@@ -84,6 +84,10 @@ class Execution(object):
                 metascript.code, metascript.path, "exec"
             )
             sys.meta_path.insert(0, metascript.definition.finder)
+            # The processes the script starts are traced only while it
+            # runs: the audit hook goes inert and the patch of
+            # subprocess.Popen leaves with the finder (#202).
+            self.collector.external.start(metascript)
             try:
                 # Runs the user's own script, instrumented: what `now run`
                 # is for
@@ -94,6 +98,7 @@ class Execution(object):
                 # process (an --interactive cell, the tests) with the
                 # ended trial's loaders.
                 sys.meta_path.remove(metascript.definition.finder)
+                self.collector.external.stop()
         except SystemExit as ex:
             self.exit_code, self.exit_message = exit_status(ex.code)
             self.force_msg = self.partial = self.exit_code != 0

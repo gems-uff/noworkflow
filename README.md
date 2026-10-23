@@ -146,6 +146,13 @@ $ now run -e relevant script.py
 ```
 Other options include *-c* to choose which functions are subject to depth computation (*main*, *package*, or *all*), *-r* to choose the serialization method for values (*repr*, *jsonpickle*, *jsonpickle_content*, or *simple*), *-s* and *-S* to set how often partial provenance is saved, *--name* to group or separate trials, *--dir* to set where provenance is stored, and *--message* to attach a message to the trial.
 
+Scripts often delegate steps to other programs: an R script, a compiled binary, a shell command. noWorkflow records the processes a script starts through `subprocess`, `os.system`, `os.popen` and `os.posix_spawn`, without changes to the script: the call that starts the process is an activation whose arguments are the command line, and the files the command line names become file accesses of that activation, with their content before and after the process (so `now diff -f` shows that an R script edited between two trials changed, even though the Python did not), as do the files the process creates in the project directory. A file the process modifies without naming it on its command line is not seen, and the program itself is recorded as a dependency (coming in 2.2.0). The *--external-tracer* option selects how much of this is recorded:
+```bash
+$ now run --external-tracer none script.py    # nothing of the processes
+$ now run --external-tracer argv script.py    # the default: the files named on the command lines and the new files of the project
+$ now run --external-tracer strace script.py  # also the files the processes open on their own (Linux; not available yet, falls back to argv)
+```
+
 To restore files, run:
 ```
 $ now restore [trial]

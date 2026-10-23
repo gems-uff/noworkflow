@@ -20,6 +20,7 @@ from future.utils import exec_, viewitems, viewkeys, viewvalues
 from ...persistence import content
 from ...persistence.models import Trial
 from ...utils.cross_version import PY3, PY38, cross_print, isiterable
+from .external import ExternalProcessTracer
 from .file_access_proxy import wrap_file_access
 from .structures import (
     Assign,
@@ -110,6 +111,11 @@ class Collector(object):
         # content_hash_after for files the script never closes.
         self.open_write_files = {}
 
+        # The processes the script starts, and the files it exchanges with
+        # them (#202). Traces only between Execution.collect_provenance's
+        # start and its finally (or around a cell, in the kernel).
+        self.external = ExternalProcessTracer(self)
+
         # attribute<->self dependency
         self.current_attr = None
         # item<->key dependency
@@ -183,6 +189,35 @@ class Collector(object):
         """Return value without any processing"""
         return value
 
+    def current_activation(self):
+        """The closest active activation, where a file access or a launch
+        made now is attached; None outside any activation"""
+        activation = self.last_activation
+        while activation and not activation.active:
+            activation = activation.parent
+        return activation
+
+    def add_file_access(self, name, activation, checkpoint=None, path=NOW_UNSET):
+        """A file access of ``activation`` to ``name``, with the hash of the
+        content before it
+
+        The content is read from ``path`` (``name`` itself by default; None
+        reads nothing, for a file that does not exist yet) when it is a
+        regular file: a directory (os.open of one, as shutil.rmtree does,
+        or the directory tempfile names in the open of a temporary file), a
+        pipe or a device has no content to read here.
+        """
+        file_access = self.file_accesses.add_object(
+            self.trial_id, name, self.get_time() if checkpoint is None else checkpoint
+        )
+        if path is NOW_UNSET:
+            path = name
+        if path is not None and os.path.isfile(path):
+            with content.std_open(path, "rb") as fil:
+                file_access.content_hash_before = content.put(fil.read(), path)
+        file_access.activation_id = activation.id
+        return file_access
+
     def new_open(self, old_open, osopen=False):
         """Wrap the open builtin function to register file access"""
 
@@ -193,24 +228,11 @@ class Collector(object):
             if isinstance(name, int):
                 # ToDo: support file descriptor
                 return old_open(name, *args, **kwargs)
-            activation = self.last_activation
-            while activation and not activation.active:
-                activation = activation.parent
-
+            activation = self.current_activation()
             if not activation:
                 return old_open(name, *args, **kwargs)
             # Create a file access object with default values
-            file_access = self.file_accesses.add_object(
-                self.trial_id, name, self.get_time()
-            )
-            if os.path.isfile(name):
-                # Read previous content if a regular file exists: a
-                # directory (os.open of one, as shutil.rmtree does, or the
-                # directory tempfile names in the open of a temporary file),
-                # a pipe or a device has no content to read here
-                with content.std_open(name, "rb") as fil:
-                    file_access.content_hash_before = content.put(fil.read(), name)
-            file_access.activation_id = activation.id
+            file_access = self.add_file_access(name, activation)
             # Update with the informed keyword arguments (mode / buffering)
             file_access.update(kwargs)
             # Update with the informed positional arguments
@@ -530,6 +552,8 @@ class Collector(object):
                         fil.read(), file_access.name
                     )
             file_access.done = True
+        # A process started by this call and finished with it (os.system)
+        self.external.activation_closed(activation)
 
     def start_script(self, module_name, code_component_id, iscell):
         """Start script collection. Create new activation"""
@@ -2319,6 +2343,11 @@ class Collector(object):
         metascript.activations_store.do_store(partial)
         metascript.dependencies_store.do_store(partial)
         metascript.members_store.do_store(partial)
+        # The processes whose end was not seen: at the end of the trial,
+        # every one still pending; on a partial save, those known to have
+        # ended. Before the sweep below, which would take their hashes
+        # without inferring their modes.
+        self.external.finalize_pending(final=not partial)
         if not partial:
             # Final sweep: write-mode files the script never closed do not
             # trigger the FileAccessProxy. Flush any still-open file object so

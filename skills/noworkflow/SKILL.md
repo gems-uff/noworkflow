@@ -110,6 +110,7 @@ Collection options, from the cheapest to the most complete:
 | `-b` | reuse the module dependencies of the previous trial (faster; fails without a previous trial) |
 | `-c main\|package\|all` | which functions count for `-d` |
 | `-r repr\|jsonpickle\|jsonpickle_content\|simple` | how values are serialized |
+| `--external-tracer none\|argv\|strace` | what is recorded of the processes the script starts (`subprocess`, `os.system`, `os.popen`, `os.posix_spawn`). `argv` (default): the files their command lines name, with their content before and after, and the files they create in the project, as file accesses of the call that started the process; `none`: nothing; `strace`: also the files they open on their own (Linux; not available yet, falls back to `argv` with a warning, #206) |
 | `-s MS` / `-S CALLS` | save partial provenance every MS milliseconds / CALLS calls |
 | `--name NAME` | the name of the trial's script in the history; separates or groups branches |
 | `--message TEXT` | a note stored with the trial (`now show -p` shows it) |
@@ -365,8 +366,14 @@ swipl -q -g "consult('trial2.pl'), forall(access(_, _, N, M, _, H, _, _), (write
   print their failure on stdout and exit 0 (#256).
 - Interrupting a run with Ctrl-C leaves the trial unfinished, without a
   finish time (#251).
-- Only Python is traced: external processes the script starts, and the
-  files they touch, are not recorded (#202).
+- Only Python is traced inside: of a process the script starts, noWorkflow
+  records the call boundary (the command line, the exit status in the
+  call's value) and the files named on the command line or created in
+  the project, never what happens inside the program. A file the process
+  modifies without naming it is not seen, a file it rewrites with the same
+  content is recorded as a read, and the children of `os.fork` and
+  `multiprocessing` are not recorded at all. The program itself is not a
+  dependency yet (#203).
 - Fine-grained collection slows the script down considerably; `-cg` or
   `-e relevant` reduce the cost.
 - Inside `now run`, `open` and `__builtins__` are not the standard ones: the

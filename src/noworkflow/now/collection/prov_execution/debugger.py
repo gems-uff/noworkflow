@@ -20,6 +20,7 @@ from argparse import Namespace
 from ...cmd.cmd_export.cmd_ipynb import Ipynb
 from ...persistence.models.trial import Trial
 from ...utils.io import redirect_output
+from .external import suspended
 
 FNULL = open(os.devnull, "w")
 atexit.register(FNULL.close)
@@ -98,7 +99,7 @@ def debugger_builtins(provider, namespace, metascript):
         if not vis_open:
             params = ["now", "vis", "-p", str(port)]
             print("now vis: {}".format(url))
-            with redirect_output():
+            with redirect_output(), suspended():
                 vis[0] = True
                 # No shell; a fixed argv except the port of the script's own now_vis() call
                 proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)  # nosec B603
@@ -129,7 +130,9 @@ def debugger_builtins(provider, namespace, metascript):
             Ipynb().execute(Namespace(trial=None, dir=None))
             if start:
                 params = ["ipython", "notebook", "Current Trial.ipynb"]
-                proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
+                # noWorkflow's own launch, not the script's (#202)
+                with suspended():
+                    proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
                 CHILDREN_PID.append(proc)
         except ImportError:
             return "IPython not found"

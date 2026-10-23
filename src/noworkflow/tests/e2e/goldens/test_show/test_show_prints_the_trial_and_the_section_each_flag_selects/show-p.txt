@@ -20,6 +20,7 @@
   save_frequency: 0
   call_storage_frequency: 10000
   coarse_granularity: False
+  external_tracer: 'argv'
   name: None
   dir: None
   verbose: False

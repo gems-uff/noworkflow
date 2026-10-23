@@ -383,7 +383,7 @@ launches an R script and a C program, three trials), from
 `paper` mark and run in the same job, which installs R; locally they need
 `Rscript` and `cc` on the PATH and skip without them, and
 `NOW_RSCRIPT=require` fails instead of skipping, as the job sets. The
-claims that wait for #202 to #206 are `_desired` twins marked
+claims that wait for #203 to #207 are `_desired` twins marked
 `xfail(strict=True)`: see "The paper's running example" in `AGENTS.md`.
 
 ### The vis in a browser

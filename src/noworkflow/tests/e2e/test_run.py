@@ -712,3 +712,69 @@ def test_run_tags_follow_the_script_code_and_the_command(project):
         [("AUTO", "1.2.1")],
         [("AUTO", "2.1.1")],
     ]
+
+
+# The processes the script starts (#202). What the store records of them is
+# pinned in test_external_processes.py; here the flag and its fallback.
+
+
+def test_run_external_tracer_none_records_nothing_of_the_child(project):
+    """``--external-tracer none``: the child runs and writes its file, and
+    the only access is the parent's own read"""
+    project.copy_corpus("processes")
+    result = project.run("run", "--external-tracer", "none", "run.py")
+    assert result.stdout == "0 child-done\n"
+    assert (project.path / "child_out.txt").read_bytes() == b"child:child input\n"
+    trial = only_trial(project)
+    rows = project.query(
+        "SELECT name, mode FROM file_access WHERE trial_id = ? ORDER BY id",
+        trial["id"],
+    )
+    assert [(row["name"], row["mode"]) for row in rows] == [("parent_in.txt", "r")]
+    arguments = project.query(
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'external_tracer'",
+        trial["id"],
+    )
+    assert [row["value"] for row in arguments] == ["'none'"]
+
+
+def test_run_external_tracer_strace_falls_back_to_argv_with_a_warning(project):
+    """Until #206 lands, ``--external-tracer strace`` records what ``argv``
+    records, warns once on stderr and exits with the script's status"""
+    project.copy_corpus("processes")
+    result = project.run(
+        "run", "--external-tracer", "strace", "run.py", allow_stderr=True
+    )
+    assert result.stdout == "0 child-done\n"
+    assert result.stderr.splitlines() == [
+        "[now] --external-tracer strace is not available yet (#206): "
+        "falling back to argv"
+    ]
+    trial = only_trial(project)
+    rows = project.query(
+        "SELECT name, mode FROM file_access WHERE trial_id = ? ORDER BY id",
+        trial["id"],
+    )
+    assert [(row["name"], row["mode"]) for row in rows] == [
+        ("parent_in.txt", "r"),
+        ("child.py", "r"),
+        ("child_in.txt", "r"),
+        ("child_out.txt", "w"),
+    ]
+
+
+def test_run_external_tracer_rejects_another_value(project):
+    """A value outside none, argv and strace is a usage error (2), and no
+    store is created"""
+    project.copy_corpus("processes")
+    result = project.run(
+        "run", "--external-tracer", "ptrace", "run.py", expect=2, allow_stderr=True
+    )
+    assert "invalid choice: 'ptrace'" in result.stderr
+    assert not project.store.exists()
+
+
+def test_run_help_lists_the_external_tracer(project):
+    """``now run -h`` documents the option and its three values"""
+    result = project.run("run", "-h")
+    assert "--external-tracer {none,argv,strace}" in result.stdout

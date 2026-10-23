@@ -118,6 +118,9 @@ class Metascript(object):  # pylint: disable=too-many-instance-attributes
         self._context = MAIN
         # Should collect only coarse granularity provenance: bool
         self.coarse_granularity = False
+        # How the processes the script starts are recorded (#202):
+        # "none", "argv" or "strace" : str
+        self.external_tracer = "argv"
 
         # Save every X ms : int
         self.save_frequency = None
@@ -234,6 +237,7 @@ class Metascript(object):  # pylint: disable=too-many-instance-attributes
             collect_values="all",
             message=None,
             content_engine=None,
+            external_tracer="argv",
         )
         self._read_args(args)
         self.path = os.getcwd()
@@ -248,6 +252,7 @@ class Metascript(object):  # pylint: disable=too-many-instance-attributes
 
         self.bypass_modules = args.bypass_modules
         self.coarse_granularity = args.coarse_granularity
+        self.external_tracer = args.external_tracer
 
         self.depth = args.depth
         self.save_frequency = args.save_frequency

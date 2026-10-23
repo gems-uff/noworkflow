@@ -41,6 +41,7 @@ argument('<UUID1>', 'context', 'main').
 argument('<UUID1>', 'save_frequency', '0').
 argument('<UUID1>', 'call_storage_frequency', '10000').
 argument('<UUID1>', 'coarse_granularity', 'False').
+argument('<UUID1>', 'external_tracer', 'argv').
 argument('<UUID1>', 'name', 'None').
 argument('<UUID1>', 'dir', 'None').
 argument('<UUID1>', 'verbose', 'False').

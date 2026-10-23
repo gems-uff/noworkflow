@@ -25,10 +25,10 @@ Structural assertions only, no goldens: a golden of a command that still
 fails cannot be recorded. With ``NOW_PAPER_DATASET`` pointing at the real
 dataset the same tests run on it.
 
-The claims that only #202 to #206 can satisfy are ``_desired`` twins,
-marked ``xfail(strict=True)`` through ``known_defects`` with the issue,
-the mechanism and the signature of today's failure (measured on this
-tree). The issue that makes a twin pass removes the mark in the same
+The claims that only #203 to #207 and #461 can satisfy are ``_desired``
+twins, marked ``xfail(strict=True)`` through ``known_defects`` with the
+issue, the mechanism and the signature of today's failure (measured on
+this tree). The issue that makes a twin pass removes the mark in the same
 commit (XPASS(strict) is the signal); the issue that changes how it fails
 rewrites the ``Defect``'s signature. The map:
 
@@ -36,37 +36,37 @@ rewrites the ``Defect``'s signature. The map:
 twin                                                                 passes signature
                                                                      with   changes
 ==================================================================== ====== =========
-test_model_r_is_read_by_the_rscript_launch_desired                   #202
-test_pred_csv_is_written_by_rscript_and_read_by_metrics_desired      #202
-test_metrics_c_is_read_and_the_binary_written_by_the_compiler_...    #202
-test_out_txt_is_written_by_the_metrics_launch_desired                #202
-test_argv0_never_becomes_a_file_access_desired                       #202
-test_show_f_lists_the_exchanged_files_with_their_modes_desired       #202
-test_diff_f_reports_model_r_replaced_with_both_hashes_desired        #202
-test_diff_f_reports_metrics_c_metrics_and_out_txt_replaced_desired   #202
-test_restore_1_1_1_rewrites_model_r_and_metrics_c_and_removes_...    #202
-test_dataflow_in_activation_mode_draws_the_three_launches_..._desired #202
-test_external_tracer_none_records_no_child_file_desired              #202
 test_rscript_cc_and_the_binary_are_modules_with_hash_and_version_... #203
 test_show_m_lists_the_executables_desired                            #203
 test_the_recompiled_binary_changes_its_code_hash_in_1_1_3_desired    #203
-test_diff_f_pairs_pred_csv_by_name_and_mode_desired                  #204   #202
+test_diff_f_pairs_pred_csv_by_name_and_mode_desired                  #204
 test_diff_content_prints_the_unified_diff_of_model_r_desired         #204
 test_diff_m_prints_the_code_hash_change_of_the_recompiled_..._desired #204   #203
-test_restore_f_of_the_compiled_binary_keeps_it_executable_desired    #205 (#246) #202
-test_strace_tracer_records_the_file_model_r_sources_desired          #206   #202
-test_rdtlite_prov_json_is_discovered_as_a_new_file_desired           #202
-test_rdtlite_file_entities_become_accesses_of_the_launch_desired     #207   #202
-test_export_prov_has_entities_for_the_exchanged_files_desired        #461   #202
+test_restore_f_of_the_compiled_binary_keeps_it_executable_desired    #205 (#246) #203
+test_strace_tracer_records_the_file_model_r_sources_desired          #206
+test_rdtlite_file_entities_become_accesses_of_the_launch_desired     #207
+test_export_prov_has_entities_for_the_exchanged_files_desired        #461
 ==================================================================== ====== =========
 
-The two rdtLite twins run a fourth trial of their own, the wrapper of
+The claims of #202 (the files the launches exchange, ``now show -f``,
+``now diff -f``, the restore, the dataflow, ``--external-tracer none``,
+the PROV-JSON of rdtLite found by the snapshot) passed with it and lost
+their marks and their ``_desired`` suffix. Three things #202 showed that
+the section's draft did not foresee, now stated by the tests: the
+launch of ``Rscript`` also reads ``prepared.csv``, which its command line
+names, so a trial has nine accesses, not eight; ``now restore 1.1.1``
+records a backup trial (2.0.0), as the running example's 7.0.0, because
+the outputs 1.1.3 created have no content before their first access and
+the restore sees them as changed; and ``now restore 1.1.3 -f metrics``
+without ``-i`` restores nothing (#246), instead of finding no version.
+
+The two rdtLite tests run a fourth trial of their own, the wrapper of
 ``corpus/beyond_python/rdtlite`` (``model.R`` under rdtLite's
 ``prov.run``), and skip without the rdtLite package, in CI too. The PROV
 export (``now export prov``) writes no entity for any file access today,
 the wrapper's own reads and writes included (#461, a finding of these
 tests): ``test_export_prov_declares_no_file_access`` pins it, and its
-twin waits for #461 and, for the launches' files, #202.
+twin waits for #461.
 """
 
 import ast
@@ -119,16 +119,20 @@ LAUNCHES = {
     "cc": ("cc", "-O2", "-o", "metrics", "metrics.c"),
     "./metrics": ("./metrics", "pred.csv", "out.txt"),
 }
-# The file accesses of each trial once the launches are recorded (#202):
-# (name, mode, the program whose launch makes it), in the order of the
-# pipeline. The wrapper's own two accesses come through pandas, whose
-# read_csv opens the dataset in binary ("rb") with its C engine and in
-# text ("r") when it takes another path (seen once in a full run of the
-# suite): the claim is a read, so modes go through `read_kind`.
+# The file accesses of each trial, the launches' included (#202): (name,
+# mode, the program whose launch makes it), in the order of the pipeline.
+# The wrapper's own two accesses come through pandas, whose read_csv opens
+# the dataset in binary ("rb") with its C engine and in text ("r") when it
+# takes another path (seen once in a full run of the suite): the claim is
+# a read, so modes go through `read_kind`. The seven of the launches are
+# the files their command lines name (prepared.csv, written by the
+# wrapper, is read again by Rscript) and the two the snapshot finds, the
+# binary of `cc -o` and out.txt.
 EXCHANGED = [
     ("creditcard.csv", "r", None),
     ("prepared.csv", "w", None),
     ("model.R", "r", "Rscript"),
+    ("prepared.csv", "r", "Rscript"),
     ("pred.csv", "w", "Rscript"),
     ("metrics.c", "r", "cc"),
     ("metrics", "w", "cc"),
@@ -148,30 +152,6 @@ SHOW_MODULES = "[now] this trial depends on the following modules:"
 def read_kind(mode):
     """A mode as the section states it: a read is ``r``, binary or not"""
     return "r" if mode in ("r", "rb") else mode
-
-
-def child_files(signature):
-    """#202: the files a launched process reads or writes leave no row"""
-    return Defect(
-        "#202: a call that starts a process (subprocess.run in the "
-        "wrapper's run) is recorded by Collector._call (collector.py) as "
-        "an activation without a code block, with no file access of its "
-        "own: the files the child reads or writes, named on its command "
-        "line or created in the project, leave no row, and nothing the "
-        "store holds says that a process ran; #202 records them through "
-        "the audit hooks of PEP 578 and a snapshot of the project",
-        signature=signature,
-    )
-
-
-def no_tracer_option(signature):
-    """#202: `now run` has no --external-tracer option yet"""
-    return Defect(
-        "#202: `now run` (cmd/cmd_run.py) has no --external-tracer "
-        "option; its script argument is argparse's REMAINDER, so the "
-        "word after the unknown option is taken for the script",
-        signature=signature,
-    )
 
 
 def no_executable_modules(signature):
@@ -253,9 +233,10 @@ def no_prov_file_entities(signature):
 def no_strace_backend(signature):
     """#206: no backend reads the files a child opens by itself"""
     return Defect(
-        "#206: no --external-tracer backend follows the child's system "
-        "calls; a file the R script opens by itself (source) is named on "
-        "no command line and left in no snapshot",
+        "#206: `--external-tracer strace` falls back to argv with a "
+        "warning (prov_execution/external.py), and no backend follows "
+        "the child's system calls; a file the R script opens by itself "
+        "(source) is named on no command line and left in no snapshot",
         signature=signature,
     )
 
@@ -328,7 +309,8 @@ def case_store(tmp_path_factory, tools):
     After the replay it deletes the compiled binary and restores it from
     1.1.3 with ``-f`` (#205 with #246: the version the trial wrote, since
     the first access has no content before), then restores 1.1.1 whole:
-    the restore operation the section describes, recorded for the tests.
+    the restore operation the section describes, recorded for the tests,
+    which adds the backup trial 2.0.0 to the store.
     """
     project = case_project(tmp_path_factory.mktemp("beyond_python"), tools)
     place_sources(project)
@@ -543,7 +525,9 @@ def test_the_three_trials_are_tagged_1_1_x_with_one_script_hash(case):
     """The history: three finished trials, 1.1.1, 1.1.2 and 1.1.3, each the
     parent of the next, all with the command `run fraud_pipeline.py` and
     the code hash of the wrapper, which never changes (the tags of a
-    re-execution, as sec. 4 defines them: only the launched code moved)"""
+    re-execution, as sec. 4 defines them: only the launched code moved);
+    then the backup trial 2.0.0 that `now restore 1.1.1` recorded, a
+    child of 1.1.3 (the fixture ran the restore of the section)"""
     project = case.project
     tags = {
         trial["id"]: [row["name"] for row in project.tags(trial["id"])]
@@ -563,11 +547,13 @@ def test_the_three_trials_are_tagged_1_1_x_with_one_script_hash(case):
         (1, ["1.1.1"], "finished", None, "run fraud_pipeline.py"),
         (2, ["1.1.2"], "finished", ["1.1.1"], "run fraud_pipeline.py"),
         (3, ["1.1.3"], "finished", ["1.1.2"], "run fraud_pipeline.py"),
+        (4, ["2.0.0"], "backup", ["1.1.3"], "restore 1.1.1"),
     ], diverges("the trial history")
     script = sha1((CASE_CORPUS / SCRIPT).read_bytes())
     hashes = project.query(
         "SELECT b.code_hash FROM trial t JOIN code_block b "
-        "ON b.trial_id = t.id AND b.id = t.main_id ORDER BY t.sequence_key"
+        "ON b.trial_id = t.id AND b.id = t.main_id "
+        "WHERE t.status = 'finished' ORDER BY t.sequence_key"
     )
     assert [row["code_hash"] for row in hashes] == [script] * 3, diverges(
         "the code hash of the wrapper"
@@ -577,18 +563,21 @@ def test_the_three_trials_are_tagged_1_1_x_with_one_script_hash(case):
 def test_the_wrapper_reads_the_dataset_and_writes_prepared_csv_through_pandas(case):
     """The wrapper's own accesses, through pandas's open: creditcard.csv
     read (binary or text, see ``EXCHANGED``) with the dataset's hash
-    before and after, prepared.csv
-    written, new in 1.1.1 and rewritten with the same content in 1.1.2 and
-    1.1.3"""
+    before and after, prepared.csv written, new in 1.1.1 and rewritten
+    with the same content in 1.1.2 and 1.1.3 (the launch of Rscript reads
+    it afterwards: the next test)"""
     dataset = sha1((case.project.path / DATASET).read_bytes())
     previous = None
     for tag in RUN_TAGS:
         (read,) = named(case, tag, "creditcard.csv")
         assert read_kind(read["mode"]) == "r", diverges("creditcard.csv", tag)
         assert read["content_hash_before"] == read["content_hash_after"] == dataset
-        (written,) = named(case, tag, "prepared.csv")
-        assert written["mode"] == "w", diverges("prepared.csv", tag)
-        assert written["content_hash_before"] == previous
+        (written,) = [
+            access
+            for access in named(case, tag, "prepared.csv")
+            if access["mode"] == "w"
+        ]
+        assert written["content_hash_before"] == previous, diverges("prepared.csv", tag)
         assert written["content_hash_after"] == case.files[tag]["prepared.csv"]
         previous = written["content_hash_after"]
 
@@ -640,8 +629,7 @@ def one_access(case, tag, name):
     return found[0]
 
 
-@known_defects(child_files("0 file accesses named model.R"))
-def test_model_r_is_read_by_the_rscript_launch_desired(case):
+def test_model_r_is_read_by_the_rscript_launch(case):
     """1.1.1 records one access to model.R: a read, with the hash of the
     script before and after, made by the launch of Rscript"""
     access = one_access(case, "1.1.1", "model.R")
@@ -651,8 +639,20 @@ def test_model_r_is_read_by_the_rscript_launch_desired(case):
     assert access["activation_id"] == launch_activation(case, "1.1.1", "Rscript")
 
 
-@known_defects(child_files("0 file accesses named pred.csv"))
-def test_pred_csv_is_written_by_rscript_and_read_by_metrics_desired(case):
+def test_prepared_csv_is_read_again_by_the_rscript_launch(case):
+    """1.1.1 records a second access to prepared.csv, after the wrapper's
+    write: a read by the launch of Rscript, whose command line names it,
+    with the hash of what the wrapper wrote before and after (a finding
+    of #202: the section's draft counted the launches' files without it)"""
+    written, read = named(case, "1.1.1", "prepared.csv")
+    assert (written["mode"], read["mode"]) == ("w", "r")
+    expected = case.files["1.1.1"]["prepared.csv"]
+    assert read["content_hash_before"] == read["content_hash_after"] == expected
+    assert read["activation_id"] == launch_activation(case, "1.1.1", "Rscript")
+    assert written["activation_id"] != read["activation_id"]
+
+
+def test_pred_csv_is_written_by_rscript_and_read_by_metrics(case):
     """1.1.1 records exactly two accesses to pred.csv, in this order: the
     write by the launch of Rscript (no content before: run.sh deleted it)
     and the read by the launch of ./metrics, of what Rscript wrote; no
@@ -679,8 +679,7 @@ def test_pred_csv_is_written_by_rscript_and_read_by_metrics_desired(case):
     assert read["activation_id"] == launch_activation(case, "1.1.1", "./metrics")
 
 
-@known_defects(child_files("0 file accesses named metrics.c"))
-def test_metrics_c_is_read_and_the_binary_written_by_the_compiler_launch_desired(case):
+def test_metrics_c_is_read_and_the_binary_written_by_the_compiler_launch(case):
     """1.1.1 records metrics.c read and the binary metrics written (new:
     `-o metrics` names a file with no extension, which the snapshot of
     the project finds), both by the launch of cc"""
@@ -697,8 +696,7 @@ def test_metrics_c_is_read_and_the_binary_written_by_the_compiler_launch_desired
     assert binary["activation_id"] == compiler
 
 
-@known_defects(child_files("0 file accesses named out.txt"))
-def test_out_txt_is_written_by_the_metrics_launch_desired(case):
+def test_out_txt_is_written_by_the_metrics_launch(case):
     """1.1.1 records out.txt written, new, by the launch of ./metrics,
     with the hash of the metrics it holds"""
     access = one_access(case, "1.1.1", "out.txt")
@@ -708,8 +706,7 @@ def test_out_txt_is_written_by_the_metrics_launch_desired(case):
     assert access["activation_id"] == launch_activation(case, "1.1.1", "./metrics")
 
 
-@known_defects(child_files("0 file accesses named metrics"))
-def test_argv0_never_becomes_a_file_access_desired(case):
+def test_argv0_never_becomes_a_file_access(case):
     """The program of a launch is never a file access: no row names
     Rscript or cc, and ./metrics, launched in every trial, has one row per
     trial, the write of the compiler (the executable goes to the module
@@ -725,10 +722,9 @@ def test_argv0_never_becomes_a_file_access_desired(case):
         assert binary["mode"] == "w", tag
 
 
-@known_defects(child_files("now show 1.1.1 -f lists 2 accesses"))
-def test_show_f_lists_the_exchanged_files_with_their_modes_desired(case):
-    """`now show 1.1.1 -f` lists the eight accesses of the pipeline with
-    their modes: the wrapper's two and the six of the three launches"""
+def test_show_f_lists_the_exchanged_files_with_their_modes(case):
+    """`now show 1.1.1 -f` lists the nine accesses of the pipeline with
+    their modes: the wrapper's two and the seven of the three launches"""
     stdout = case.run("show", "1.1.1", "-f").stdout
     found = [
         (block["Name"], read_kind(block["Mode"]))
@@ -754,10 +750,7 @@ def changes(block):
     return found
 
 
-@known_defects(
-    child_files("now diff 1.1.1 1.1.2 -f: file accesses replaced: ['prepared.csv']")
-)
-def test_diff_f_reports_model_r_replaced_with_both_hashes_desired(case):
+def test_diff_f_reports_model_r_replaced_with_both_hashes(case):
     """Figure A: `now diff 1.1.1 1.1.2 -f` reports model.R replaced, with
     the content hash before and after changed from the hash of the first
     version to the hash of the second (the Python did not change: the
@@ -777,8 +770,7 @@ def test_diff_f_reports_model_r_replaced_with_both_hashes_desired(case):
     assert "Code hash" not in stdout
 
 
-@known_defects(child_files("now diff 1.1.2 1.1.3 -f: file accesses replaced: []"))
-def test_diff_f_reports_metrics_c_metrics_and_out_txt_replaced_desired(case):
+def test_diff_f_reports_metrics_c_metrics_and_out_txt_replaced(case):
     """Figure B: `now diff 1.1.2 1.1.3 -f` reports metrics.c (the source
     edited), metrics (the binary recompiled) and out.txt (the accuracy
     added) replaced, with their hashes; pred.csv and prepared.csv did not
@@ -818,15 +810,16 @@ def version_of(case, name, digest):
     return "{} is a version of no trial".format(name)
 
 
-@known_defects(child_files("model.R is the version of 1.1.3"))
-def test_restore_1_1_1_rewrites_model_r_and_metrics_c_and_removes_the_outputs_desired(
+def test_restore_1_1_1_rewrites_model_r_and_metrics_c_and_removes_the_outputs(
     case,
 ):
     """The restore of the section: after the three trials, `now restore
     1.1.1` brings model.R and metrics.c back to the versions 1.1.1 read,
     removes what 1.1.1 created (prepared.csv, pred.csv, out.txt and the
-    binary), keeps the dataset and the wrapper, and records no backup
-    trial (the project held what 1.1.3 recorded)"""
+    binary), keeps the dataset and the wrapper, and records a backup
+    trial, 2.0.0, as the running example's 7.0.0: the outputs 1.1.3
+    created have no content before their first access, so the restore
+    sees the project as changed since 1.1.3 and keeps it"""
     assert case.restore.returncode == 0, str(case.restore)
     after = case.restored
     wrong = []
@@ -839,22 +832,23 @@ def test_restore_1_1_1_rewrites_model_r_and_metrics_c_and_removes_the_outputs_de
     assert wrong == [], "after now restore 1.1.1: " + "; ".join(wrong)
     assert after[DATASET] == case.files["1.1.1"][DATASET]
     assert after[SCRIPT] == case.files["1.1.1"][SCRIPT]
-    assert len(case.project.trials()) == case.trials_before_restores
-
-
-@known_defects(
-    child_files(
-        "missing file nodes: ['metrics', 'metrics.c', 'model.R', 'out.txt', 'pred.csv']"
+    trials = case.project.trials()
+    assert len(trials) == case.trials_before_restores + 1
+    assert (trials[-1]["status"], case.project.tags(trials[-1]["id"])) == (
+        "backup",
+        [{"type": "AUTO", "name": "2.0.0"}],
     )
-)
-def test_dataflow_in_activation_mode_draws_the_three_launches_and_their_files_desired(
+
+
+def test_dataflow_in_activation_mode_draws_the_three_launches_and_their_files(
     case,
 ):
     """Figure C: `now export dataflow 1.1.3 -m activation` has a node for
-    each of the five files the launches exchange, one per file, each
+    each of the six files the launches exchange, one per file, each
     linked to the launch that reads it (an edge from the launch to the
     file) or writes it (from the file to the launch), next to the two
-    files of the wrapper"""
+    files of the wrapper (prepared.csv is among both: written by the
+    wrapper, read by Rscript)"""
     stdout = case.run("export", "dataflow", "1.1.3", "-m", "activation").stdout
     labels, edges = labelled(stdout)
     assert labels.count(LAUNCH_NODE) == 3, labels
@@ -870,8 +864,7 @@ def test_dataflow_in_activation_mode_draws_the_three_launches_and_their_files_de
     assert expected <= links, "missing edges: {}".format(sorted(expected - links))
 
 
-@known_defects(no_tracer_option("can't open file 'none'"))
-def test_external_tracer_none_records_no_child_file_desired(tmp_path, tools):
+def test_external_tracer_none_records_no_child_file(tmp_path, tools):
     """`now run --external-tracer none fraud_pipeline.py` records the
     trial as before #202: the wrapper's two accesses and nothing of the
     launches"""
@@ -949,7 +942,7 @@ def test_the_recompiled_binary_changes_its_code_hash_in_1_1_3_desired(case):
 
 
 @known_defects(
-    diff_pairs_by_name_alone("pred.csv in replaced 0 times, added 0, removed 0")
+    diff_pairs_by_name_alone("pred.csv in replaced 2 times, added 0, removed 1")
 )
 def test_diff_f_pairs_pred_csv_by_name_and_mode_desired(case):
     """Figure A: in `now diff 1.1.1 1.1.2 -f` pred.csv, written by Rscript
@@ -1006,7 +999,7 @@ def test_diff_m_prints_the_code_hash_change_of_the_recompiled_binary_desired(cas
 # --- Section 6.4: restore and the executable bit (#205) --------------------
 
 
-@known_defects(restore_loses_the_bit("File version not found!"))
+@known_defects(restore_loses_the_bit("no metrics after the restore"))
 def test_restore_f_of_the_compiled_binary_keeps_it_executable_desired(case):
     """With the binary deleted, `now restore 1.1.3 -f metrics` brings
     back the bytes the trial wrote (its first access has no content
@@ -1023,7 +1016,11 @@ def test_restore_f_of_the_compiled_binary_keeps_it_executable_desired(case):
 # --- Section 6.2: the strace backend (#206) ---------------------------------
 
 
-@known_defects(no_strace_backend("can't open file 'strace'"))
+# The signature is reasoned, not measured: the test runs only on Linux
+# with strace on the PATH, which no leg and no maintainer's machine has
+# until #206 installs it (the fallback to argv records model.R and leaves
+# utils.R, named on no command line, with no row).
+@known_defects(no_strace_backend("0 file accesses named utils.R"))
 def test_strace_tracer_records_the_file_model_r_sources_desired(tmp_path, tools):
     """With `--external-tracer strace`, a file the R script reads by
     itself (utils.R, sourced by the model.R of corpus/beyond_python/strace)
@@ -1128,8 +1125,7 @@ def prov_json_files(project):
     }
 
 
-@known_defects(child_files("0 file accesses named prov.json"))
-def test_rdtlite_prov_json_is_discovered_as_a_new_file_desired(rdtlite):
+def test_rdtlite_prov_json_is_discovered_as_a_new_file(rdtlite):
     """In the fourth trial, the PROV-JSON that rdtLite writes
     (prov_model/prov.json, named on no command line) is recorded as a new
     file written by the launch of Rscript: the snapshot of the project
@@ -1181,7 +1177,7 @@ def test_rdtlite_file_entities_become_accesses_of_the_launch_desired(rdtlite):
 # --- The PROV export (#461) --------------------------------------------------
 
 # The files of the case study that a PROV export of 1.1.1 should declare:
-# the wrapper's own two, and the launches' five once #202 records them.
+# the wrapper's own two, and the launches' files (#202).
 WRAPPER_FILES = ["creditcard.csv", "prepared.csv"]
 EXCHANGED_FILES = sorted({name for name, _, _ in EXCHANGED})
 PROV_ENTITY = re.compile(r"^entity\((\S+?), \[(.*)\]\)$", re.MULTILINE)
@@ -1225,8 +1221,8 @@ def test_export_prov_declares_no_file_access(case):
 @known_defects(no_prov_file_entities("no file entity in the PROV export of 1.1.1"))
 def test_export_prov_has_entities_for_the_exchanged_files_desired(case):
     """`now export prov 1.1.1` declares an entity for each file the trial
-    read or wrote: the wrapper's two (#461) and the five the launches
-    exchange (#461 with #202)"""
+    read or wrote: the wrapper's two and the ones the launches exchange
+    (#461)"""
     stdout = case.run("export", "prov", "1.1.1").stdout
     found = prov_file_entities(stdout)
     assert found, "no file entity in the PROV export of 1.1.1"

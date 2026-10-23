@@ -21,22 +21,24 @@ deadline, and ``child.py`` ends itself after a minute, for the waits that
 take none; a child that a change breaks fails the test instead of hanging
 it.
 
-Today a call that starts a process is recorded like any call the collector
-does not trace: an activation without a code block, without evaluations
-and without file accesses, whose arguments are evaluations of its caller
-and whose value is a repr. Nothing in the store says that a process ran:
-no file access names a file only the child opened, and the module table
-holds what a script with the same imports and no call holds. #202
-(processes captured through audit hooks and a patch of
-``subprocess.Popen``, the files a child reads or writes recorded as file
-accesses) and #203 (the executable of a launched process and the
-libraries loaded through ctypes recorded in the module table) change these
-characterizations on purpose; each test names the one expected to change
-it, and that pull request updates the test deliberately, so its diff shows
-what changed. Two scripts go further: ``execv.py`` replaces its own
-process through ``os.execv``, and its trial is lost; ``fork_exit.py``
-forks children with ``os.fork()`` that leave through ``sys.exit``, and
-each one stores the trial as well.
+A call that starts a process is recorded like any call the collector
+does not trace: an activation without a code block, without evaluations,
+whose arguments are evaluations of its caller and whose value is a repr.
+Since #202 (processes captured through the audit hooks of PEP 578 and a
+patch of ``subprocess.Popen``, ``prov_execution/external.py``) the call
+that starts the process also carries, as its file accesses, the files the
+child's command line names, read with the same hash before and after,
+and the files the child creates, written with no content before: here
+the child's script, its input and its output. A forked child
+(``multiprocessing``) is not a launch and records nothing (#375, #379).
+The module table still holds what a script with the same imports and no
+call holds: #203 (the executable of a launched process and the libraries
+loaded through ctypes recorded in the module table) changes that
+characterization on purpose; the tests name it, and its commit updates
+them deliberately, so its diff shows what changed. Two scripts go
+further: ``execv.py`` replaces its own process through ``os.execv``, and
+its trial is lost; ``fork_exit.py`` forks children with ``os.fork()``
+that leave through ``sys.exit``, and each one stores the trial as well.
 
 Structural assertions only, no goldens: paths, hashes, addresses, pids
 and evaluation ids differ per platform and version. The executable's path
@@ -235,10 +237,14 @@ def waited(text):
 
 @dataclasses.dataclass(frozen=True)
 class Kind:
-    """One way of starting a process: its script and its calls"""
+    """One way of starting a process: its script, its calls and, among
+    them, the call that starts the process (``launch``), which carries
+    the child's file accesses since #202; None for the fork, which
+    records nothing of its child"""
 
     script: str
     calls: tuple
+    launch: str = None
 
 
 KINDS = {
@@ -258,6 +264,7 @@ KINDS = {
                 ),
             ),
         ),
+        launch="run",
     ),
     "check_output": Kind(
         "check_output.py",
@@ -270,6 +277,7 @@ KINDS = {
                 child_done,
             ),
         ),
+        launch="check_output",
     ),
     "popen": Kind(
         "popen.py",
@@ -291,6 +299,7 @@ KINDS = {
                 "communicate", "process.communicate(", ("literal",), None, communicated
             ),
         ),
+        launch="Popen",
     ),
     "shell": Kind(
         "shell.py",
@@ -306,10 +315,12 @@ KINDS = {
                 ),
             ),
         ),
+        launch="run",
     ),
     "system": Kind(
         "system.py",
         (Call("system", "os.system(", ("name",), "status", lambda text: text == "0"),),
+        launch="system",
     ),
     "os_popen": Kind(
         "os_popen.py",
@@ -324,6 +335,7 @@ KINDS = {
             Call("read", "pipe.read(", (), "output", child_done),
             Call("close", "pipe.close(", (), "status", lambda text: text == "None"),
         ),
+        launch="popen",
     ),
     "posix_spawn": Kind(
         "posix_spawn.py",
@@ -346,6 +358,7 @@ KINDS = {
                 lambda text: text == "0",
             ),
         ),
+        launch="posix_spawn",
     ),
     "fork": Kind(
         "fork.py",
@@ -375,6 +388,10 @@ KINDS = {
         ),
     ),
 }
+# What the launch exchanges with the child, as the store records it: the
+# child's script and its input, read, with the same hash before and
+# after; its output, written, with no content before.
+CHILD_FILES = ("child.py", "child_in.txt", "child_out.txt")
 # The kinds whose child is a new interpreter, not a fork of the parent.
 NEW_INTERPRETER_KINDS = [
     "run",
@@ -552,11 +569,12 @@ def unreferenced_blobs(project):
 def test_process_call_is_an_opaque_activation(stores, kind):
     """Each call that starts or drives the process is an activation of the
     trial, called by the script, with no code block (the collector's -1 is
-    stored as NULL), no evaluations of its own and no file accesses
+    stored as NULL) and no evaluations of its own; the call that starts
+    the process carries the child's three file accesses (#202), the
+    others none
 
-    Characterization: #202 records the process behind these calls and
-    changes this on purpose; its pull request updates this test
-    deliberately.
+    The fork records nothing of its child: none of its calls has a file
+    access.
     """
     project = stores(KINDS[kind].script)
     with reading(project) as trial:
@@ -577,7 +595,10 @@ def test_process_call_is_an_opaque_activation(stores, kind):
                 call.source, evaluations
             )
             accesses = len(list(activation.file_accesses))
-            assert accesses == 0, "{}: {} file accesses".format(call.source, accesses)
+            expected = len(CHILD_FILES) if call.name == KINDS[kind].launch else 0
+            assert accesses == expected, "{}: {} file accesses".format(
+                call.source, accesses
+            )
             by_script = activation.caller.id == script.id
             assert by_script, "{}: not called by the script".format(call.source)
             evaluation = activation.this_evaluation
@@ -602,9 +623,7 @@ def test_process_call_arguments_are_evaluations_of_the_caller(stores, kind):
     argument list holds the executable and the child's words, the fork's
     tuple the target's arguments
 
-    Characterization: #202 changes how these calls are recorded on
-    purpose; if it changes their arguments, its pull request updates this
-    test deliberately.
+    #202 left the arguments of these calls as they were: this pins them.
     """
     project = stores(KINDS[kind].script)
     with reading(project) as trial:
@@ -671,9 +690,8 @@ def test_process_call_value_is_the_repr_of_its_result(stores, kind):
     what waitpid returned, the process object before start; it flows to
     the name it is assigned to
 
-    Characterization: #202 changes how these calls are recorded on
-    purpose; if it changes their values, its pull request updates this
-    test deliberately.
+    #202 left the values of these calls as they were (the patch of Popen
+    replaces its functions, not the objects): this pins them.
     """
     project = stores(KINDS[kind].script)
     with reading(project) as trial:
@@ -694,27 +712,29 @@ def test_process_call_value_is_the_repr_of_its_result(stores, kind):
 
 
 @pytest.mark.parametrize("kind", ALL_KINDS)
-def test_child_file_accesses_are_not_recorded(stores, kind):
-    """The only file access is the parent's read of ``parent_in.txt``, by
-    the script's ``open``, with the SHA-1 of its content before and after;
-    the child's read of ``child_in.txt`` and its write of
-    ``child_out.txt``, which is on disk, leave no row
-
-    Characterization: #202 records the files a child reads or writes as
-    file accesses and changes this on purpose; its pull request updates
-    this test deliberately.
+def test_child_file_accesses_are_recorded_with_the_launch(stores, kind):
+    """The parent's read of ``parent_in.txt``, by the script's ``open``,
+    with the SHA-1 of its content before and after, is apart from the
+    launch; the launch carries the child's files, named as its command
+    line names them: ``child.py`` and ``child_in.txt`` read, with the
+    same hash before and after, and ``child_out.txt`` written, with no
+    content before and the child's output after (#202). The child of the
+    fork, which is not a launch, leaves no row: its files are out of
+    scope (#375, #379).
     """
     project = stores(KINDS[kind].script)
     assert (project.path / "child_out.txt").read_bytes() == CHILD_OUTPUT
     parent_input = sha1((project.path / "parent_in.txt").read_bytes())
+    launch = KINDS[kind].launch
     with reading(project) as trial:
         trial_id = trial.id
         script = script_activation(trial)
-        accesses = list(trial.file_accesses)
-        assert [masked(project, access.name) for access in accesses] == [
-            "parent_in.txt"
-        ]
-        (access,) = accesses
+        accesses = {
+            masked(project, access.name): access for access in trial.file_accesses
+        }
+        expected = ["parent_in.txt"] + (list(CHILD_FILES) if launch else [])
+        assert sorted(accesses) == sorted(expected)
+        access = accesses["parent_in.txt"]
         # Booleans: a file access's repr is its Prolog fact, which holds
         # the absolute name of the file.
         read = access.mode == "r"
@@ -732,12 +752,38 @@ def test_child_file_accesses_are_not_recorded(stores, kind):
         calls = {call_activation(trial, call).id for call in KINDS[kind].calls}
         apart = access.activation_id not in calls
         assert apart, "the access belongs to a call that starts a process"
+        if launch:
+            launcher = call_activation(
+                trial, next(call for call in KINDS[kind].calls if call.name == launch)
+            )
+            for name in CHILD_FILES:
+                by_launch = accesses[name].activation_id == launcher.id
+                assert by_launch, "{} is not an access of the launch".format(name)
+            hashes = {
+                name: (
+                    accesses[name].mode,
+                    accesses[name].content_hash_before,
+                    accesses[name].content_hash_after,
+                )
+                for name in CHILD_FILES
+            }
+            child = sha1((project.path / "child.py").read_bytes())
+            assert hashes == {
+                "child.py": ("r", child, child),
+                "child_in.txt": ("r", sha1(CHILD_INPUT), sha1(CHILD_INPUT)),
+                "child_out.txt": ("w", None, sha1(CHILD_OUTPUT)),
+            }
     rows = project.query(
-        "SELECT name, mode FROM file_access WHERE trial_id = ?", trial_id
+        "SELECT name, mode FROM file_access WHERE trial_id = ? ORDER BY id",
+        trial_id,
     )
     assert [(masked(project, row["name"]), row["mode"]) for row in rows] == [
         ("parent_in.txt", "r")
-    ]
+    ] + (
+        [("child.py", "r"), ("child_in.txt", "r"), ("child_out.txt", "w")]
+        if launch
+        else []
+    )
 
 
 # --- the modules -------------------------------------------------------------
@@ -832,9 +878,9 @@ def test_fork_target_runs_without_an_activation(stores):
     what the child does is not in the store, whose activations of the
     process are the parent's calls
 
-    Characterization: #202 changes what is recorded of a child process on
-    purpose; if it records the forked child, its pull request updates this
-    test deliberately.
+    Characterization: #202 records launches, not forks, and left this
+    as it was; a change that records the forked child updates this test
+    deliberately.
     """
     project = stores("fork.py")
     assert (project.path / "child_out.txt").read_bytes() == CHILD_OUTPUT
@@ -884,12 +930,12 @@ def test_call_that_raises(stores):
     the dependent of no row, and its value is stored as the string
     ``'None'``; the parameters of ``boom`` keep their bindings. The same
     calls returning, ``int("7", 10)`` and ``fine(number, 2)``, have their
-    func and arguments
+    func and arguments. The launch that raised is recorded all the same:
+    the run call carries the child's three files (#202)
 
     Characterization of #378, a defect of the collector, not
     of subprocess; the value ``'None'`` has a cause of its own (the twin
-    does not state it). #202 changes how the subprocess call is recorded
-    on purpose; its pull request updates this test deliberately.
+    does not state it).
     """
     project = stores("raising_calls.py")
     with reading(project) as trial:
@@ -900,6 +946,9 @@ def test_call_that_raises(stores):
             assert traced == (call.name == "boom"), "{}: a code block: {}".format(
                 call.source, traced
             )
+            names = sorted(masked(project, a.name) for a in activation.file_accesses)
+            expected = list(CHILD_FILES) if call.name == "run" else []
+            assert names == expected, call.source
             # Counts and booleans: an evaluation's repr is its Prolog
             # fact, and a value can hold the executable's path.
             dependencies = len(list(evaluation.dependencies_as_dependent))
@@ -955,9 +1004,8 @@ def test_fork_child_content_blobs(stores):
     """The forked child writes into the parent's content store the content
     of its input and of its output, which no row names: exactly these two
 
-    Characterization of #379. #202 changes what is recorded of a
-    child process on purpose; if it names these blobs, its pull request
-    updates this test deliberately.
+    Characterization of #379. #202 records launches, not forks, and
+    left this as it was.
     """
     project = stores("fork.py")
     assert (project.path / "child_in.txt").read_bytes() == CHILD_INPUT
@@ -1119,10 +1167,11 @@ def test_script_that_replaces_itself_through_exec(replaced):
     blobs of its code with no row naming them; the same script without the
     exec (the control) is stored whole, its local module included
 
-    Characterization of #377. #202 records the processes
-    a script starts through audit hooks, and CPython raises ``os.exec``
-    before it replaces the image: if its pull request stores the trial
-    there, it updates this test deliberately.
+    Characterization of #377. #202 records the processes a script starts
+    through audit hooks, and CPython raises ``os.exec`` before it replaces
+    the image, but the tracer stores nothing there (it only closes its
+    pending launches in memory, by the decision recorded in #202): this
+    stays as it was.
     """
     # The outcomes reach the messages through normalize: a traceback holds
     # paths of the checkout, of the interpreter and of the project.
@@ -1214,9 +1263,8 @@ def test_forked_children_that_leave_through_sys_exit(forked_exits):
     prints the epilogue's line on stderr
 
     Characterization of #375 on the store; the oracle case
-    ``fork_child_exit_status`` pins the output. #202 records the processes
-    a script starts and may change what is stored of a forked child; if
-    it does, its pull request updates this test deliberately.
+    ``fork_child_exit_status`` pins the output. #202 records launches,
+    not forks, and left this as it was.
     """
     project, plain, traced = forked_exits
     # The outcomes reach the messages through normalize: a traceback holds

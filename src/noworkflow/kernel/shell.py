@@ -100,6 +100,11 @@ class OverrideShell(object):
         if store_history and not self.metascript.jupyter_original:
             # ToDo: variable dependency
             sys.meta_path.insert(0, self.metascript.definition.finder)
+            # The processes a cell starts are traced while it runs, next
+            # to the finder (#202); a launch a later cell waits for is
+            # finalized by the partial save of that cell.
+            external = self.metascript.execution.collector.external
+            external.start(self.metascript)
             result = self.old_run_cell(
                 raw_cell,
                 store_history=store_history,
@@ -107,6 +112,7 @@ class OverrideShell(object):
                 shell_futures=shell_futures,
                 cell_id=cell_id,
             )
+            external.stop()
             sys.meta_path.remove(self.metascript.definition.finder)
             # ToDo: capture exception: result.error_in_exec
             self.now_save()

@@ -177,6 +177,18 @@ class Run(Command):
             help="capture only activation-level provenance "
             "(activations, arguments, returns and file accesses)",
         )
+        add_arg(
+            "--external-tracer",
+            choices=["none", "argv", "strace"],
+            default="argv",
+            help="R|how the processes the script starts are recorded "
+            "(default: argv).\n"
+            "argv records the files their command lines name, with\n"
+            "their content before and after, and the files they create\n"
+            "in the project; none records nothing of them; strace\n"
+            "(Linux) also sees the files they open on their own\n"
+            "(not available yet: falls back to argv)",
+        )
 
         # Other
         if not self.is_ipython:

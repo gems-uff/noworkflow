@@ -313,13 +313,22 @@ neither executes:
   `os.posix_spawn` skip on Windows, and spawn and forkserver (#325, #334)
   run nowhere.
 - **External processes and compiled code:** `test_external_processes.py`
-  pins what the store records when a traced script starts a process, and
+  pins what the store records when a traced script starts a process (the
+  call, and since #202 the files the child's command line names and the
+  files it creates, as accesses of the call), and
   `test_compiled_modules.py` how an extension module of the standard
   library and a library loaded through `ctypes` are recorded (`_dbm` on
-  POSIX, `winsound` on Windows, which only `pre-release.yml` runs). #202 and
-  #203 change these characterizations on purpose. The leak detector sees
-  the children of the pytest process only, never what a `now` run as a
-  process leaves behind.
+  POSIX, `winsound` on Windows, which only `pre-release.yml` runs). #203
+  changes the module characterizations on purpose. What the external
+  process tracer (`prov_execution/external.py`) does on Windows, where
+  `subprocess` hands the audit hook one command-line string and
+  `os.spawn*` is a launch, runs only in `pre-release.yml`; a child of
+  `os.fork` or `multiprocessing` is not a launch and is tested as not
+  recorded; the `strace` backend has no test anywhere until #206
+  installs `strace` on a leg; and the kernel's own use of the tracer
+  (around each cell, `kernel/shell.py`) runs nowhere, like the rest of
+  the kernel. The leak detector sees the children of the pytest process
+  only, never what a `now` run as a process leaves behind.
 - **The exports off the reference leg:** goldens compare `prolog`, `prov`,
   `dataflow` and `prospective` on the reference leg only (Linux, the newest
   blocking Python); on every other leg nothing compares their output.
@@ -482,6 +491,17 @@ and therefore the first suspects when an upgrade breaks something:
   `now_tag_variable` into `builtins`, and inserts a finder at the front of
   `sys.meta_path` around the `exec` of the script, and removes it in a
   `finally`, whichever way the script leaves.
+- `src/noworkflow/now/collection/prov_execution/external.py`: installs an
+  audit hook (`sys.addaudithook`, which no process can remove: it stays
+  inert when no collection traces) that reads the `subprocess.Popen`,
+  `os.system`, `os.posix_spawn`, `os.spawn` and `os.exec` events as
+  CPython raises them, with the arguments each one carries; and, around
+  the `exec` of the script (and around each cell in the kernel), replaces
+  `subprocess.Popen.__init__`, `wait` and `poll` with wrappers that bind a
+  launch to its `Popen` and see its end through `returncode`, which is
+  where `run`, `check_output`, `communicate` and `with Popen` meet. The
+  class is not replaced, and the originals come back in the same
+  `finally` as the finder.
 - `src/noworkflow/now/persistence/content/safeopen.py`: keeps the original
   `open`s and restores them in a context manager; also pokes at
   `__builtins__["open"]`, which is a dict or a module depending on who imports
@@ -542,11 +562,12 @@ C program, in `beyond-python/` of the package and in
 `src/noworkflow/tests/e2e/corpus/beyond_python/` here, replayed by
 `src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job.
 Its tests need `Rscript` and `cc` and skip without them (the job sets
-`NOW_RSCRIPT=require`). The claims that only #202 to #206 can satisfy are
-`_desired` twins, `xfail(strict=True)` through `known_defects` with the
-signature of today's failure; the issue that makes one pass removes the
-mark in its own commit, and the issue that changes how one fails rewrites
-its signature. The map is the module's docstring.
+`NOW_RSCRIPT=require`). The claims that only #203 to #207 and #461 can
+satisfy are `_desired` twins, `xfail(strict=True)` through
+`known_defects` with the signature of today's failure; the issue that
+makes one pass removes the mark in its own commit, and the issue that
+changes how one fails rewrites its signature. The map is the module's
+docstring.
 
 ## Sensitive data
 
