@@ -185,7 +185,7 @@ happened; each section lists its blocks by name.
 
 ```bash
 now export prolog 2 > trial2.pl          # Prolog facts; `now schema prolog` documents each predicate
-now export prov 2 > trial2.provn         # PROV-N
+now export prov 2 > trial2.provn         # PROV-N; each file access is an entity of its activation
 now export dataflow 2 | dot -Tpng -o dataflow.png
 now export prospective 2 | dot -Tsvg -o structure.svg   # the static structure of the script
 now export ast -d 2 | dot -Tpng -o ast.png               # the script's AST
