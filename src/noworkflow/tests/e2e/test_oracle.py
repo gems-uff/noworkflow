@@ -528,6 +528,18 @@ MODULE_ON_ANOTHER_DRIVE = Defect(
     systems=("win32",),
     condition=STDLIB_ON_ANOTHER_DRIVE,
 )
+TEMPORARY_FILE_READ_AT_STORE = Defect(
+    "#407: the final sweep of Collector.store (collector.py) reopens by "
+    "name every write-mode access whose content_hash_after is unset and "
+    "whose name os.path.isfile accepts, with no error handling; on "
+    "Windows a file of tempfile is delete-on-close (O_TEMPORARY) and "
+    "still exists under its name while open, so the second open is "
+    "denied, the store fails after the script ran and `now run` exits "
+    "with 1 (measured on every Windows leg of pre-release.yml and on "
+    "main without #202; the script runs and stores on Linux and macOS)",
+    signature="PermissionError: [Errno 13] Permission denied",
+    systems=("win32",),
+)
 YIELD_IN_CALL_ARGUMENT = Defect(
     "#311: Collector.call (collector.py) pushes a "
     "FutureActivation on "
@@ -864,7 +876,10 @@ CASES = (
         case("distribution_finder.py", defects=(DISTRIBUTION_LOOKUP,)),
         case("duplicate_distributions.py", defects=(DISTRIBUTIONS_LISTED_TWICE,)),
         case("setuptools_vendor_path.py"),
-        case("directories_and_temporary_files.py"),
+        case(
+            "directories_and_temporary_files.py",
+            defects=(TEMPORARY_FILE_READ_AT_STORE,),
+        ),
     ]
 )
 
