@@ -570,7 +570,7 @@ C program, in `beyond-python/` of the package and in
 `src/noworkflow/tests/e2e/corpus/beyond_python/` here, replayed by
 `src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job.
 Its tests need `Rscript` and `cc` and skip without them (the job sets
-`NOW_RSCRIPT=require`). The claims that only #205 to #207 and #461 can
+`NOW_RSCRIPT=require`). The claims that only #206, #207 and #461 can
 satisfy are `_desired` twins, `xfail(strict=True)` through
 `known_defects` with the signature of today's failure; the issue that
 makes one pass removes the mark in its own commit, and the issue that

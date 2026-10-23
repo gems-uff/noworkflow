@@ -25,7 +25,7 @@ Structural assertions only, no goldens: a golden of a command that still
 fails cannot be recorded. With ``NOW_PAPER_DATASET`` pointing at the real
 dataset the same tests run on it.
 
-The claims that only #205 to #207 and #461 can satisfy are ``_desired``
+The claims that only #206, #207 and #461 can satisfy are ``_desired``
 twins, marked ``xfail(strict=True)`` through ``known_defects`` with the
 issue, the mechanism and the signature of today's failure (measured on
 this tree). The issue that makes a twin pass removes the mark in the same
@@ -36,7 +36,6 @@ rewrites the ``Defect``'s signature. The map:
 twin                                                                 passes signature
                                                                      with   changes
 ==================================================================== ====== =========
-test_restore_f_of_the_compiled_binary_keeps_it_executable_desired    #205 (#246)
 test_strace_tracer_records_the_file_model_r_sources_desired          #206
 test_rdtlite_file_entities_become_accesses_of_the_launch_desired     #207
 test_export_prov_has_entities_for_the_exchanged_files_desired        #461
@@ -52,21 +51,26 @@ names, so a trial has nine accesses, not eight; ``now restore 1.1.1``
 records a backup trial (2.0.0), as the running example's 7.0.0, because
 the outputs 1.1.3 created have no content before their first access and
 the restore sees them as changed; and ``now restore 1.1.3 -f metrics``
-without ``-i`` restores nothing (#246), instead of finding no version.
+without ``-i`` restored nothing (#246), instead of finding no version.
 
 The claims of #203 (``Rscript``, ``cc`` and the compiled ``metrics`` in
 the module table, with the real path, the hash of the binary and a
 probed version for the first two; ``now show -m``; the new hash of the
 rebuilt binary in 1.1.3) passed with it and lost their marks and their
 suffix. The module row of ``metrics`` changed a twin's failure: ``now
-restore 1.1.3 -f metrics`` finds the binary through its module row, the
+restore 1.1.3 -f metrics`` found the binary through its module row, the
 local module that ``Trial.iterate_accesses`` yields before the accesses,
-and writes its bytes back without the executable bit (#205).
+and wrote its bytes back without the executable bit.
 
 The claims of #204 (``now diff -f`` pairs the two accesses to
 ``pred.csv`` by mode, ``--content`` prints the unified diff of
 ``model.R``, and ``-m`` the code hash of the rebuilt binary) passed with
 it and lost their marks and their suffix.
+
+The claim of #205 (with #246, absorbed by it: ``-f`` without ``-i``
+restores the content a trial wrote into a file it created) passed with
+it and lost its mark and its suffix: the restored ``metrics`` is
+executable, because it is a program the trial launched.
 
 The two rdtLite tests run a fourth trial of their own, the wrapper of
 ``corpus/beyond_python/rdtlite`` (``model.R`` under rdtLite's
@@ -160,21 +164,6 @@ SHOW_MODULES = "[now] this trial depends on the following modules:"
 def read_kind(mode):
     """A mode as the section states it: a read is ``r``, binary or not"""
     return "r" if mode in ("r", "rb") else mode
-
-
-def restore_loses_the_bit(signature):
-    """#205 (with #246): a restored executable comes back without its
-    mode"""
-    return Defect(
-        "#205 (#246): Restore.restore (cmd/cmd_restore.py) writes the "
-        "content of the version into the path and records no mode, so "
-        "the executable bit of a launched binary (module.path, #203) is "
-        "lost; `-f FILE` without `-i` finds a launched binary of the "
-        "project through its module row, but a file the trial created "
-        "that is no module still has only the hash before its first "
-        "access, empty (#246, absorbed by #205)",
-        signature=signature,
-    )
 
 
 def no_provjson_link(signature):
@@ -995,8 +984,7 @@ def test_diff_m_prints_the_code_hash_change_of_the_recompiled_binary(case):
 # --- Section 6.4: restore and the executable bit (#205) --------------------
 
 
-@known_defects(restore_loses_the_bit("metrics restored with mode"))
-def test_restore_f_of_the_compiled_binary_keeps_it_executable_desired(case):
+def test_restore_f_of_the_compiled_binary_keeps_it_executable(case):
     """With the binary deleted, `now restore 1.1.3 -f metrics` brings
     back the bytes the trial wrote (its first access has no content
     before: the version after it is the one, #246) and leaves it

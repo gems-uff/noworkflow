@@ -222,12 +222,14 @@ working files differ from the last trial, it first records a backup trial
 `now restore <backup>` undoes the restore. The next `now run` becomes a
 child of the restored trial, so the history branches. `-f` restores one
 file without creating a backup or changing the history; `-i` picks which
-access (timestamp, access number or content hash).
+access (timestamp, access number or content hash). Without `-i`, `-f`
+restores the file as the trial first had it, or, for a file the trial
+created, what the trial wrote into it; a version in which the file did not
+exist never deletes a `-t` target. A program the trial launched comes back
+executable; any other file comes back with the default mode.
 
-Known defects: `-f` onto an existing target with the default access can
-delete the target (#246); a binary local module crashes the restore (#183);
-the executable bit is lost (#205); `--dir` from another directory writes
-into the current one (#245).
+Known defects: a binary local module crashes the restore (#183); `--dir`
+from another directory writes into the current one (#245).
 
 ### 7. History: `now history`
 
