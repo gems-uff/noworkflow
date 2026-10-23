@@ -198,6 +198,14 @@ Optional, each for one purpose:
 - **Google Chrome**, for the tests of the vis in a browser (with the
   `browser` dependency group); they skip without it. The `vis-browser` job
   of CI installs it. See [The vis in a browser](#the-vis-in-a-browser).
+- **R (`Rscript`) and a C compiler (`cc`)**, for the tests of the case
+  study of the paper's "Beyond Python" section
+  (`src/noworkflow/tests/e2e/test_beyond_python.py`, see [The paper's
+  running example](#the-papers-running-example)); they skip without them.
+  Base R is enough (`r-base-core` on Debian and Ubuntu, `brew install r`
+  on macOS); the C compiler is the system's. Two of those tests also need
+  the rdtLite package in R (`install.packages("rdtLite")`) and skip
+  without it.
 - **[issuefinder](https://github.com/gems-uff/issuefinder)**, cloned next to
   the checkout (`../issuefinder`), to search the existing issues before
   opening one: it finds an issue written with other words or in the other
@@ -367,6 +375,16 @@ triaged as "The paper's running example" in `AGENTS.md` says: the change
 regressed, or the paper and its package must follow it; the expectation is
 never edited to make the test pass. To replay on the real dataset, see the
 README in `src/noworkflow/tests/e2e/corpus/paper_example/`.
+
+`src/noworkflow/tests/e2e/test_beyond_python.py` does the same for the
+case study of the paper's "Beyond Python" section (a Python wrapper that
+launches an R script and a C program, three trials), from
+`src/noworkflow/tests/e2e/corpus/beyond_python/`. Its tests carry the same
+`paper` mark and run in the same job, which installs R; locally they need
+`Rscript` and `cc` on the PATH and skip without them, and
+`NOW_RSCRIPT=require` fails instead of skipping, as the job sets. The
+claims that wait for #202 to #206 are `_desired` twins marked
+`xfail(strict=True)`: see "The paper's running example" in `AGENTS.md`.
 
 ### The vis in a browser
 

@@ -328,7 +328,14 @@ neither executes:
 - **The paper's running example off the reference platform:** the
   `paper-example` job replays it on Linux with the reference leg's Python
   only; the claims that depend on noWorkflow's numbering, and its goldens,
-  are skipped anywhere else, and no other leg runs it at all.
+  are skipped anywhere else, and no other leg runs it at all. The same
+  goes for the case study of the "Beyond Python" section
+  (`test_beyond_python.py`), the only tests that run R and a C compiler:
+  the job and the reference container install `r-base-core`, every other
+  leg deselects `paper`, and a maintainer's machine without `Rscript`
+  skips them. Its strace variant runs nowhere until #206 installs
+  `strace` on a leg, and its two claims under rdtLite run only where the
+  rdtLite package is installed in R, which no leg does.
 - **The optional content engines** (`dulwich`, `pygit`, `gitdb`): only the
   `engines` job of `ci.yml` installs them (the `engines` group) and runs
   the tests marked `engines`, the contract tests of
@@ -528,6 +535,18 @@ the maintainer decides whether the change regressed or the paper and the
 package must follow it; the expectation is never edited just to make the
 test pass. When the package gets a new tag, the copy in the tests follows in
 the same commit.
+
+The case study of the paper's "Beyond Python" section is a second example
+in the same three places: a Python wrapper that launches an R script and a
+C program, in `beyond-python/` of the package and in
+`src/noworkflow/tests/e2e/corpus/beyond_python/` here, replayed by
+`src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job.
+Its tests need `Rscript` and `cc` and skip without them (the job sets
+`NOW_RSCRIPT=require`). The claims that only #202 to #206 can satisfy are
+`_desired` twins, `xfail(strict=True)` through `known_defects` with the
+signature of today's failure; the issue that makes one pass removes the
+mark in its own commit, and the issue that changes how one fails rewrites
+its signature. The map is the module's docstring.
 
 ## Sensitive data
 

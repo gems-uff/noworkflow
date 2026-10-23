@@ -402,15 +402,17 @@ jobs:
         run: bash ../../.github/scripts/tsc-baseline.sh 1
 
   # The running example of the noWorkflow 2 paper (#257), replayed from
-  # src/noworkflow/tests/e2e/corpus/paper_example: a red here means the tool
-  # no longer produces what the paper shows, and is triaged as "The paper's
-  # running example" in AGENTS.md says, never by editing the expectation. A
-  # job of its own because it needs the `paper` dependency group
-  # (scikit-learn, imbalanced-learn, pandas), which the matrix legs do not
-  # sync, and SWI-Prolog for the paper's Prolog query. Blocking: it is in the
-  # needs of ci-ok. It runs on the reference platform (the Python of the
-  # reference leg, which moves with it), where its goldens and the claims
-  # that depend on noWorkflow's numbering are recorded.
+  # src/noworkflow/tests/e2e/corpus/paper_example, and the case study of its
+  # "Beyond Python" section (#459), replayed from corpus/beyond_python: a red
+  # here means the tool no longer produces what the paper shows, and is
+  # triaged as "The paper's running example" in AGENTS.md says, never by
+  # editing the expectation. A job of its own because it needs the `paper`
+  # dependency group (scikit-learn, imbalanced-learn, pandas), which the
+  # matrix legs do not sync, SWI-Prolog for the paper's Prolog query, and R
+  # for the case study's model (the C compiler is on the runner image).
+  # Blocking: it is in the needs of ci-ok. It runs on the reference platform
+  # (the Python of the reference leg, which moves with it), where its goldens
+  # and the claims that depend on noWorkflow's numbering are recorded.
   paper-example:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -424,30 +426,37 @@ jobs:
           python-version: "3.15"
           enable-cache: true
 
-      - name: Install SWI-Prolog
+      # r-base-core: Rscript for the case study's model.R (base R, no
+      # package); NOW_RSCRIPT=require below fails its tests instead of
+      # skipping them when Rscript or cc is missing.
+      - name: Install SWI-Prolog and R
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox r-base-core
 
       - name: Install dependencies
         run: uv sync --locked --group paper
 
-      - name: Run the paper example
+      - name: Run the paper example and the case study
         env:
           GOLDEN: require
           GOLDEN_ACTUAL_DIR: ${{ runner.temp }}/golden-actual
+          NOW_RSCRIPT: require
         run: |
           set -o pipefail
           uv run --no-sync pytest -m paper | tee pytest.log
 
-      # min-tests: every test of the module, none skipped here (the group,
-      # swipl and the reference platform are all present).
+      # min-tests: every test of the two modules; none skipped here (the
+      # group, swipl, Rscript, cc and the reference platform are all
+      # present) but the strace variant of the case study, which skips
+      # until #206 installs strace, and its two claims under rdtLite, which
+      # no leg installs; a skip counts.
       - name: Record the test count
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh pytest.log 41 \
+          bash .github/scripts/pytest-summary.sh pytest.log 72 \
             "paper example (ubuntu-latest, 3.15)" \
-            'uv sync --locked --group paper && GOLDEN=require uv run --no-sync pytest -m paper'
+            'uv sync --locked --group paper && GOLDEN=require NOW_RSCRIPT=require uv run --no-sync pytest -m paper'
 
       - name: Upload the outputs that differ from the goldens
         if: failure()

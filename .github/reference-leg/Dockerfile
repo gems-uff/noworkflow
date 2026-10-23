@@ -14,7 +14,7 @@ FROM --platform=linux/amd64 ubuntu:24.04
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates git build-essential swi-prolog-nox graphviz \
+ && apt-get install -y --no-install-recommends ca-certificates git build-essential swi-prolog-nox graphviz r-base-core \
  && rm -rf /var/lib/apt/lists/*
 
 ARG PYTHON
