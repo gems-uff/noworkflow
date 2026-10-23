@@ -53,6 +53,10 @@ from pathlib import Path
 import pytest
 
 import noworkflow
+from noworkflow.now.collection.prov_execution.external import (
+    EXECUTABLE_CAP,
+    PLACEHOLDER_PREFIX,
+)
 
 from ..helpers.defects import Defect, known_defects
 from .harness import (
@@ -788,6 +792,48 @@ def test_restore_of_a_deleted_executable_desired(project):
 
     mode = stat.S_IMODE((project.path / "tool.sh").stat().st_mode)
     assert mode == before, "{} != {}".format(oct(mode), oct(before))
+
+
+# A program of the project above the cap of #203: a shell script that
+# exits at its second line, padded past 16 MB with a comment the shell
+# never reads.
+LARGE_PROGRAM = "#!/bin/sh\nexit 0\n#{}\n"
+LARGE_PROGRAM_SCRIPT = (
+    "import subprocess\n"
+    "\n"
+    "completed = subprocess.run(['./large.sh'])\n"
+    "print('exit', completed.returncode)\n"
+)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="a shell script as the launched program")
+def test_restore_never_writes_the_placeholder_of_a_large_executable(project):
+    """A launched program of the project above ``EXECUTABLE_CAP`` is a
+    local module whose code is a placeholder, not its bytes (#203): `now
+    restore` of the trial, which restores the local modules, and `now
+    restore -f` of the program both leave the file as it is, report on
+    stderr that it was too large to store, and exit with 1"""
+    padding = "x" * (EXECUTABLE_CAP + 1)
+    project.write("large.sh", LARGE_PROGRAM.format(padding))
+    os.chmod(project.path / "large.sh", 0o755)
+    project.write("main.py", LARGE_PROGRAM_SCRIPT)
+    result = project.run("run", "main.py")
+    assert "exit 0" in result.stdout.splitlines()
+    (row,) = project.query(
+        "SELECT m.name, b.code_hash FROM module m JOIN code_block b "
+        "ON b.trial_id = m.trial_id AND b.id = m.code_block_id WHERE m.name = 'large.sh'"
+    )
+    placeholder = project.content(row["code_hash"])
+    assert placeholder.startswith(PLACEHOLDER_PREFIX), placeholder[:60]
+
+    changed = LARGE_PROGRAM.format("y" * (EXECUTABLE_CAP + 1)).encode("ascii")
+    (project.path / "large.sh").write_bytes(changed)
+    for args in (("restore", "1"), ("restore", "1", "-f", "large.sh")):
+        result = project.run(*args, expect=1, allow_stderr=True)
+        assert "the executable was too large to store" in result.stderr, result
+        assert "File has not changed!" not in result.stdout, result
+        kept = (project.path / "large.sh").read_bytes() == changed
+        assert kept, "now {} wrote over large.sh".format(" ".join(args))
 
 
 # ---------------------------------------------------------------------------

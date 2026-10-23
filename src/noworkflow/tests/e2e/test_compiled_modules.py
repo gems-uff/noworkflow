@@ -13,15 +13,15 @@ module of the standard library (``EXTENSION``), directly and, on POSIX,
 through the ``dbm`` package, and pin what the store records, what ``now
 show -m`` lists, and that ``now diff -m`` finds no change between two
 trials of the same script. The last test loads the same file as a shared
-library through ``ctypes``, which no import finder sees: today no
-``module`` row names it. Structural only: the path, the hash and the size
+library through ``ctypes``, which no import finder sees: the
+``ctypes.dlopen`` audit event gives it a ``module`` row (#203). Structural only: the path, the hash and the size
 of the file differ per platform, Python version and build, so none of
 them is written here.
 
-#203 adds the executable of a launched process and the libraries that
+#203 added the executable of a launched process and the libraries that
 ``ctypes`` loads (from the ``ctypes.dlopen`` audit event) to this table,
 and #204 changes what ``now diff -m`` reports when a module's code hash
-changes: their pull requests revisit these tests on purpose.
+changes: its commit revisits these tests on purpose.
 
 The extension module of each system, and how to redo the choice for a new
 interpreter:
@@ -372,22 +372,21 @@ def is_ctypes_module(name):
     return name in ("ctypes", "_ctypes") + CTYPES_IMPORTS or name.startswith("ctypes.")
 
 
-def test_run_records_no_module_for_a_library_loaded_through_ctypes(
+def test_run_records_a_library_loaded_through_ctypes_as_a_module(
     project, extension_file
 ):
-    """A library that the script loads with ``ctypes.CDLL`` has no
-    ``module`` row: the import finder never sees it. The trial records
-    only modules of ``ctypes`` itself and what it imports (``ctypes`` and
-    ``ctypes._endian`` on python-build-standalone 3.11 to 3.15 on macOS,
-    plus ``sysconfig`` on 3.13 and 3.14; none where noWorkflow imported
-    ``ctypes`` before the script), and the call is an activation
-    without a code block. The library is the ``EXTENSION`` file, a real
-    shared library that ``extension_file`` already located, so the test
-    depends on no library the runner may lack.
-
-    Characterization: #203 records a library loaded through ``ctypes`` as a
-    module, with the hash of its file, and changes this on purpose; its
-    pull request updates this test deliberately.
+    """A library that the script loads with ``ctypes.CDLL`` by its path
+    gets a ``module`` row (#203), from the ``ctypes.dlopen`` audit event:
+    named as the path names it, with its real path, the SHA-1 of its
+    bytes as code hash, those bytes in the content store and no version.
+    Besides it, the trial records only modules of ``ctypes`` itself and
+    what it imports (``ctypes`` and ``ctypes._endian`` on
+    python-build-standalone 3.11 to 3.15 on macOS, plus ``sysconfig`` on
+    3.13 and 3.14; none where noWorkflow imported ``ctypes`` before the
+    script), and the call is an activation without a code block. The
+    library is the ``EXTENSION`` file, a real shared library that
+    ``extension_file`` already located, so the test depends on no library
+    the runner may lack.
     """
     project.write("main.py", CTYPES_SCRIPT.format(path=extension_file))
     result = run_now(project, "run", "main.py")
@@ -397,14 +396,28 @@ def test_run_records_no_module_for_a_library_loaded_through_ctypes(
     assert trial["status"] == "finished"
 
     rows = project.query(
-        "SELECT name, path FROM module WHERE trial_id = ?", trial["id"]
+        "SELECT m.name, m.path, m.version, b.code_hash FROM module m "
+        "JOIN code_block b ON b.trial_id = m.trial_id AND b.id = m.code_block_id "
+        "WHERE m.trial_id = ?",
+        trial["id"],
     )
-    others = sorted(row["name"] for row in rows if not is_ctypes_module(row["name"]))
+    libraries = [row for row in rows if same_path(row["path"], extension_file)]
+    assert len(libraries) == 1, "{} module rows name the library".format(len(libraries))
+    (library,) = libraries
+    assert library["name"] == os.path.basename(extension_file)
+    data = Path(extension_file).read_bytes()
+    assert library["code_hash"] == sha1(data)
+    stored = project.content(library["code_hash"]) == data
+    assert stored, "the content store does not hold the bytes of the library"
+    assert library["version"] is None
+    others = sorted(
+        row["name"]
+        for row in rows
+        if row is not library and not is_ctypes_module(row["name"])
+    )
     assert others == [], "modules that are not ctypes: {}".format(
         project.normalize(", ".join(others))
     )
-    names_the_library = any(same_path(row["path"], extension_file) for row in rows)
-    assert not names_the_library, "a module row names the library that ctypes loaded"
     calls = project.query(
         "SELECT typeof(code_block_id) AS type FROM activation "
         "WHERE trial_id = ? AND name = 'CDLL'",

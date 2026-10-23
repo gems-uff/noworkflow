@@ -31,11 +31,11 @@ child's command line names, read with the same hash before and after,
 and the files the child creates, written with no content before: here
 the child's script, its input and its output. A forked child
 (``multiprocessing``) is not a launch and records nothing (#375, #379).
-The module table still holds what a script with the same imports and no
-call holds: #203 (the executable of a launched process and the libraries
-loaded through ctypes recorded in the module table) changes that
-characterization on purpose; the tests name it, and its commit updates
-them deliberately, so its diff shows what changed. Two scripts go
+Since #203 the module table holds, besides what a script with the same
+imports and no call holds, one row for the program the process runs:
+the interpreter, under the name the command line gives it, with its real
+path, the hash of its bytes and the version it prints; a fork adds no
+such row. Two scripts go
 further: ``execv.py`` replaces its own process through ``os.execv``, and
 its trial is lost; ``fork_exit.py`` forks children with ``os.fork()``
 that leave through ``sys.exit``, and each one stores the trial as well.
@@ -64,6 +64,7 @@ from collections import Counter, defaultdict
 
 import pytest
 
+from noworkflow.now.collection.prov_execution.external import executable_content
 from noworkflow.now.persistence.models import Trial
 from noworkflow.tests.e2e.harness import (
     NowProject,
@@ -790,31 +791,53 @@ def test_child_file_accesses_are_recorded_with_the_launch(stores, kind):
 
 
 @pytest.mark.parametrize("kind", NEW_INTERPRETER_KINDS)
-def test_process_call_adds_no_module(stores, kind):
-    """A script that starts a process records the same modules as the
-    control, which has the same imports and starts nothing; no module row
-    names the executable or the child's script
-
-    Characterization: #203 records the executable of a launched process
-    as a module and changes this on purpose; its pull request updates this
-    test deliberately.
-    """
+def test_process_call_adds_the_interpreter_as_a_module(stores, kind):
+    """A script that starts a process records the modules of the control,
+    which has the same imports and starts nothing, plus one row for the
+    program the process runs (#203): the interpreter that the script's
+    ``sys.executable`` names, under the name the command line gives it,
+    with its real path, the version it prints and, as code, its bytes or,
+    above ``EXECUTABLE_CAP`` (the interpreters of uv are larger on some
+    systems), the placeholder with their SHA-1; no row names the child's
+    script. Through a shell (``shell``, ``system``, ``os_popen``) the row
+    is the program of the command, not the shell."""
     with reading(stores("control.py")) as control:
         expected = sorted(module.name for module in control.modules)
     project = stores(KINDS[kind].script)
     with reading(project) as trial:
         modules = list(trial.modules)
-        assert sorted(module.name for module in modules) == expected
         paths = executables(project, trial.id)
         assert paths, "the script evaluated no sys.executable"
-        named = any(
-            same_path(module.path, path) for module in modules for path in paths
+        programs = [
+            module
+            for module in modules
+            if any(same_path(module.path, path) for path in paths)
+        ]
+        assert len(programs) == 1, "{} module rows name the executable".format(
+            len(programs)
         )
-        assert not named, "a module row names the executable"
+        (program,) = programs
+        others = sorted(module.name for module in modules if module is not program)
+        assert others == expected
+        names = {os.path.basename(path) for path in paths}
+        assert program.name in names, "the row is named {!r}".format(program.name)
+        assert (program.version or "").startswith("Python "), program.version
         # A boolean: pytest would show the modules passed to the call,
         # whose Prolog facts hold their paths.
         child = names_the_child(project, modules)
         assert not child, "a module row names the child"
+        real = os.path.realpath(program.path)
+    (row,) = project.query(
+        "SELECT b.code_hash FROM module m JOIN code_block b "
+        "ON b.trial_id = m.trial_id AND b.id = m.code_block_id "
+        "WHERE m.trial_id = ? AND m.name = ?",
+        trial.id,
+        program.name,
+    )
+    code = executable_content(real)
+    assert row["code_hash"] == sha1(code)
+    stored = project.content(row["code_hash"]) == code
+    assert stored, "the content store does not hold the code of the executable"
 
 
 # What multiprocessing.spawn imports, which `python -m noworkflow` has
@@ -844,9 +867,8 @@ def test_fork_adds_only_multiprocessing_modules(stores):
     where popen_fork imports the resource tracker), on the build of the
     interpreter (the C modules) and on how ``now`` starts (``runpy`` under
     the console script), so only what it is made of is pinned.
-    Characterization: #203 changes the module table on purpose (the
-    executable, the libraries loaded through ctypes); its pull request
-    updates this test deliberately.
+    A fork is not a launch: the program it runs is the interpreter
+    already running, and #203 adds no row for it.
     """
     with reading(stores("control.py")) as control:
         expected = {module.name for module in control.modules}

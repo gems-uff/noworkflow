@@ -19,6 +19,8 @@ program itself is never a file access, a launch made under
 ``suspended()`` or with ``--external-tracer none`` is not recorded, a
 launch that fails to start leaves nothing, and once the collection ends
 the hook is inert and ``subprocess.Popen`` has its own functions back.
+``TestProgramsAsModules`` (#203) reads the ``module`` rows of the
+programs the launches run and of the libraries loaded through ``ctypes``.
 
 ``e2e/test_external_processes.py`` pins the same from a real store, for
 ``now run`` as a process; ``test_external_parsing.py`` the pure functions.
@@ -625,3 +627,217 @@ class TestExternalProcessLimits(ExternalProcessTestCase):
         self.assertFalse(external.popen_patched())
         self.assertIsNone(external.current())
         self.assert_child_files("run")
+
+
+PROBED_TOOL = """\
+#!/bin/sh
+case "$1" in --version|-version) echo probed > probed.txt; exit 0 ;; esac
+cat "$1" > /dev/null
+"""
+
+
+class TestProgramsAsModules(ExternalProcessTestCase):
+    """The program a launch runs is a module of the trial (#203)"""
+
+    # pylint: disable=invalid-name
+
+    def rows(self, name=None):
+        """The module rows, in id order, all of them or those of a name"""
+        found = [
+            module
+            for module in self.metascript.modules_store.store.values()
+            if module is not None and (name is None or module.name == name)
+        ]
+        found.sort(key=lambda module: module.id)
+        return found
+
+    def code_hash(self, module):
+        return self.metascript.code_blocks_store[module.code_block_id].code_hash
+
+    def test_the_interpreter_of_a_launch_is_a_module_with_its_version(self):
+        """``run([sys.executable, ...])``: one row, named as the command
+        line names the program, with its real path, the version it prints
+        and the hash of its code; the version probe is no launch and opens
+        nothing the trial records (its stdin is os.devnull)"""
+        self.collect_ok(run_script("in.txt", "out.txt"), bypass_modules=False)
+        (row,) = self.rows()
+        real = os.path.realpath(sys.executable)
+        self.assertEqual(row.name, os.path.basename(sys.executable))
+        self.assertEqual(row.path, real)
+        self.assertTrue(row.version.startswith("Python "), row.version)
+        self.assertEqual(self.code_hash(row), sha1(external.executable_content(real)))
+        self.assertFalse(row.transformed)
+        self.assert_child_files("run")
+        self.assertEqual(len(self.accesses()), 3)
+        tracer = self.metascript.execution.collector.external
+        self.assertEqual(tracer.pending, [])
+        self.assertEqual(list(tracer.versions.values()), [row.version])
+
+    def test_bypass_modules_records_no_program_and_keeps_the_accesses(self):
+        """``-b``: no row, the files exchanged as without it"""
+        self.collect_ok(run_script("in.txt", "out.txt"), bypass_modules=True)
+        self.assertEqual(self.rows(), [])
+        self.assert_child_files("run")
+
+    def test_external_tracer_none_records_no_program(self):
+        self.collect_ok(
+            run_script("in.txt", "out.txt"),
+            bypass_modules=False,
+            external_tracer="none",
+        )
+        self.assertEqual(self.rows(), [])
+
+    def test_the_same_program_launched_twice_is_one_row_probed_once(self):
+        self.collect_ok(
+            "# script.py\n"
+            "import subprocess\n"
+            "import sys\n"
+            "subprocess.run([sys.executable, 'child.py', 'in.txt', 'a.txt'])\n"
+            "subprocess.run([sys.executable, 'child.py', 'in.txt', 'b.txt'])\n",
+            bypass_modules=False,
+        )
+        self.assertEqual(len(self.rows()), 1)
+        tracer = self.metascript.execution.collector.external
+        self.assertEqual(len(tracer.versions), 1)
+
+    def test_an_executable_above_the_cap_is_a_placeholder_with_its_sha1(self):
+        """Above the cap the code is the placeholder, whose hash follows
+        the SHA-1 and the size of the file"""
+        self.script(run_script("in.txt", "out.txt"), bypass_modules=False)
+        tracer = self.metascript.execution.collector.external
+        tracer.executable_cap = 10
+        self.metascript.execution.collect_provenance()
+        self.assertEqual(self.metascript.execution.msg, SUCCESS)
+        (row,) = self.rows()
+        data = self.read(row.path)
+        placeholder = external.PLACEHOLDER.format(sha1(data), len(data))
+        self.assertEqual(self.code_hash(row), sha1(placeholder.encode("ascii")))
+
+    def test_a_launch_that_fails_to_start_takes_its_row_with_it(self):
+        """The program exists but the process never ran (its cwd does not
+        exist): no row, no code block for it, and a later launch of the
+        same program records it"""
+        self.collect_ok(
+            "# script.py\n"
+            "import subprocess\n"
+            "import sys\n"
+            "try:\n"
+            "    subprocess.run([sys.executable, 'child.py'], cwd='no_such_dir')\n"
+            "except OSError:\n"
+            "    failed = True\n"
+            "rows = len([m for m in __noworkflow__.metascript.modules_store.store.values() if m])\n"
+            "subprocess.run([sys.executable, 'child.py', 'in.txt', 'out.txt'])\n",
+            bypass_modules=False,
+        )
+        self.assertTrue(self.metascript.namespace["failed"])
+        self.assertEqual(self.metascript.namespace["rows"], 0)
+        (row,) = self.rows()
+        blocks = [
+            block
+            for block in self.metascript.code_blocks_store.store.values()
+            if block is not None and block.id != 1
+        ]
+        self.assertEqual([block.id for block in blocks], [row.code_block_id])
+
+    @POSIX
+    def test_a_program_outside_the_allowlist_is_never_run_to_probe_it(self):
+        """``./tool.sh``: a row with its real path and its bytes as code,
+        no version, and no run with ``--version`` (it would write
+        probed.txt)"""
+        self.write("tool.sh", PROBED_TOOL)
+        os.chmod("tool.sh", 0o755)
+        self.collect_ok(
+            "# script.py\n"
+            "import subprocess\n"
+            "result = subprocess.run(['./tool.sh', 'in.txt'])\n",
+            bypass_modules=False,
+        )
+        (row,) = self.rows()
+        self.assertEqual(
+            (row.name, row.path, row.version),
+            ("tool.sh", os.path.realpath("tool.sh"), None),
+        )
+        self.assertEqual(self.code_hash(row), sha1(PROBED_TOOL.encode("utf-8")))
+        self.assertFalse(os.path.exists("probed.txt"))
+
+    @POSIX
+    def test_a_program_rewritten_during_the_trial_gets_a_second_row(self):
+        """One row per version of the file a trial runs: the program
+        rewritten between two launches has two rows, with the two hashes;
+        a third launch of the second version adds none"""
+        self.write("tool.sh", PROBED_TOOL)
+        os.chmod("tool.sh", 0o755)
+        self.collect_ok(
+            "# script.py\n"
+            "import os\n"
+            "import subprocess\n"
+            "subprocess.run(['./tool.sh', 'in.txt'])\n"
+            "with open('tool.sh', 'a', encoding='utf-8') as tool:\n"
+            "    tool.write('# rebuilt\\n')\n"
+            "subprocess.run(['./tool.sh', 'in.txt'])\n"
+            "subprocess.run(['./tool.sh', 'in.txt'])\n",
+            bypass_modules=False,
+        )
+        rows = self.rows("tool.sh")
+        self.assertEqual(
+            [self.code_hash(row) for row in rows],
+            [
+                sha1(PROBED_TOOL.encode("utf-8")),
+                sha1((PROBED_TOOL + "# rebuilt\n").encode("utf-8")),
+            ],
+        )
+
+    @POSIX
+    def test_a_shell_line_records_the_program_of_each_command(self):
+        """``shell=True``: the programs of the commands of the line, not
+        the shell that runs them"""
+        self.write("tool.sh", PROBED_TOOL)
+        os.chmod("tool.sh", 0o755)
+        self.collect_ok(
+            "# script.py\n"
+            "import subprocess\n"
+            "subprocess.run('./tool.sh in.txt | cat > copy.txt', shell=True)\n",
+            bypass_modules=False,
+        )
+        self.assertEqual(sorted(row.name for row in self.rows()), ["cat", "tool.sh"])
+
+    @POSIX
+    def test_a_bare_name_is_resolved_on_the_path_of_the_env_given(self):
+        """``env={"PATH": ...}`` decides where a bare name is found, as it
+        decides for subprocess"""
+        os.mkdir("bin")
+        self.write(os.path.join("bin", "mytool"), PROBED_TOOL)
+        os.chmod(os.path.join("bin", "mytool"), 0o755)
+        self.collect_ok(
+            "# script.py\n"
+            "import os\n"
+            "import subprocess\n"
+            "subprocess.run(['mytool', 'in.txt'], env={'PATH': os.path.abspath('bin')})\n",
+            bypass_modules=False,
+        )
+        (row,) = self.rows()
+        self.assertEqual(
+            (row.name, row.path),
+            ("mytool", os.path.realpath(os.path.join("bin", "mytool"))),
+        )
+
+    def test_a_library_is_a_module_only_when_loaded_by_a_path(self):
+        """``ctypes.dlopen``: a path (relative to the current directory)
+        gives a row with no version and the bytes as code; a bare name,
+        which the loader searches, and None (the program itself) give
+        none. The event is fed to the tracer directly: loading a real
+        library is the e2e test's (test_compiled_modules.py)"""
+        self.write("libfake.so", "not really a library")
+        self.script("# script.py\nvalue = 1\n", bypass_modules=False)
+        tracer = self.metascript.execution.collector.external
+        tracer.event("ctypes.dlopen", ("libm.so.6",))
+        tracer.event("ctypes.dlopen", (None,))
+        self.assertEqual(self.rows(), [])
+        tracer.event("ctypes.dlopen", ("./libfake.so",))
+        (row,) = self.rows()
+        self.assertEqual(
+            (row.name, row.path, row.version),
+            ("libfake.so", os.path.realpath("libfake.so"), None),
+        )
+        self.assertEqual(self.code_hash(row), sha1(b"not really a library"))
+        self.assertEqual(tracer.failures, [])

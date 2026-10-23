@@ -15,6 +15,7 @@ from datetime import datetime
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
+from ..collection.prov_execution.external import is_placeholder
 from ..persistence import content, persistence_config
 from ..persistence.models import (
     Argument,
@@ -154,6 +155,16 @@ class Restore(Command):
             return True
         elif code_hash is not None:
             load_file = content.get(code_hash)
+            if is_placeholder(load_file):
+                # An executable above the cap of #203: its bytes were never
+                # stored, and the placeholder must not replace them
+                msg = "Unable to restore file {}".format(path)
+                if trial_id:
+                    msg += " from trial {}".format(trial_id)
+                msg += ": the executable was too large to store. Skipping it"
+                print_error(msg)
+                self.failed = True
+                return False
             try:
                 parent = os.path.dirname(path)
                 if parent:
@@ -260,7 +271,7 @@ class Restore(Command):
                 self.failed = True
             else:
                 path = parsed.target or parsed.path
-                if not self.restore(path, restore[1], None):
+                if not self.restore(path, restore[1], None) and not self.failed:
                     print_msg("File has not changed!", self.print_msg)
             content.close()
         return 1 if self.failed else 0

@@ -3,7 +3,9 @@
 # Please, consult the license terms in the LICENSE file.
 """The pure functions of the external process tracer (#202): how a
 command line is read, which words name files, what mode the hashes
-around a process give an access, and the snapshot of the project
+around a process give an access, and the snapshot of the project; and
+of its programs (#203): how a program is resolved and named, which
+programs are probed for a version, and the code of an executable
 
 No collector and no store: ``prov_execution/external.py`` keeps these
 apart from the tracer so that they are tested without a trial. The
@@ -11,19 +13,30 @@ tracer itself is tested in ``test_external_process_execution.py``
 (in-process) and ``e2e/test_external_processes.py`` (``now run``).
 """
 
+import hashlib
 import os
 import pathlib
+import sys
 
 import pytest
 
 from ...now.collection.prov_execution.external import (
+    PLACEHOLDER,
     SNAPSHOT_CAP,
+    VERSION_LENGTH,
     classify_tokens,
+    executable_content,
+    first_line,
     infer_mode,
+    is_placeholder,
     looks_like_path,
     parse_command,
+    probe_flag,
+    probe_version,
+    program_name,
     redirection,
     relative_to_cwd,
+    resolve_program,
     snapshot,
     split_command_line,
 )
@@ -397,3 +410,143 @@ def test_parse_command_with_the_windows_rules():
         (["b"], []),
         (["c"], []),
     ]
+
+
+# --- the programs (#203) ------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("name", "windows", "flag"),
+    [
+        ("Rscript", False, "--version"),
+        ("R", False, "--version"),
+        ("cc", False, "--version"),
+        ("g++", False, "--version"),
+        ("make", False, "--version"),
+        ("java", False, "-version"),
+        ("python", False, "--version"),
+        ("python3", False, "--version"),
+        ("python3.15", False, "--version"),
+        ("pythonw", False, "--version"),
+        ("metrics", False, None),
+        ("tool.sh", False, None),
+        ("r", False, None),
+        ("rscript", False, None),
+        ("python-config", False, None),
+        ("Rscript.exe", True, "--version"),
+        ("RSCRIPT.EXE", True, "--version"),
+        ("python.exe", True, "--version"),
+        ("Java.exe", True, "-version"),
+        ("metrics.exe", True, None),
+    ],
+)
+def test_probe_flag_is_the_allowlist(name, windows, flag):
+    """Only the interpreters and compilers of the allowlist (and the
+    ``python*`` names) are probed, ``java`` with ``-version``; the case
+    and a trailing ``.exe`` count only on Windows"""
+    assert probe_flag(name, windows=windows) == flag
+
+
+@pytest.mark.parametrize(
+    ("output", "expected"),
+    [
+        (b"Python 3.15.1\n", "Python 3.15.1"),
+        (b"\n\nThis is perl 5\nmore\n", "This is perl 5"),
+        (b"  Rscript (R) version 4.6.1  \r\n", "Rscript (R) version 4.6.1"),
+        (b"", None),
+        (b"\n \n", None),
+        (b"\xff\xfeversion\n", "\ufffd\ufffdversion"),
+        (b"x" * 300, "x" * VERSION_LENGTH),
+    ],
+)
+def test_first_line(output, expected):
+    """The first non-empty line, stripped, decoded without failing, cut
+    at ``VERSION_LENGTH``"""
+    assert first_line(output) == expected
+
+
+def test_probe_version_of_this_interpreter():
+    """What ``python --version`` prints, and None for a program that
+    exits with another status or does not exist"""
+    assert probe_version(sys.executable, "--version").startswith("Python ")
+    assert probe_version(sys.executable, "--no-such-flag") is None
+    assert probe_version(os.path.join("no", "such", "program"), "--version") is None
+
+
+@pytest.mark.parametrize(
+    ("program", "name"),
+    [
+        ("Rscript", "Rscript"),
+        ("./metrics", "metrics"),
+        ("/usr/bin/cc", "cc"),
+        ("bin/tool/", "tool"),
+        (b"./metrics", "metrics"),
+        (pathlib.Path("bin") / "tool", "tool"),
+    ],
+)
+def test_program_name_is_the_last_part_of_the_word(program, name):
+    assert program_name(program) == name
+
+
+def make_program(path, text="#!/bin/sh\nexit 0\n"):
+    """An executable file"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    path.chmod(0o755)
+    return path
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX executables and links")
+def test_resolve_program(tmp_path, monkeypatch):
+    """A bare name on the PATH of the given environment (not the
+    script's), a name with a separator relative to the launch's cwd (the
+    current directory without one), always the real path; a missing
+    program, a directory or a file without the executable bit is none"""
+    tool = make_program(tmp_path / "bin" / "tool")
+    (tmp_path / "link").symlink_to(tool)
+    local = make_program(tmp_path / "project" / "metrics")
+    (tmp_path / "project" / "data.txt").write_text("x", encoding="utf-8")
+    real = os.path.realpath
+    environment = {"PATH": str(tmp_path / "bin")}
+    assert resolve_program("tool", env=environment) == real(tool)
+    assert resolve_program("tool", env={"PATH": str(tmp_path)}) is None
+    monkeypatch.setenv("PATH", str(tmp_path / "bin"))
+    assert resolve_program("tool") == real(tool)
+    assert resolve_program("./metrics", cwd=str(tmp_path / "project")) == real(local)
+    assert resolve_program("../link", cwd=str(tmp_path / "project")) == real(tool)
+    monkeypatch.chdir(tmp_path / "project")
+    assert resolve_program("./metrics") == real(local)
+    assert resolve_program("./data.txt") is None
+    assert resolve_program("./missing") is None
+    assert resolve_program(str(tmp_path / "bin")) is None
+    assert resolve_program("") is None
+    assert resolve_program(None) is None
+
+
+def test_resolve_program_finds_this_interpreter():
+    """By its full path, on every system"""
+    assert resolve_program(sys.executable) == os.path.realpath(sys.executable)
+
+
+def test_executable_content_up_to_the_cap_is_the_file(tmp_path):
+    path = tmp_path / "metrics"
+    path.write_bytes(b"\x7fELF binary")
+    assert executable_content(str(path), cap=len(b"\x7fELF binary")) == (
+        b"\x7fELF binary"
+    )
+
+
+def test_executable_content_above_the_cap_is_a_placeholder(tmp_path):
+    """The placeholder carries the size and the SHA-1 of the bytes, so
+    its hash changes with the binary, and is recognized as one"""
+    path = tmp_path / "big"
+    data = os.urandom(3 * 1024 * 1024 + 7)
+    path.write_bytes(data)
+    content = executable_content(str(path), cap=1024)
+    expected = PLACEHOLDER.format(hashlib.sha1(data).hexdigest(), len(data))
+    assert content == expected.encode("ascii")
+    assert is_placeholder(content)
+    path.write_bytes(data + b"!")
+    assert executable_content(str(path), cap=1024) != content
+    assert not is_placeholder(data)
+    assert not is_placeholder(None)

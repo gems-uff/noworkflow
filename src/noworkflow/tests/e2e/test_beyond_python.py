@@ -25,7 +25,7 @@ Structural assertions only, no goldens: a golden of a command that still
 fails cannot be recorded. With ``NOW_PAPER_DATASET`` pointing at the real
 dataset the same tests run on it.
 
-The claims that only #203 to #207 and #461 can satisfy are ``_desired``
+The claims that only #204 to #207 and #461 can satisfy are ``_desired``
 twins, marked ``xfail(strict=True)`` through ``known_defects`` with the
 issue, the mechanism and the signature of today's failure (measured on
 this tree). The issue that makes a twin pass removes the mark in the same
@@ -36,13 +36,10 @@ rewrites the ``Defect``'s signature. The map:
 twin                                                                 passes signature
                                                                      with   changes
 ==================================================================== ====== =========
-test_rscript_cc_and_the_binary_are_modules_with_hash_and_version_... #203
-test_show_m_lists_the_executables_desired                            #203
-test_the_recompiled_binary_changes_its_code_hash_in_1_1_3_desired    #203
 test_diff_f_pairs_pred_csv_by_name_and_mode_desired                  #204
 test_diff_content_prints_the_unified_diff_of_model_r_desired         #204
-test_diff_m_prints_the_code_hash_change_of_the_recompiled_..._desired #204   #203
-test_restore_f_of_the_compiled_binary_keeps_it_executable_desired    #205 (#246) #203
+test_diff_m_prints_the_code_hash_change_of_the_recompiled_..._desired #204
+test_restore_f_of_the_compiled_binary_keeps_it_executable_desired    #205 (#246)
 test_strace_tracer_records_the_file_model_r_sources_desired          #206
 test_rdtlite_file_entities_become_accesses_of_the_launch_desired     #207
 test_export_prov_has_entities_for_the_exchanged_files_desired        #461
@@ -59,6 +56,17 @@ records a backup trial (2.0.0), as the running example's 7.0.0, because
 the outputs 1.1.3 created have no content before their first access and
 the restore sees them as changed; and ``now restore 1.1.3 -f metrics``
 without ``-i`` restores nothing (#246), instead of finding no version.
+
+The claims of #203 (``Rscript``, ``cc`` and the compiled ``metrics`` in
+the module table, with the real path, the hash of the binary and a
+probed version for the first two; ``now show -m``; the new hash of the
+rebuilt binary in 1.1.3) passed with it and lost their marks and their
+suffix. The module row of ``metrics`` changed two twins' failures: ``now
+diff 1.1.2 1.1.3 -m`` now pairs the two rows of ``metrics`` as replaced
+but prints no code hash (#204), and ``now restore 1.1.3 -f metrics``
+finds the binary through its module row, the local module that
+``Trial.iterate_accesses`` yields before the accesses, and writes its
+bytes back without the executable bit (#205).
 
 The two rdtLite tests run a fourth trial of their own, the wrapper of
 ``corpus/beyond_python/rdtlite`` (``model.R`` under rdtLite's
@@ -154,17 +162,6 @@ def read_kind(mode):
     return "r" if mode in ("r", "rb") else mode
 
 
-def no_executable_modules(signature):
-    """#203: the executable of a launched process is no module"""
-    return Defect(
-        "#203: the module table holds what the import finder of "
-        "prov_deployment/py3module.py sees, Python modules imported for "
-        "the first time; the program a launched process runs, resolved "
-        "on the PATH, gets no row, no hash and no version",
-        signature=signature,
-    )
-
-
 def diff_pairs_by_name_alone(signature):
     """#204 (#360): `now diff -f` pairs the replaced accesses by name"""
     return Defect(
@@ -197,14 +194,15 @@ def diff_m_hides_the_hash(signature):
 
 def restore_loses_the_bit(signature):
     """#205 (with #246): a restored executable comes back without its
-    mode, and -f alone cannot name the version a trial wrote"""
+    mode"""
     return Defect(
         "#205 (#246): Restore.restore (cmd/cmd_restore.py) writes the "
         "content of the version into the path and records no mode, so "
         "the executable bit of a launched binary (module.path, #203) is "
-        "lost; and `-f FILE` without `-i` takes the hash before the "
-        "first access, empty for a file the trial created, so it "
-        "restores nothing (#246, absorbed by #205)",
+        "lost; `-f FILE` without `-i` finds a launched binary of the "
+        "project through its module row, but a file the trial created "
+        "that is no module still has only the hash before its first "
+        "access, empty (#246, absorbed by #205)",
         signature=signature,
     )
 
@@ -886,10 +884,7 @@ def test_external_tracer_none_records_no_child_file(tmp_path, tools):
 # --- Section 6.4: the executables as dependencies (#203) -------------------
 
 
-@known_defects(no_executable_modules("1.1.1: module rows named []"))
-def test_rscript_cc_and_the_binary_are_modules_with_hash_and_version_desired(
-    case, tools
-):
+def test_rscript_cc_and_the_binary_are_modules_with_hash_and_version(case, tools):
     """1.1.1 records Rscript, cc and the compiled metrics in the module
     table, each with the real path of the program and the hash of its
     bytes; Rscript and cc have a version (probed), the binary none"""
@@ -910,8 +905,7 @@ def test_rscript_cc_and_the_binary_are_modules_with_hash_and_version_desired(
     assert binary["version"] is None
 
 
-@known_defects(no_executable_modules("missing ['Rscript', 'cc', 'metrics']"))
-def test_show_m_lists_the_executables_desired(case):
+def test_show_m_lists_the_executables(case):
     """`now show 1.1.1 -m` lists Rscript, cc and metrics among the
     modules, each with its path and code hash"""
     stdout = case.run("show", "1.1.1", "-m").stdout
@@ -924,8 +918,7 @@ def test_show_m_lists_the_executables_desired(case):
         assert same_path(found[name]["Path"], rows[name]["path"]), name
 
 
-@known_defects(no_executable_modules("1.1.1: module rows named []"))
-def test_the_recompiled_binary_changes_its_code_hash_in_1_1_3_desired(case):
+def test_the_recompiled_binary_changes_its_code_hash_in_1_1_3(case):
     """The module row of metrics has the hash of the binary each trial
     launched: the same in 1.1.1 and 1.1.2, another in 1.1.3, where the
     compiler rebuilt it from the edited source"""
@@ -978,7 +971,11 @@ def test_diff_content_prints_the_unified_diff_of_model_r_desired(case):
         assert expected in lines, "no {!r} line in:\n{}".format(expected, stdout)
 
 
-@known_defects(diff_m_hides_the_hash("now diff 1.1.2 1.1.3 -m: modules replaced: []"))
+@known_defects(
+    diff_m_hides_the_hash(
+        "now diff 1.1.2 1.1.3 -m: metrics replaced with the changes ['Trial id']"
+    )
+)
 def test_diff_m_prints_the_code_hash_change_of_the_recompiled_binary_desired(case):
     """Figure B: `now diff 1.1.2 1.1.3 -m` reports the module metrics
     replaced, with its code hash changed from the binary of 1.1.2 to the
@@ -992,14 +989,16 @@ def test_diff_m_prints_the_code_hash_change_of_the_recompiled_binary_desired(cas
     assert changes(block).get("Code hash") == (
         case.files["1.1.2"]["metrics"],
         case.files["1.1.3"]["metrics"],
-    ), stdout
+    ), "now diff 1.1.2 1.1.3 -m: metrics replaced with the changes {}".format(
+        sorted(changes(block))
+    )
     assert sections["added"] == [] and sections["removed"] == []
 
 
 # --- Section 6.4: restore and the executable bit (#205) --------------------
 
 
-@known_defects(restore_loses_the_bit("no metrics after the restore"))
+@known_defects(restore_loses_the_bit("metrics restored with mode"))
 def test_restore_f_of_the_compiled_binary_keeps_it_executable_desired(case):
     """With the binary deleted, `now restore 1.1.3 -f metrics` brings
     back the bytes the trial wrote (its first access has no content

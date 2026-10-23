@@ -1,8 +1,8 @@
 # Copyright (c) 2026 Universidade Federal Fluminense (UFF)
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""External processes a traced script starts: the call boundary and the
-files exchanged with them (#202)
+"""External processes a traced script starts: the call boundary, the
+files exchanged with them (#202) and the programs they run (#203)
 
 A script that calls ``subprocess.run(["Rscript", "model.R", "data.csv",
 "pred.csv"])`` is recorded, like any call the collector does not trace, as
@@ -64,6 +64,33 @@ on the command line and is modified by the process is not seen: with no
 hash before it, ``restore`` would delete it. That is the limit of the
 ``argv`` backend; the optional tracer backend of #206 lifts it.
 
+**The programs** (#203). The program a launch runs is a deployment
+dependency of the trial, like an imported module: ``record_programs``
+resolves it as the system does (``resolve_program``: the ``PATH`` of the
+``env`` given to the process, or of the script's environment, and the
+launch's ``cwd`` for a name with a separator, then the real path) and
+adds a ``module`` row named as the command line names it, with that path
+and a binary code block, so that ``code_hash`` is the hash of the
+executable's bytes; above ``EXECUTABLE_CAP`` bytes the code block is a
+placeholder that carries the SHA-1 of the file, computed by streaming, so
+the hash still changes when the binary does. For an argument list the
+program is the executable ``Popen`` runs (``executable=``, or the first
+word); for a line run through a shell, the program of each of its
+commands, not the shell. One row per ``(real path, size, mtime)`` per
+trial: a binary rebuilt in the middle of a trial gets a second row with
+its new hash. An interpreter or a compiler of ``PROBED`` (or a
+``python*``) gets a version, the first line of what ``<program>
+--version`` (``-version`` for ``java``) prints, probed once per path per
+trial under ``suspended()``, with no input and a timeout; any other
+program is never run to probe it, and has no version. A shared library
+loaded through ``ctypes`` (the ``ctypes.dlopen`` audit event), which no
+import finder sees, gets a row the same way, without a version, when the
+name it is loaded by is a path (absolute, or relative to the current
+directory); a bare name (``libm.so.6``) is found by the loader's own
+search, which is not reproduced here. ``-b`` (``bypass_modules``) skips
+all of this and keeps the file accesses; a launch that fails to start
+takes its rows with it.
+
 What is not covered: the children of ``os.fork`` and ``multiprocessing``
 (#375, #379), launches made by C code, nested launches (the child's own
 children), a launch that failed to start (nothing ran: its accesses are
@@ -73,8 +100,11 @@ run a program (``platform.architecture`` runs ``file``) are recorded as
 any other launch, which is harmless.
 """
 
+import hashlib
 import os
+import re
 import shlex
+import shutil
 
 # Patches Popen's functions while a collection traces; starts no process
 import subprocess  # nosec B404
@@ -91,7 +121,14 @@ MODES = ("none", "argv", "strace")
 DEFAULT_MODE = "argv"
 # The audit events the hook reads.
 EVENTS = frozenset(
-    {"subprocess.Popen", "os.system", "os.posix_spawn", "os.spawn", "os.exec"}
+    {
+        "subprocess.Popen",
+        "os.system",
+        "os.posix_spawn",
+        "os.spawn",
+        "os.exec",
+        "ctypes.dlopen",
+    }
 )
 # Entries of the project above which the snapshot is disabled for the trial.
 SNAPSHOT_CAP = 20000
@@ -107,6 +144,39 @@ REDIRECTIONS = (
     (">", "w"),
     ("<", "r"),
 )
+# Executables above this size are not stored: their code block is a
+# placeholder with the SHA-1 of the file (#203).
+EXECUTABLE_CAP = 16 * 1024 * 1024
+# The programs whose version is probed (#203), by the name the command
+# line gives them; any other program is never run to probe it. On Windows
+# the comparison ignores case and a trailing ".exe".
+PROBED = frozenset(
+    {
+        "Rscript",
+        "R",
+        "julia",
+        "bash",
+        "perl",
+        "node",
+        "ruby",
+        "java",
+        "gcc",
+        "cc",
+        "clang",
+        "g++",
+        "make",
+        "octave",
+    }
+)
+# python, python3, python3.15, pythonw: probed as well.
+PYTHON_NAME = re.compile(r"python[0-9.]*w?\Z")
+# The code block of an executable above EXECUTABLE_CAP: not its bytes,
+# which `now restore` must never write in its place.
+PLACEHOLDER = "<noWorkflow: executable not stored; sha1={}; size={}>"
+PLACEHOLDER_PREFIX = PLACEHOLDER.split("{")[0].encode("ascii")
+# Seconds a version probe may take, and the length of the version kept.
+PROBE_TIMEOUT = 5
+VERSION_LENGTH = 200
 # The messages the tracer prints on stderr, once per trial each.
 SNAPSHOT_WARNING = (
     "the project has more than {} entries: files that external processes "
@@ -148,6 +218,9 @@ class ExternalProcess:
         self.popen = None
         self.finished = False
         self.returncode = None
+        # The keys of the executables this launch added to the module
+        # table (#203), which a launch that fails to start takes back.
+        self.executables = []
 
 
 class ExternalProcessTracer:
@@ -170,6 +243,12 @@ class ExternalProcessTracer:
         self.warned = set()
         self.failures = []
         self.lock = threading.RLock()
+        # (real path, size, mtime_ns) -> (module id, code block id) of the
+        # executables recorded in this trial, and the probed versions by
+        # path (#203).
+        self.executables = {}
+        self.versions = {}
+        self.executable_cap = EXECUTABLE_CAP
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -239,13 +318,17 @@ class ExternalProcessTracer:
             elif event == "os.system":
                 self.launch("system", None, None, shell_command=as_text(args[0]))
             elif event == "os.posix_spawn":
-                self.launch("posix_spawn", args[1], None)
+                self.launch("posix_spawn", args[1], None, program=args[0], env=args[2])
             elif event == "os.spawn":
-                launch = self.launch("spawn", args[2], None)
+                launch = self.launch(
+                    "spawn", args[2], None, program=args[1], env=args[3]
+                )
                 if launch is not None:
                     launch.finalize_on_close = args[0] == getattr(os, "P_WAIT", 0)
             elif event == "os.exec":
                 self.close_all()
+            elif event == "ctypes.dlopen":
+                self.library_loaded(args[0])
         except Exception as error:  # pylint: disable=broad-except
             self.failures.append(error)
             self.warn(
@@ -254,31 +337,43 @@ class ExternalProcessTracer:
             )
 
     def popen_event(self, executable, args, cwd, env):
-        """``subprocess.Popen``: an argument list, or the shell's line"""
-        # pylint: disable=unused-argument
+        """``subprocess.Popen``: an argument list, or the shell's line
+
+        ``executable`` is what the process runs: ``executable=`` when given,
+        the first word otherwise (POSIX; None on Windows).
+        """
         if isinstance(args, (str, bytes)):
             # Windows: Popen joins the list into one string (list2cmdline),
             # and with shell=True wraps it as `cmd.exe /c "line"`.
             line = as_text(args)
             inner = windows_shell_command(line)
             if inner is not None:
-                return self.launch("popen", None, cwd, shell_command=inner)
-            return self.launch("popen", split_windows_command_line(line), cwd)
+                return self.launch("popen", None, cwd, shell_command=inner, env=env)
+            return self.launch(
+                "popen",
+                split_windows_command_line(line),
+                cwd,
+                program=executable,
+                env=env,
+            )
         words = [as_text(word) for word in args]
         if (
             len(words) >= 3
             and words[1] == "-c"
             and os.path.basename(words[0]).endswith("sh")
         ):
-            return self.launch("popen", None, cwd, shell_command=words[2])
-        return self.launch("popen", words, cwd)
+            return self.launch("popen", None, cwd, shell_command=words[2], env=env)
+        return self.launch("popen", words, cwd, program=executable, env=env)
 
     # --- launches ----------------------------------------------------------
 
-    def launch(self, kind, words, cwd, shell_command=None):
-        """Record a launch: the files it names now, the candidates and the
-        snapshot; returns the ``ExternalProcess``, or None when nothing is
+    def launch(self, kind, words, cwd, shell_command=None, program=None, env=None):
+        """Record a launch: the files it names now, the candidates, the
+        snapshot and the programs it runs (``program``, or the first word;
+        for a shell line, the first word of each command), resolved with
+        ``env``; returns the ``ExternalProcess``, or None when nothing is
         collecting"""
+        # pylint: disable=too-many-arguments
         collector = self.collector
         activation = collector.current_activation()
         if activation is None:
@@ -315,6 +410,13 @@ class ExternalProcessTracer:
                 else:
                     launch.candidates.append((recorded, resolved, mode))
         launch.before = self.snapshot(cwd)
+        if shell_command is not None:
+            programs = [command[0][0] for command in commands if command[0]]
+        else:
+            programs = [program or (words[0] if words else None)]
+        # Before the launch is bound: a version probe starts a process of
+        # its own, whose Popen must find nothing to bind on this thread.
+        self.record_programs(launch, programs, base, env)
         with self.lock:
             self.pending.append(launch)
             if kind == "popen":
@@ -362,6 +464,99 @@ class ExternalProcessTracer:
         for access, _, _ in launch.accesses:
             del store[access.id]
         launch.accesses = []
+        metascript = self.collector.metascript
+        for key in launch.executables:
+            with self.lock:
+                ids = self.executables.pop(key, None)
+            if ids is None:
+                continue
+            module_id, code_id = ids
+            del metascript.modules_store[module_id]
+            del metascript.code_components_store[code_id]
+            del metascript.code_blocks_store[code_id]
+        launch.executables = []
+
+    # --- the programs (#203) -------------------------------------------------
+
+    def records_modules(self):
+        """Whether the programs go to the module table: not under ``-b``"""
+        return not getattr(self.collector.metascript, "bypass_modules", True)
+
+    def record_programs(self, launch, programs, base, env):
+        """Add the programs of a launch to the module table; a program
+        that resolves to no file (a shell builtin, a missing program) is
+        skipped, and a failure is reported, never raised"""
+        if not self.records_modules():
+            return
+        for program in programs:
+            try:
+                path = resolve_program(program, base, env)
+                if path is None:
+                    continue
+                key = self.add_executable(program_name(program), path, probe=True)
+            except Exception as error:  # pylint: disable=broad-except
+                self.failures.append(error)
+                self.warn(
+                    "the external process tracer recorded no module for a "
+                    "program: {}: {}".format(type(error).__name__, error)
+                )
+                continue
+            if key is not None:
+                launch.executables.append(key)
+
+    def library_loaded(self, name):
+        """``ctypes.dlopen``: a library loaded by a path is a module"""
+        if not self.records_modules():
+            return
+        name = as_text(name)
+        if not name or not os.path.dirname(name):
+            return
+        path = os.path.realpath(os.path.join(os.getcwd(), name))
+        if is_regular_file(path):
+            self.add_executable(os.path.basename(name), path, probe=False)
+
+    def add_executable(self, name, path, probe):
+        """A ``module`` row for the file at ``path`` (a real path), with a
+        binary code block and, when ``probe`` and the name is in the
+        allowlist, a version; returns its key, or None when this file, as
+        it is now, already has a row in the trial"""
+        info = os.stat(path)
+        key = (os.path.normcase(path), info.st_size, info.st_mtime_ns)
+        with self.lock:
+            if key in self.executables:
+                return None
+            self.executables[key] = None
+        try:
+            version = self.version_of(name, path) if probe else None
+            data = executable_content(path, self.executable_cap)
+            metascript = self.collector.metascript
+            _, code_id = metascript.definition.create_code_block(
+                data, path, "module", True, False
+            )
+            module_id = metascript.deployment.add_module(
+                name, version, path, code_id, False, None
+            )
+        except BaseException:
+            with self.lock:
+                self.executables.pop(key, None)
+            raise
+        with self.lock:
+            self.executables[key] = (module_id, code_id)
+        return key
+
+    def version_of(self, name, path):
+        """The probed version of a program of the allowlist, once per path
+        per trial; None for any other program, which is not run"""
+        flag = probe_flag(name)
+        if flag is None:
+            return None
+        cache_key = os.path.normcase(path)
+        if cache_key not in self.versions:
+            # The probe's own opens (os.devnull for its stdin) are not the
+            # script's: safe open makes the collector's wrappers step aside
+            with self.suspended(), content.use_safe_open():
+                self.versions[cache_key] = probe_version(path, flag)
+        return self.versions[cache_key]
 
     def completed(self, popen):
         """``wait`` or ``poll`` saw the process end"""
@@ -625,6 +820,110 @@ def as_text(value):
         return os.fsdecode(os.fspath(value))
     except TypeError:
         return str(value)
+
+
+def program_name(program):
+    """The name of a program's module row: the last part of the word
+    that names it, as the command line gives it (``./metrics`` is
+    ``metrics``; a link keeps its own name, ``cc`` and not ``gcc``)"""
+    program = as_text(program)
+    return os.path.basename(program.rstrip("/" + os.sep)) or program
+
+
+def resolve_program(program, cwd=None, env=None):
+    """The real path of the program a launch runs, or None
+
+    A name with a separator is relative to the launch's ``cwd`` (the
+    current directory when None); a bare name is searched in the ``PATH``
+    of ``env`` (the environment given to the process, the script's when
+    None), as ``subprocess`` does; on Windows ``shutil.which`` adds the
+    ``PATHEXT`` extensions. Only a regular file is a program.
+    """
+    program = as_text(program)
+    if not program:
+        return None
+    if os.path.dirname(program):
+        found = shutil.which(os.path.join(cwd or os.getcwd(), program))
+    else:
+        found = shutil.which(program, path=os.pathsep.join(os.get_exec_path(env)))
+    if found is None:
+        return None
+    real = os.path.realpath(found)
+    return real if is_regular_file(real) else None
+
+
+def probe_flag(name, windows=None):
+    """The flag that makes a program of the allowlist print its version
+    (``-version`` for ``java``, ``--version`` otherwise), or None for a
+    program outside it, which is never run to probe it"""
+    if windows is None:
+        windows = os.name == "nt"
+    base = name
+    known = name in PROBED
+    if windows:
+        base = name.lower()
+        if base.endswith(".exe"):
+            base = base[: -len(".exe")]
+        known = base in {probed.lower() for probed in PROBED}
+    if not known and not PYTHON_NAME.match(base):
+        return None
+    return "-version" if base == "java" else "--version"
+
+
+def probe_version(path, flag, timeout=PROBE_TIMEOUT):
+    """The first non-empty line of what ``path flag`` prints, on stdout
+    or stderr, cut at ``VERSION_LENGTH``; None when it fails, times out
+    or exits with another status than 0"""
+    try:
+        # A program of the allowlist, by its real path, with one flag and
+        # no shell (probe_flag): the version probe of #203
+        completed = subprocess.run(  # nosec B603
+            [path, flag],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    return first_line(completed.stdout)
+
+
+def first_line(output):
+    """The first non-empty line of a program's output, cut at
+    ``VERSION_LENGTH``, or None"""
+    if isinstance(output, bytes):
+        output = output.decode("utf-8", errors="replace")
+    for line in (output or "").splitlines():
+        line = line.strip()
+        if line:
+            return line[:VERSION_LENGTH]
+    return None
+
+
+def executable_content(path, cap=EXECUTABLE_CAP):
+    """The bytes of an executable for its code block: the file up to
+    ``cap`` bytes; above it, a placeholder with the size and the SHA-1 of
+    the file, read in chunks, so that the code hash still follows the
+    binary"""
+    size = os.path.getsize(path)
+    if size <= cap:
+        with content.std_open(path, "rb") as handle:
+            return handle.read()
+    digest = hashlib.sha1(usedforsecurity=False)
+    with content.std_open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return PLACEHOLDER.format(digest.hexdigest(), size).encode("ascii")
+
+
+def is_placeholder(data):
+    """Whether stored content is the placeholder of an executable that was
+    too large to store, rather than its bytes"""
+    return isinstance(data, bytes) and data.startswith(PLACEHOLDER_PREFIX)
 
 
 def split_command_line(text, windows=None):

@@ -318,11 +318,15 @@ neither executes:
   files it creates, as accesses of the call), and
   `test_compiled_modules.py` how an extension module of the standard
   library and a library loaded through `ctypes` are recorded (`_dbm` on
-  POSIX, `winsound` on Windows, which only `pre-release.yml` runs). #203
-  changes the module characterizations on purpose. What the external
+  POSIX, `winsound` on Windows, which only `pre-release.yml` runs), and,
+  since #203, the program a launch runs (the interpreter, under the name
+  the command line gives it) as a module row. What the external
   process tracer (`prov_execution/external.py`) does on Windows, where
-  `subprocess` hands the audit hook one command-line string and
-  `os.spawn*` is a launch, runs only in `pre-release.yml`; a child of
+  `subprocess` hands the audit hook one command-line string,
+  `os.spawn*` is a launch and `shutil.which` resolves a program with the
+  extensions of `PATHEXT`, runs only in `pre-release.yml`; the version
+  probe runs on `python` in the suite and on `Rscript` and `cc` only in
+  `test_beyond_python.py`; a child of
   `os.fork` or `multiprocessing` is not a launch and is tested as not
   recorded; the `strace` backend has no test anywhere until #206
   installs `strace` on a leg; and the kernel's own use of the tracer
@@ -409,7 +413,10 @@ and what came out, in the PR.
   through SQLAlchemy, subprocess through `utils/functions.py`), more or
   fewer by how it starts and by the interpreter's build (#380). A test of
   the module table imports a module measured absent at the top of a traced
-  script, such as `_dbm`.
+  script, such as `_dbm`. Besides them, the table holds the program each
+  launch runs and each library `ctypes` loads by a path (#203), named as
+  the script names them; a program of the project is then a local module,
+  which `now restore` puts back like an imported one.
 - **A child of `os.fork()` in a traced script runs `now`'s epilogue** when
   it leaves through `sys.exit` or by returning: it stores the trial again,
   prints `[now]` lines and exits 0 (#375). A corpus script ends its forked
@@ -494,8 +501,11 @@ and therefore the first suspects when an upgrade breaks something:
 - `src/noworkflow/now/collection/prov_execution/external.py`: installs an
   audit hook (`sys.addaudithook`, which no process can remove: it stays
   inert when no collection traces) that reads the `subprocess.Popen`,
-  `os.system`, `os.posix_spawn`, `os.spawn` and `os.exec` events as
-  CPython raises them, with the arguments each one carries; and, around
+  `os.system`, `os.posix_spawn`, `os.spawn`, `os.exec` and `ctypes.dlopen`
+  events as CPython raises them, with the arguments each one carries
+  (the version probe of a program starts a process from inside the hook,
+  under `suspended()` and `use_safe_open()`, before the user's launch is
+  bound); and, around
   the `exec` of the script (and around each cell in the kernel), replaces
   `subprocess.Popen.__init__`, `wait` and `poll` with wrappers that bind a
   launch to its `Popen` and see its end through `returncode`, which is
@@ -562,7 +572,7 @@ C program, in `beyond-python/` of the package and in
 `src/noworkflow/tests/e2e/corpus/beyond_python/` here, replayed by
 `src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job.
 Its tests need `Rscript` and `cc` and skip without them (the job sets
-`NOW_RSCRIPT=require`). The claims that only #203 to #207 and #461 can
+`NOW_RSCRIPT=require`). The claims that only #204 to #207 and #461 can
 satisfy are `_desired` twins, `xfail(strict=True)` through
 `known_defects` with the signature of today's failure; the issue that
 makes one pass removes the mark in its own commit, and the issue that

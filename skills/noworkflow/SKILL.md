@@ -110,7 +110,7 @@ Collection options, from the cheapest to the most complete:
 | `-b` | reuse the module dependencies of the previous trial (faster; fails without a previous trial) |
 | `-c main\|package\|all` | which functions count for `-d` |
 | `-r repr\|jsonpickle\|jsonpickle_content\|simple` | how values are serialized |
-| `--external-tracer none\|argv\|strace` | what is recorded of the processes the script starts (`subprocess`, `os.system`, `os.popen`, `os.posix_spawn`). `argv` (default): the files their command lines name, with their content before and after, and the files they create in the project, as file accesses of the call that started the process; `none`: nothing; `strace`: also the files they open on their own (Linux; not available yet, falls back to `argv` with a warning, #206) |
+| `--external-tracer none\|argv\|strace` | what is recorded of the processes the script starts (`subprocess`, `os.system`, `os.popen`, `os.posix_spawn`). `argv` (default): the files their command lines name, with their content before and after, and the files they create in the project, as file accesses of the call that started the process, and the program each one runs as a module (`now show -m`); `none`: nothing; `strace`: also the files they open on their own (Linux; not available yet, falls back to `argv` with a warning, #206) |
 | `-s MS` / `-S CALLS` | save partial provenance every MS milliseconds / CALLS calls |
 | `--name NAME` | the name of the trial's script in the history; separates or groups branches |
 | `--message TEXT` | a note stored with the trial (`now show -p` shows it) |
@@ -146,7 +146,7 @@ command line changes.
 ```bash
 now show 2             # id, sequence key, status, script, code hash, start, finish, duration
 now show -f 2          # files read and written, mode, content hash before and after, the call chain that opened each
-now show -m 2          # the local modules the script imported, with path and code hash
+now show -m 2          # the modules the script imported, the programs its processes ran and the libraries it loaded through ctypes, with path, code hash and version
 now show -d 2          # the code blocks (script, functions) with parameters and calls
 now show -a 2          # the activation tree: every call with parameters, return value and time
 now show -p 2          # the options of the run, the message and the script's argv
@@ -372,8 +372,12 @@ swipl -q -g "consult('trial2.pl'), forall(access(_, _, N, M, _, H, _, _), (write
   the project, never what happens inside the program. A file the process
   modifies without naming it is not seen, a file it rewrites with the same
   content is recorded as a read, and the children of `os.fork` and
-  `multiprocessing` are not recorded at all. The program itself is not a
-  dependency yet (#203).
+  `multiprocessing` are not recorded at all. The program a process runs
+  is a module of the trial, with the hash of the executable; it has a
+  version only when it is an interpreter or a compiler (`Rscript`,
+  `python`, `gcc`, `java`...), which noWorkflow runs once with
+  `--version`. Through a shell, the programs of the line's commands are
+  recorded, not the shell.
 - Fine-grained collection slows the script down considerably; `-cg` or
   `-e relevant` reduce the cost.
 - Inside `now run`, `open` and `__builtins__` are not the standard ones: the

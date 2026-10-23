@@ -108,8 +108,8 @@ class Deployment(object):
     def add_module(
         self, name, version, path, code_id, transformed=False, fullpath=None
     ):
-        """Insert module into provenance store"""
-        self.metascript.modules_store.add(
+        """Insert module into provenance store; returns its id"""
+        return self.metascript.modules_store.add(
             self.metascript.trial_id,
             name,
             version,
