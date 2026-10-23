@@ -71,9 +71,10 @@ resolves it as the system does (``resolve_program``: the ``PATH`` of the
 launch's ``cwd`` for a name with a separator, then the real path) and
 adds a ``module`` row named as the command line names it, with that path
 and a binary code block, so that ``code_hash`` is the hash of the
-executable's bytes; above ``EXECUTABLE_CAP`` bytes the code block is a
-placeholder that carries the SHA-1 of the file, computed by streaming, so
-the hash still changes when the binary does. For an argument list the
+executable's bytes; above the cap (``--executable-cap`` of ``now run``,
+``EXECUTABLE_CAP`` by default, #463) the code block is a placeholder
+that carries the SHA-1 of the file, computed by streaming, so the hash
+still changes when the binary does. For an argument list the
 program is the executable ``Popen`` runs (``executable=``, or the first
 word); for a line run through a shell, the program of each of its
 commands, not the shell. One row per ``(real path, size, mtime)`` per
@@ -145,7 +146,8 @@ REDIRECTIONS = (
     ("<", "r"),
 )
 # Executables above this size are not stored: their code block is a
-# placeholder with the SHA-1 of the file (#203).
+# placeholder with the SHA-1 of the file (#203). The default of
+# `now run --executable-cap` (#463).
 EXECUTABLE_CAP = 16 * 1024 * 1024
 # The programs whose version is probed (#203), by the name the command
 # line gives them; any other program is never run to probe it. On Windows
@@ -266,6 +268,7 @@ class ExternalProcessTracer:
             mode = "argv"
         self.mode = mode
         self.project_dir = getattr(metascript, "dir", None) or None
+        self.executable_cap = getattr(metascript, "executable_cap", EXECUTABLE_CAP)
         if mode == "none" or self.started:
             return
         install_hook()
@@ -906,11 +909,11 @@ def first_line(output):
 
 def executable_content(path, cap=EXECUTABLE_CAP):
     """The bytes of an executable for its code block: the file up to
-    ``cap`` bytes; above it, a placeholder with the size and the SHA-1 of
-    the file, read in chunks, so that the code hash still follows the
-    binary"""
+    ``cap`` bytes; above it, or always when ``cap`` is 0, a placeholder
+    with the size and the SHA-1 of the file, read in chunks, so that the
+    code hash still follows the binary"""
     size = os.path.getsize(path)
-    if size <= cap:
+    if 0 < cap and size <= cap:
         with content.std_open(path, "rb") as handle:
             return handle.read()
     digest = hashlib.sha1(usedforsecurity=False)

@@ -218,6 +218,42 @@ def test_now_run_of_a_script(shell):
     assert returned, cell.describe()
 
 
+def recorded_executable_cap(project, trial_id):
+    """The ``--executable-cap`` a trial recorded, in bytes"""
+    rows = project.query(
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'executable_cap'",
+        trial_id,
+    )
+    return [ast.literal_eval(row["value"]) for row in rows]
+
+
+def test_now_run_takes_the_executable_cap_of_now_run(shell):
+    """``%now_run --executable-cap 2K`` reaches ``now run``, which records
+    it with the trial (#463)"""
+    project = shell.project
+    project.write("script.py", SCRIPT)
+    cell = shell.run("%now_run --executable-cap 2K script.py a1")
+    assert cell.success and "script argv ['a1']" in cell.stdout, cell.describe()
+    (trial_id,) = trial_ids(project)
+    assert recorded_executable_cap(project, trial_id) == [2048]
+
+
+def test_interactive_cell_takes_the_executable_cap(shell):
+    """``%%now_run --interactive --executable-cap 3K``: the magic's own
+    parser, which it inherits from ``now run``, reads the option, and the
+    trial records it (#463)"""
+    project = shell.project
+    try:
+        cell = shell.run(
+            "%%now_run --interactive --executable-cap 3K --name cellX\nvalue = 1"
+        )
+    finally:
+        leaks.undo_collection()
+    assert cell.success, cell.describe()
+    (trial_id,) = trial_ids(project)
+    assert recorded_executable_cap(project, trial_id) == [3072]
+
+
 def test_now_run_of_a_cell(shell):
     """``%%now_run`` records the cell as a trial and returns it (#313)
 

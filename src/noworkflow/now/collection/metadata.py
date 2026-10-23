@@ -38,6 +38,7 @@ from ..utils.cross_version import perf_counter
 from .prov_definition.definition import Definition
 from .prov_deployment.deployment import Deployment
 from .prov_execution.execution import Execution
+from .prov_execution.external import EXECUTABLE_CAP
 
 LAST_TRIAL = ".last_trial"
 MAIN = 0
@@ -121,6 +122,9 @@ class Metascript(object):  # pylint: disable=too-many-instance-attributes
         # How the processes the script starts are recorded (#202):
         # "none", "argv" or "strace" : str
         self.external_tracer = "argv"
+        # Size above which the program a process runs is stored as a
+        # placeholder with its hash (#203, #463) : int
+        self.executable_cap = EXECUTABLE_CAP
 
         # Save every X ms : int
         self.save_frequency = None
@@ -238,6 +242,7 @@ class Metascript(object):  # pylint: disable=too-many-instance-attributes
             message=None,
             content_engine=None,
             external_tracer="argv",
+            executable_cap=EXECUTABLE_CAP,
         )
         self._read_args(args)
         self.path = os.getcwd()
@@ -253,6 +258,7 @@ class Metascript(object):  # pylint: disable=too-many-instance-attributes
         self.bypass_modules = args.bypass_modules
         self.coarse_granularity = args.coarse_granularity
         self.external_tracer = args.external_tracer
+        self.executable_cap = args.executable_cap
 
         self.depth = args.depth
         self.save_frequency = args.save_frequency

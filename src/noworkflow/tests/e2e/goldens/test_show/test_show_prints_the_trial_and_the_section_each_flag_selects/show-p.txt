@@ -13,6 +13,7 @@
 [now] this trial has the following arguments:
   script: '<PROJECT>/simulation.py'
   bypass_modules: False
+  executable_cap: 16777216
   depth: 1000
   serializer: 'repr'
   collect_values: 'all'

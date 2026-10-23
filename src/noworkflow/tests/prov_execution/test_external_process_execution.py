@@ -701,13 +701,17 @@ class TestProgramsAsModules(ExternalProcessTestCase):
         self.assertEqual(len(tracer.versions), 1)
 
     def test_an_executable_above_the_cap_is_a_placeholder_with_its_sha1(self):
-        """Above the cap the code is the placeholder, whose hash follows
-        the SHA-1 and the size of the file"""
-        self.script(run_script("in.txt", "out.txt"), bypass_modules=False)
+        """Above the cap of the ``Metascript`` (``--executable-cap``, #463),
+        which reaches the tracer when it starts, the code is the
+        placeholder, whose hash follows the SHA-1 and the size of the
+        file"""
+        self.script(
+            run_script("in.txt", "out.txt"), bypass_modules=False, executable_cap=10
+        )
         tracer = self.metascript.execution.collector.external
-        tracer.executable_cap = 10
         self.metascript.execution.collect_provenance()
         self.assertEqual(self.metascript.execution.msg, SUCCESS)
+        self.assertEqual(tracer.executable_cap, 10)
         (row,) = self.rows()
         data = self.read(row.path)
         placeholder = external.PLACEHOLDER.format(sha1(data), len(data))

@@ -108,6 +108,7 @@ Collection options, from the cheapest to the most complete:
 | `-e relevant` / `-e none` | collect the values of activations, arguments and tagged evaluations only / no values |
 | `-d N` | limit the depth of collected activations. **It can change what the script computes** (#243): on a script that ran fine, `-d 1` made it fail with `IndexError`. Prefer `-cg`. |
 | `-b` | reuse the module dependencies of the previous trial (faster; fails without a previous trial) |
+| `--executable-cap SIZE` | the size above which the program a process runs (and a `ctypes` library) is stored as its hash only, which `now restore` cannot put back (default `16M`; bytes or a `K`, `M`, `G` suffix; `0` stores none) |
 | `-c main\|package\|all` | which functions count for `-d` |
 | `-r repr\|jsonpickle\|jsonpickle_content\|simple` | how values are serialized |
 | `--external-tracer none\|argv\|strace` | what is recorded of the processes the script starts (`subprocess`, `os.system`, `os.popen`, `os.posix_spawn`). `argv` (default): the files their command lines name, with their content before and after, and the files they create in the project, as file accesses of the call that started the process, and the program each one runs as a module (`now show -m`); `none`: nothing; `strace`: also the files they open on their own (Linux; not available yet, falls back to `argv` with a warning, #206) |
@@ -379,7 +380,8 @@ swipl -q -g "consult('trial2.pl'), forall(access(_, _, N, M, _, H, _, _), (write
   modifies without naming it is not seen, a file it rewrites with the same
   content is recorded as a read, and the children of `os.fork` and
   `multiprocessing` are not recorded at all. The program a process runs
-  is a module of the trial, with the hash of the executable; it has a
+  is a module of the trial, with the hash of the executable (and its
+  bytes up to `--executable-cap`, 16 MB by default); it has a
   version only when it is an interpreter or a compiler (`Rscript`,
   `python`, `gcc`, `java`...), which noWorkflow runs once with
   `--version`. Through a shell, the programs of the line's commands are

@@ -26,12 +26,18 @@ outcome. Tracebacks are never compared whole: they hold noWorkflow's own
 line numbers and carets that change with the Python version.
 """
 
+import hashlib
 import os
 import re
 import subprocess
 import sys
 
 import pytest
+
+from noworkflow.now.collection.prov_execution.external import (
+    EXECUTABLE_CAP,
+    PLACEHOLDER,
+)
 
 from ..helpers.defects import Defect, known_defects
 from .harness import (
@@ -778,3 +784,83 @@ def test_run_help_lists_the_external_tracer(project):
     """``now run -h`` documents the option and its three values"""
     result = project.run("run", "-h")
     assert "--external-tracer {none,argv,strace}" in result.stdout
+
+
+# The size above which the program a process runs is stored as a
+# placeholder with its hash (#463). What restore does with the placeholder
+# is pinned in test_restore.py.
+
+
+@pytest.mark.parametrize(
+    ("value", "cap"),
+    [
+        ("1000", 1000),
+        ("512K", 512 * 1024),
+        ("64M", 64 * 1024 * 1024),
+        ("64m", 64 * 1024 * 1024),
+        ("1G", 1024 * 1024 * 1024),
+        ("0", 0),
+    ],
+)
+def test_run_executable_cap_is_recorded_with_the_trial(project, value, cap):
+    """``--executable-cap`` takes bytes or a K, M or G suffix (powers of
+    1024), and the trial records it in bytes with its other arguments"""
+    project.copy_corpus("processes")
+    result = project.run("run", "--executable-cap", value, "run.py")
+    assert result.stdout == "0 child-done\n"
+    arguments = project.query(
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'executable_cap'",
+        only_trial(project)["id"],
+    )
+    assert [row["value"] for row in arguments] == [repr(cap)]
+
+
+def test_run_without_executable_cap_records_the_default(project):
+    project.copy_corpus("processes")
+    project.run("run", "run.py")
+    arguments = project.query(
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'executable_cap'",
+        only_trial(project)["id"],
+    )
+    assert [row["value"] for row in arguments] == [repr(EXECUTABLE_CAP)]
+
+
+@pytest.mark.parametrize("value", ["16MB", "-1", "1.5M", "M", "", "big"])
+def test_run_executable_cap_rejects_another_value(project, value):
+    """A value that is not a size is a usage error (2), and no store is
+    created"""
+    project.copy_corpus("processes")
+    result = project.run(
+        "run", "--executable-cap", value, "run.py", expect=2, allow_stderr=True
+    )
+    message = "argument --executable-cap: {!r} is not a size".format(value)
+    assert message in result.stderr, result.stderr
+    assert not project.store.exists()
+
+
+def test_run_executable_cap_zero_stores_the_interpreter_as_a_placeholder(project):
+    """``--executable-cap 0``: the interpreter the script launches is a
+    module whose code is the placeholder with the SHA-1 and the size of
+    the file, not its bytes"""
+    project.copy_corpus("processes")
+    project.run("run", "--executable-cap", "0", "run.py")
+    rows = project.query(
+        "SELECT m.path, b.code_hash FROM module m JOIN code_block b "
+        "ON b.trial_id = m.trial_id AND b.id = m.code_block_id "
+        "WHERE m.version LIKE 'Python %'"
+    )
+    assert len(rows) == 1, rows
+    (row,) = rows
+    with open(row["path"], "rb") as handle:
+        data = handle.read()
+    expected = PLACEHOLDER.format(hashlib.sha1(data).hexdigest(), len(data))
+    assert project.content(row["code_hash"]) == expected.encode("ascii")
+
+
+def test_run_help_lists_the_executable_cap(project):
+    """``now run -h`` documents the option among the deployment arguments"""
+    result = project.run("run", "-h")
+    deployment = result.stdout.split("optional deployment arguments")[1]
+    deployment = deployment.split("optional execution arguments")[0]
+    assert "--executable-cap SIZE" in deployment
+    assert "(default: 16M)" in " ".join(deployment.split())

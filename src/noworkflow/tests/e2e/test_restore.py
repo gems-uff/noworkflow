@@ -885,6 +885,33 @@ def test_restore_never_writes_the_placeholder_of_a_large_executable(project):
         assert kept, "now {} wrote over large.sh".format(" ".join(args))
 
 
+@pytest.mark.skipif(os.name == "nt", reason="a shell script as the launched program")
+def test_restore_never_writes_the_placeholder_of_a_program_above_the_chosen_cap(
+    project,
+):
+    """With ``--executable-cap 10`` (#463) a small program of the project
+    is stored as the placeholder, and `now restore -f` of it leaves the
+    file as it is, reports it on stderr and exits with 1, as above the
+    default cap"""
+    project.write("large.sh", LARGE_PROGRAM.format("x"))
+    os.chmod(project.path / "large.sh", 0o755)
+    project.write("main.py", LARGE_PROGRAM_SCRIPT)
+    result = project.run("run", "--executable-cap", "10", "main.py")
+    assert "exit 0" in result.stdout.splitlines()
+    (row,) = project.query(
+        "SELECT b.code_hash FROM module m JOIN code_block b "
+        "ON b.trial_id = m.trial_id AND b.id = m.code_block_id WHERE m.name = 'large.sh'"
+    )
+    placeholder = project.content(row["code_hash"])
+    assert placeholder.startswith(PLACEHOLDER_PREFIX), placeholder[:60]
+
+    changed = LARGE_PROGRAM.format("y").encode("ascii")
+    (project.path / "large.sh").write_bytes(changed)
+    result = project.run("restore", "1", "-f", "large.sh", expect=1, allow_stderr=True)
+    assert "the executable was too large to store" in result.stderr, result
+    assert (project.path / "large.sh").read_bytes() == changed
+
+
 # ---------------------------------------------------------------------------
 # restore and the files a trial opened outside the project (#440)
 # ---------------------------------------------------------------------------

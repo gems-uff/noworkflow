@@ -550,3 +550,13 @@ def test_executable_content_above_the_cap_is_a_placeholder(tmp_path):
     assert executable_content(str(path), cap=1024) != content
     assert not is_placeholder(data)
     assert not is_placeholder(None)
+
+
+def test_executable_content_with_cap_zero_is_always_a_placeholder(tmp_path):
+    """``--executable-cap 0`` (#463) stores no executable, an empty one
+    included"""
+    for data in (b"\x7fELF binary", b""):
+        path = tmp_path / "metrics"
+        path.write_bytes(data)
+        expected = PLACEHOLDER.format(hashlib.sha1(data).hexdigest(), len(data))
+        assert executable_content(str(path), cap=0) == expected.encode("ascii")
