@@ -312,3 +312,88 @@ def test_relative_to_cwd(tmp_path, monkeypatch):
     assert relative_to_cwd(os.path.join(os.pardir, "other.txt")) == os.path.realpath(
         outside
     )
+
+
+# --- the Windows rules (run everywhere: the functions take the line) ----------
+
+from ...now.collection.prov_execution.external import (  # noqa: E402
+    split_windows_command_line,
+    strip_cmd_quotes,
+    windows_shell_command,
+)
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        (
+            '"C:\\Program Files\\python.exe" child.py "a b" c\\d',
+            ["C:\\Program Files\\python.exe", "child.py", "a b", "c\\d"],
+        ),
+        (
+            "python child.py  out.txt\tin.txt",
+            ["python", "child.py", "out.txt", "in.txt"],
+        ),
+        # 2n+1 backslashes before a quote: n backslashes and a literal quote
+        ('a\\"b', ['a"b']),
+        # 2n backslashes before a quote: n backslashes, the quote groups
+        ('"a\\\\" b', ["a\\", "b"]),
+        # two quotes inside a span are a literal quote
+        ('"say ""hi"" now" x', ['say "hi" now', "x"]),
+        ("", []),
+        ('""', [""]),
+    ],
+)
+def test_split_windows_command_line(line, expected):
+    assert split_windows_command_line(line) == expected
+
+
+def test_split_windows_command_line_inverts_list2cmdline():
+    """Whatever ``subprocess.list2cmdline`` builds comes back as the list"""
+    import subprocess
+
+    words = ["C:\\py thon\\python.exe", "child.py", "a b", 'q"uote', "back\\slash", ""]
+    assert split_windows_command_line(subprocess.list2cmdline(words)) == words
+
+
+def test_strip_cmd_quotes(tmp_path):
+    """cmd.exe /c: a line that starts with a quote loses its first and
+    its last quote (what os.system's extra pair of quotes becomes),
+    unless the two quotes it has wrap a name with spaces that is an
+    executable file"""
+    assert (
+        strip_cmd_quotes('""C:\\p.exe" child.py out in"')
+        == '"C:\\p.exe" child.py out in'
+    )
+    assert strip_cmd_quotes('"python child.py out in"') == "python child.py out in"
+    assert strip_cmd_quotes('"a" "b"') == 'a" "b'
+    assert strip_cmd_quotes("python child.py") == "python child.py"
+    assert strip_cmd_quotes('"') == '"'
+    program = tmp_path / "my tool.exe"
+    program.write_bytes(b"")
+    quoted = '"{}"'.format(program)
+    assert strip_cmd_quotes(quoted) == quoted
+
+
+def test_windows_shell_command():
+    """``COMSPEC /c "line"`` gives the line; another command line gives
+    None"""
+    line = 'C:\\Windows\\system32\\cmd.exe /c "python child.py out in"'
+    assert windows_shell_command(line) == '"python child.py out in"'
+    assert windows_shell_command('"C:\\Program Files\\cmd.exe" /K dir') == "dir"
+    assert windows_shell_command("python child.py /c x") is None
+    assert windows_shell_command("cmd.exe /c") is None
+
+
+def test_parse_command_with_the_windows_rules():
+    """A shell line parsed as Windows does: the extra quotes of os.system
+    stripped, the words split as argv, the redirections read"""
+    line = '""C:\\py\\python.exe" child.py out.txt in.txt" > log.txt'
+    assert parse_command(line, shell=True, windows=True) == [
+        (["C:\\py\\python.exe", "child.py", "out.txt", "in.txt"], [("log.txt", "w")])
+    ]
+    assert parse_command("a && b | c", shell=True, windows=True) == [
+        (["a"], []),
+        (["b"], []),
+        (["c"], []),
+    ]

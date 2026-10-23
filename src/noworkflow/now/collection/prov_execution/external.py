@@ -257,12 +257,13 @@ class ExternalProcessTracer:
         """``subprocess.Popen``: an argument list, or the shell's line"""
         # pylint: disable=unused-argument
         if isinstance(args, (str, bytes)):
-            # Windows: Popen joins the list into one string, and with
-            # shell=True wraps it as `cmd.exe /c "line"`.
-            words = split_command_line(as_text(args))
-            if len(words) >= 3 and words[1].lower() == "/c":
-                return self.launch("popen", None, cwd, shell_command=words[2])
-            return self.launch("popen", words, cwd)
+            # Windows: Popen joins the list into one string (list2cmdline),
+            # and with shell=True wraps it as `cmd.exe /c "line"`.
+            line = as_text(args)
+            inner = windows_shell_command(line)
+            if inner is not None:
+                return self.launch("popen", None, cwd, shell_command=inner)
+            return self.launch("popen", split_windows_command_line(line), cwd)
         words = [as_text(word) for word in args]
         if (
             len(words) >= 3
@@ -626,24 +627,114 @@ def as_text(value):
         return str(value)
 
 
-def split_command_line(text):
+def split_command_line(text, windows=None):
     """The words of a shell command line, as the shell of the system
-    reads them: shlex on POSIX; on Windows the quotes are kept by shlex
-    and stripped here, a best effort"""
-    posix = os.name != "nt"
+    reads them: shlex on POSIX (a line it rejects, an unbalanced quote,
+    is split on spaces); on Windows, what cmd.exe runs for ``/c`` with
+    the line (``strip_cmd_quotes``), split as the C runtime builds argv
+    (``split_windows_command_line``). ``windows`` forces either system,
+    for the tests."""
+    if windows is None:
+        windows = os.name == "nt"
+    if windows:
+        return split_windows_command_line(strip_cmd_quotes(text))
     try:
-        words = shlex.split(text, posix=posix)
+        return shlex.split(text, posix=True)
     except ValueError:
-        words = text.split()
-    if not posix:
-        words = [
-            word[1:-1] if len(word) > 1 and word[0] == word[-1] == '"' else word
-            for word in words
-        ]
+        return text.split()
+
+
+def split_windows_command_line(text):
+    """The words of a Windows command line, as the C runtime builds argv
+    (the inverse of ``subprocess.list2cmdline``): whitespace separates
+    the words, a quote opens or closes a span where it does not, ``2n``
+    backslashes before a quote are ``n`` backslashes, ``2n+1`` are ``n``
+    and a literal quote, two quotes inside a span are a literal quote,
+    and backslashes elsewhere are literal"""
+    words, current, in_quotes, started = [], [], False, False
+    index, length = 0, len(text)
+    while index < length:
+        char = text[index]
+        if char == "\\":
+            end = index
+            while end < length and text[end] == "\\":
+                end += 1
+            count = end - index
+            started = True
+            if end < length and text[end] == '"':
+                current.append("\\" * (count // 2))
+                if count % 2:
+                    current.append('"')
+                    index = end + 1
+                else:
+                    index = end
+                continue
+            current.append("\\" * count)
+            index = end
+            continue
+        if char == '"':
+            started = True
+            if in_quotes and index + 1 < length and text[index + 1] == '"':
+                current.append('"')
+                index += 2
+                continue
+            in_quotes = not in_quotes
+            index += 1
+            continue
+        if char in " \t" and not in_quotes:
+            if started:
+                words.append("".join(current))
+                current, started = [], False
+            index += 1
+            continue
+        current.append(char)
+        started = True
+        index += 1
+    if started:
+        words.append("".join(current))
     return words
 
 
-def parse_command(args, shell=False):
+# The characters cmd.exe treats specially between the two quotes of a line.
+CMD_SPECIAL = frozenset("&<>()@^|")
+
+
+def strip_cmd_quotes(line):
+    """What cmd.exe runs for ``/c <line>`` (``os.system``, ``shell=True``):
+    the quotes stay when the line has exactly two, with whitespace and no
+    special character between them and the quoted text naming an
+    executable file; otherwise, when the line starts with a quote, the
+    first quote and the last one leave (the rule ``cmd /?`` states)"""
+    if not line.startswith('"'):
+        return line
+    last = line.rfind('"')
+    if last == 0:
+        return line
+    if line.count('"') == 2:
+        inner = line[1:last]
+        if (
+            any(char.isspace() for char in inner)
+            and not CMD_SPECIAL & set(inner)
+            and is_regular_file(inner)
+        ):
+            return line
+    return line[1:last] + line[last + 1 :]
+
+
+def windows_shell_command(line):
+    """The line a ``cmd.exe /c`` (or ``/k``) command line runs, or None
+    when the line is not one: what ``Popen(shell=True)`` builds on
+    Windows, ``COMSPEC /c "line"``"""
+    words = split_windows_command_line(line)
+    if len(words) < 3 or words[1].lower() not in ("/c", "/k"):
+        return None
+    marker = line.lower().find(words[1].lower() + " ")
+    if marker < 0:
+        return None
+    return line[marker + len(words[1]) + 1 :].lstrip()
+
+
+def parse_command(args, shell=False, windows=None):
     """The commands of a launch, each as ``(words, redirections)``
 
     ``args`` is an argument list (one command) or, with ``shell``, the
@@ -652,14 +743,15 @@ def parse_command(args, shell=False):
     (with its own assignments) dropped. ``redirections`` are ``(name,
     mode)`` pairs: ``w`` for ``>`` and ``&>``, ``a`` for ``>>``, ``r`` for
     ``<``; the operator may be attached to its target (``>out.txt``,
-    ``2>err.txt``) or not.
+    ``2>err.txt``) or not. ``windows`` forces the system's rules for the
+    line (``split_command_line``).
     """
     if not shell:
         words = [as_text(word) for word in args]
         return [(words, [])] if words else []
     commands = []
     current = []
-    for word in split_command_line(as_text(args)):
+    for word in split_command_line(as_text(args), windows):
         if word in SEPARATORS:
             commands.append(current)
             current = []
