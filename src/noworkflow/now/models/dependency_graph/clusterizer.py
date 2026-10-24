@@ -334,6 +334,8 @@ class RetrospectiveClusterizer(Clusterizer):
             self.process_activation(activation, evaluation, cluster, False)
             for dep in chain(evaluation.dependencies, evaluation.dependents):
                 dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
+                if dep_act_node_id not in created:
+                    continue
                 dep_cluster = created[dep_act_node_id][1]
                 if not isinstance(dep_cluster, ClusterNode):
                     continue
