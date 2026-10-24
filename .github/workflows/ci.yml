@@ -308,11 +308,12 @@ jobs:
           name: coverage-report-python
           path: coverage.xml
 
-  # Publishes the reference leg's report to the repository's code quality view.
-  # No threshold: the rule is "test count >= floor" (see min-tests), not a
-  # percentage. A job of its own, with the only write permission of the
-  # workflow, so the test legs keep read-only tokens. No checkout: the action
-  # needs only the report. The `if` mirrors the one on the artifact upload: a
+  # Publishes the reference leg's report to the repository's code quality view
+  # and to qlty.sh. No threshold: the rule is "test count >= floor" (see
+  # min-tests), not a percentage. A job of its own, with the only write
+  # permission of the workflow, so the test legs keep read-only tokens. The
+  # checkout is for qlty, which reads the commit from git and refuses to
+  # upload without a repository. The `if` mirrors the one on the artifact upload: a
   # fork PR has no artifact, and `!cancelled()` plus the result check keep the
   # job from running (or being skipped by implication) after a red or skipped
   # `test`.
@@ -325,6 +326,11 @@ jobs:
       code-quality: write
       pull-requests: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
       - name: Download the Cobertura report
         uses: actions/download-artifact@v8
         with:
