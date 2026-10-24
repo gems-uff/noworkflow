@@ -98,8 +98,11 @@ Content changed as shown above for pred.csv
 
 `pred.csv` appears twice because the R script writes it and the binary
 reads it; the two accesses are paired by mode, and the diff of the
-predictions is printed once. On the Kaggle dataset that diff is cut at 200
-lines, with a hint to write a whole version with `now restore`.
+predictions is printed once. On the Kaggle dataset it shows the nine
+predictions the new threshold changed, among some 57,000 rows, each as one
+row removed and one added, with three rows of context; a diff longer than
+200 lines would be cut, with a hint to write a whole version with `now
+restore`.
 
 The programs the script launches are dependencies of the trial, like the
 modules it imports. `now show -m` lists them with their real path, the

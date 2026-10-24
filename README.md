@@ -230,7 +230,7 @@ A module, or a program a trial launched, whose code changed between the trials i
 ```bash
 $ now diff [trial1] [trial2] -f --content
 ```
-A binary file gets one line saying that its content differs, a side where the file did not exist gets a line instead of the whole content of the other, and a diff longer than 200 lines is cut, with a hint to restore a whole version with `now restore`.
+The diff removes and adds as few lines as it can, as `diff -u` does, also in a data file whose rows repeat. A binary file gets one line saying that its content differs, a side where the file did not exist gets a line instead of the whole content of the other, and a diff longer than 200 lines is cut, with a hint to restore a whole version with `now restore`.
 
 The *-fa* option compares two function activations instead of whole trials, taking the database ids of the activations in the same order as the trials:
 ```bash
