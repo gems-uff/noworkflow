@@ -128,7 +128,12 @@ once it is integrated and nothing is left to do.
   same commit; the `frontend` job rebuilds it and fails on a difference.
 - **The docs, when the interface changes.** A new or renamed command or
   option is also changed in `README.md` and, once it exists, in
-  `skills/noworkflow/SKILL.md`.
+  `skills/noworkflow/SKILL.md`. `src/noworkflow/tests/e2e/test_readme.py`
+  holds the README to the tool (its command lines, the options and values
+  it names, what it says about installing, the output it shows, its
+  links), and `test_beyond_python.py` the excerpts of
+  `Examples/glue_pipeline/README.md`: a change that turns one of them red
+  updates the README in the same pull request.
 - **No real data.** A provenance store records the whole environment of the
   machine (every environment variable, user name, hostname). Do not paste a
   real `now show -e`, a real Prolog export or a real `.noworkflow/` into the

@@ -33,6 +33,12 @@ checks the paper against the tool). A change to the case study, or to what
 the paper shows of it, in any of the three is carried to the other two;
 see "The paper's running example" in `AGENTS.md`.
 
+`Examples/glue_pipeline/` at the root of the repository ships the six
+files of the table above, without the variants, to users, with a README
+of its own. They are byte for byte these, and
+`src/noworkflow/tests/test_repository_examples.py` fails when the two
+copies differ: a change here is copied there in the same commit.
+
 ## How the test uses it
 
 `../../test_beyond_python.py` replays the trial history of `run.sh` with
@@ -62,9 +68,10 @@ NOW_PAPER_DATASET=/path/to/creditcard.csv uv run pytest -m paper src/noworkflow/
 
 ## A new tag of the package
 
-Copy the files of the new tag over these (keep the bytes: the directory is
-`-text` in `.gitattributes`, and the wrapper's SHA-1 is the code hash the
-paper prints), write the tag and the commit above, and run the tests. A
+Copy the files of the new tag over these and over the copy in
+`Examples/glue_pipeline/` (keep the bytes: both directories are `-text` in
+`.gitattributes`, and the wrapper's SHA-1 is the code hash the paper
+prints), write the tag and the commit above, and run the tests. A
 red is triaged before anything changes: list each divergence between the
 tool and the paper, and let the maintainer decide which side moves. Change
 `STEPS` in `beyond_python.py` only when the trial history of `run.sh`

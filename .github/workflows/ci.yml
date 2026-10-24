@@ -176,16 +176,16 @@ jobs:
         # and counted by the paper-example, vis-browser and engines jobs.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 3141 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 3141 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 3141 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 3141 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 3159 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 3159 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 3159 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 3159 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 3169, reference: true }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 3187, reference: true }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -340,6 +340,18 @@ jobs:
           label: code-coverage/pytest-cov
           fail-on-error: false
 
+      # The coverage badge of the README: GitHub's coverage has no badge, so
+      # qlty.sh receives the same report. A report too, not a gate:
+      # skip-errors keeps a failed upload (an outage, or the
+      # QLTY_COVERAGE_TOKEN secret missing) from turning the job red.
+      - name: Upload coverage to qlty
+        uses: qltysh/qlty-action/coverage@ebcd284bf32e36a030afe15f1e136c7be08b9506 # v2.5.0
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: coverage.xml
+          format: cobertura
+          skip-errors: true
+
   # bundle.js is committed, because `pip install noworkflow` must serve `now
   # vis` without Node. Nothing forced whoever changed src/frontend to rebuild
   # it. The bundle is reproducible byte for byte; the .map is not (it embeds
@@ -454,7 +466,7 @@ jobs:
       - name: Record the test count
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh pytest.log 73 \
+          bash .github/scripts/pytest-summary.sh pytest.log 77 \
             "paper example (ubuntu-latest, 3.15)" \
             'uv sync --locked --group paper && GOLDEN=require NOW_RSCRIPT=require uv run --no-sync pytest -m paper'
 

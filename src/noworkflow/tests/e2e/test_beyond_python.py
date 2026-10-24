@@ -76,6 +76,11 @@ access, the wrapper's own and the launches', a finding of these tests)
 passed with it and lost its mark and its suffix; the characterization of
 the export without them left.
 
+``Examples/glue_pipeline/README.md`` shows users excerpts of what ``now``
+prints for this history; ``test_the_glue_pipeline_readme_shows_what_now_prints``
+runs each command it shows on the replay and finds the excerpt's lines,
+in order, in the output.
+
 The two rdtLite tests run a fourth trial of their own, the wrapper of
 ``corpus/beyond_python/rdtlite`` (``model.R`` under rdtLite's
 ``prov.run``), and skip without the rdtLite package, in CI too.
@@ -87,9 +92,11 @@ import importlib.util
 import json
 import os
 import re
+import shlex
 import shutil
 import stat
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -1194,3 +1201,70 @@ def test_export_prov_has_entities_for_the_exchanged_files(case):
         )
         assert linked, "no used or wasGeneratedBy of {}".format(entity)
     assert sorted(accesses) == sorted((name, mode) for name, mode, _ in EXCHANGED)
+
+
+# --- the README of Examples/glue_pipeline -----------------------------------
+
+# src/noworkflow/tests/e2e/ -> the root of the checkout
+GLUE_README = (
+    Path(__file__).resolve().parents[4] / "Examples" / "glue_pipeline" / "README.md"
+)
+EXCERPT_BLOCK = re.compile(r"^```[^\n]*\n(\$ now [^\n]*)\n(.*?)^```", re.M | re.S)
+# What differs between the README's run (the Kaggle dataset, one machine)
+# and the replay (the synthetic dataset, this machine): hashes, metric
+# values, the versions and paths of the programs, the node ids of the dot.
+EXCERPT_MASKS = (
+    (re.compile(r"\b[0-9a-f]{7,40}\b"), "<H>"),
+    (re.compile(r"\b\d+\.\d{4}\b"), "<N>"),
+    (re.compile(r"^(\s*(?:Version|Path): ).*$"), r"\1<V>"),
+    (re.compile(r"\b[ae]_\d+\b"), "<NODE>"),
+)
+
+
+def glue_readme_excerpts():
+    """``(command, shown lines)`` of each output in the README"""
+    if not GLUE_README.is_file():
+        return []
+    text = GLUE_README.read_text(encoding="utf-8")
+    return [
+        (command[2:], body.splitlines())
+        for command, body in EXCERPT_BLOCK.findall(text)
+    ]
+
+
+def excerpt_mask(line):
+    line = line.strip()
+    for pattern, replacement in EXCERPT_MASKS:
+        line = pattern.sub(replacement, line)
+    return line
+
+
+@pytest.mark.parametrize(
+    "command, shown",
+    glue_readme_excerpts(),
+    ids=[command for command, _ in glue_readme_excerpts()],
+)
+def test_the_glue_pipeline_readme_shows_what_now_prints(case, command, shown):
+    """Each excerpt of ``Examples/glue_pipeline/README.md`` is what ``now``
+    prints for the replay: its lines appear in that order in the output,
+    ``...`` standing for what the README cut, once hashes, metric values,
+    versions, paths and node ids are masked on both sides"""
+    result = case.run(*shlex.split(command)[1:])
+    printed = [excerpt_mask(line) for line in result.stdout.splitlines()]
+    position = 0
+    for line in shown:
+        line = excerpt_mask(line)
+        if line in ("", "..."):
+            continue
+        pattern = re.compile(
+            "^" + ".*".join(re.escape(part) for part in line.split("...")) + "$"
+        )
+        while position < len(printed) and not pattern.match(printed[position]):
+            position += 1
+        assert position < len(printed), (
+            "Examples/glue_pipeline/README.md shows, under `{}`, a line that "
+            "now does not print in that order: {!r}. The maintainer decides "
+            "whether the tool regressed or the README must follow it; the "
+            "README is never edited only to make this test pass.".format(command, line)
+        )
+        position += 1

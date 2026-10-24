@@ -34,7 +34,7 @@ def simulation(dataA, dataB):
 
 
 def csvRead(f):
-    reader = csv.reader(open(f, "rU"), delimiter=":")
+    reader = csv.reader(open(f, newline=""), delimiter=":")
     header = []
     data = []
     for row in reader:

@@ -1,0 +1,10 @@
+--- a/model.R
++++ b/model.R
+@@ -7,6 +7,6 @@
+ test <- sample(nrow(data), floor(0.2 * nrow(data)))
+ model <- glm(Class ~ ., data = data[-test, ], family = binomial)
+ prob <- predict(model, newdata = data[test, ], type = "response")
+-threshold <- 0.5
++threshold <- 0.3
+ write.csv(data.frame(Class = data$Class[test], Pred = as.integer(prob > threshold)),
+           output, row.names = FALSE)

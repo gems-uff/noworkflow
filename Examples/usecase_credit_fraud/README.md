@@ -31,27 +31,23 @@ To showcase how these features can take your experiment management to another le
 
 ## Noworkflow Setup
 
-To perform this tutorial, we highly recommend setting up a Conda environment on your system, which involves installing the noWorkflow package and Jupyter Lab. To reproduce the experimental Notebooks, you can clone this repository as well. Take advantage of the [_environment-snapshot.txt_](environment-snapshot.txt) file to accelerate your setup with pip tools.
+To perform this tutorial, we highly recommend setting up a Conda environment on your system, which involves installing the noWorkflow package and Jupyter Lab. To reproduce the experimental Notebooks, you can clone this repository as well. The [_environment-snapshot.txt_](environment-snapshot.txt) file records the environment the Notebooks were first run in, with Python 3.10; its versions do not install on the Python versions noWorkflow supports now, so the commands below install the current ones.
 
-First, clone our use case tutorial to your local machine and create a separate environment:
+First, clone the repository to your local machine and create a separate environment. Python 3.11 is the oldest version noWorkflow supports, and one for which every library of the Notebooks (CatBoost included) publishes ready-made packages:
 
 ```bash
-git clone -b sor_pull_request https://github.com/jaglima/noworkflow.git
+git clone https://github.com/gems-uff/noworkflow.git
 
 cd noworkflow
 # Create a conda env
-conda create -n noworkflow python=3.10
+conda create -n noworkflow python=3.11
 conda activate noworkflow
-pip install -r ./Examples/usecase_credit_fraud/environment-snapshot.txt
 ```
 
-Install the noWorkflow:
+Install noWorkflow, Jupyter Lab with the noWorkflow extension, and the libraries the Notebooks import:
 ```bash
-# install the noWorkflow
-pip install -e .[demo]
-pip install jupyter==1.0.0
-jupyter nbextension install --py --sys-prefix noworkflow
-jupyter nbextension enable noworkflow --py --sys-prefix
+pip install -e ".[demo]" jupyterlab noworkflow_labextension
+pip install pandas scikit-learn imbalanced-learn xgboost lightgbm catboost
 
 # install noworkflow jupyter kernel
 now kernel

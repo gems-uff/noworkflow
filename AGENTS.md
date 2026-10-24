@@ -14,7 +14,11 @@ Before writing a procedure, check what already exists:
 
 - `README.md`: installing noWorkflow as a **user** (`pip install`) and the
   usage of every command. It is not how to set up a development
-  environment.
+  environment. It is also the PyPI page, and
+  `src/noworkflow/tests/e2e/test_readme.py` holds it to the tool: a red
+  there means the tool regressed or the README must follow it, and the
+  maintainer decides which; the expectation is never edited only to make
+  the test pass.
 - `CONTRIBUTING.md`: the development environment (what to install on a new
   machine, and how to set up `.venv`), the commands to run locally, and the
   contribution cycle (issue, branch, commit, PR).
@@ -569,7 +573,10 @@ in the same three places: a Python wrapper that launches an R script and a
 C program, in `beyond-python/` of the package and in
 `src/noworkflow/tests/e2e/corpus/beyond_python/` here, replayed by
 `src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job.
-Its tests need `Rscript` and `cc` and skip without them (the job sets
+`Examples/glue_pipeline/` ships the same files to users, byte for byte
+the corpus copy (`test_repository_examples.py` fails when they differ),
+so a change to the corpus is copied there in the same commit. The tests
+of the case study need `Rscript` and `cc` and skip without them (the job sets
 `NOW_RSCRIPT=require`). The claims that only #206 and #207 can
 satisfy are `_desired` twins, `xfail(strict=True)` through
 `known_defects` with the signature of today's failure; the issue that
