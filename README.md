@@ -16,38 +16,39 @@ Installing and using noWorkflow is simple and easy. Please check our installatio
 Team
 ----
 
-noWorkflow is developed by researchers from Universidade Federal Fluminense (UFF) in Brazil and New York University (NYU) in the USA. The main team:
+noWorkflow is developed by researchers from Universidade Federal Fluminense (UFF) in Brazil and New York University (NYU) in the USA.
 
 - Leonardo Murta (joined in September 2013)
 - Vanessa Braganholo (joined in September 2013)
 - Juliana Freire (joined in September 2013)
 - João Felipe Pimentel (joined in July 2014)
-
-Collaborators:
-
-- David Koop (joined in September 2013)
-- Fernando Chirigati (joined in September 2013)
 - Vynicius Pontes (joined in December 2017)
 - Ruslan Guerra Marzo (joined in June 2018)
 - Eduardo Jandre (joined in April 2019)
 - Erick Grilo (joined in June 2019)
 - Daniel Toledo (joined in June 2019)
 - Henrique Linhares (joined in January 2022)
-- Vitor Gama Lemos (joined in October 2022)
 - Arthur Paiva (joined in March 2023)
 - Jessé Lima (joined in September 2023, Summer of Reproducibility)
 - Joshua Daniel Talahatu (joined in July 2024, Google Summer of Code)
-- Ana Caroline Torres de Carvalho (joined in November 2024)
 - Matheus Lobo (joined in June 2025)
 - Bruno Sumar Gonçalves (joined in July 2025)
 - Felipe Coutinho (joined in March 2026)
-- João Pedro Lopez (joined in 2026)
 
-Additional contributors:
+Additional contributors
+-----------------------
 
+- Ana Caroline Torres de Carvalho (documentation: README and wiki)
+- Ben Marwick (documentation fix)
+- David Koop (conception of noWorkflow 1.0)
+- Fernando Chirigati (conception of noWorkflow 1.0)
+- João Pedro Lopez (performance evaluation of noWorkflow)
+- [Mirochill](https://github.com/Mirochill) (bug fix: version lookup without pkg_resources)
 - Paolo Missier (Versioned-PROV, the model of the PROV export)
-- Saumen Dey, Timothy McPhillips, Khalid Belhajjame and Bertram Ludäscher (the integration with YesWorkflow)
-- Ben Marwick, Remi Rampin, [Mirochill](https://github.com/Mirochill) and [tnkinobirb](https://github.com/tnkinobirb) (fixes contributed through pull requests)
+- Remi Rampin (documentation fix)
+- Saumen Dey, Timothy McPhillips, Khalid Belhajjame and Bertram Ludäscher (integration with YesWorkflow)
+- [tnkinobirb](https://github.com/tnkinobirb) (bug fix: dictionary unpacking as an item dependency)
+- Vitor Gama Lemos (conception of the prospective provenance graph)
 
 History
 ------------------
