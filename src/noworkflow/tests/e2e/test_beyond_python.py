@@ -81,6 +81,13 @@ prints for this history; ``test_the_glue_pipeline_readme_shows_what_now_prints``
 runs each command it shows on the replay and finds the excerpt's lines,
 in order, in the output.
 
+The mirrors (#467, ``test_each_trial_computes_what_plain_python_computes``)
+run the sources of each trial with plain Python and with ``now run``
+under each configuration the paper uses (the default argv tracer,
+``--external-tracer none``, ``-cg`` and the depth limits of its
+evaluation), from fresh copies, and compare the outcomes as the oracle
+does (``oracle.differences``).
+
 The two rdtLite tests run a fourth trial of their own, the wrapper of
 ``corpus/beyond_python/rdtlite`` (``model.R`` under rdtLite's
 ``prov.run``), and skip without the rdtLite package, in CI too.
@@ -115,6 +122,7 @@ from noworkflow.tests.e2e.beyond_python import (
     has_rdtlite,
     perform,
     place_sources,
+    place_trial,
     run_sh_steps,
     tool_directories,
 )
@@ -124,7 +132,12 @@ from noworkflow.tests.e2e.harness import (
     same_path,
     sha1,
 )
-from noworkflow.tests.e2e.oracle import run_plain
+from noworkflow.tests.e2e.oracle import (
+    assert_traced,
+    differences,
+    run_plain,
+    run_traced,
+)
 from noworkflow.tests.e2e.paper import apply_patch, labelled
 from noworkflow.tests.helpers.defects import Defect, known_defects
 
@@ -469,6 +482,63 @@ def test_out_txt_and_the_exit_status_equal_plain_pythons(tmp_path, tools, case):
     assert outcome.stdout == ""
     for name in ("prepared.csv", "pred.csv", "out.txt", "metrics"):
         assert outcome.files.get(name) == case.files["1.1.1"].get(name), name
+
+
+# The configurations of the paper, with the suffix of their ids: the
+# default (the argv tracer), the external tracer off, coarse granularity
+# and the depth limits of the evaluation (#467).
+CONFIGURATIONS = (
+    ((), ""),
+    (("--external-tracer", "none"), "-none"),
+    (("-cg",), "-cg"),
+    (("-d", "2"), "-d2"),
+    (("-d", "3"), "-d3"),
+    (("-cg", "-d", "2"), "-cg-d2"),
+    (("-cg", "-d", "3"), "-cg-d3"),
+)
+
+
+@pytest.fixture(scope="module")
+def mirror_projects(tmp_path_factory, tools):
+    """``{tag: (project, plain outcome)}``, filled on demand: one project
+    per trial, where plain Python ran once and each configuration runs
+    from a fresh copy"""
+    found = {}
+
+    def get(tag):
+        if tag not in found:
+            project = case_project(tmp_path_factory.mktemp("mirror"), tools)
+            place_trial(project, tag)
+            found[tag] = (project, run_plain(project, SCRIPT, timeout=RUN_TIMEOUT))
+        return found[tag]
+
+    return get
+
+
+@pytest.mark.parametrize(
+    "tag, flags",
+    [
+        pytest.param(tag, flags, id=tag + suffix)
+        for tag in RUN_TAGS
+        for flags, suffix in CONFIGURATIONS
+    ],
+)
+def test_each_trial_computes_what_plain_python_computes(mirror_projects, tag, flags):
+    """The sources of each trial, run by plain Python and by ``now run``
+    under each configuration of the paper from a fresh copy, leave the
+    same status, outputs and files (prepared.csv, pred.csv, out.txt, the
+    compiled metrics; the store excluded). A depth limit must only reduce
+    what is collected (#243)."""
+    project, plain = mirror_projects(tag)
+    assert plain.returncode == 0, project.normalize(str(plain))
+    place_trial(project, tag)
+    traced = run_traced(project, SCRIPT, flags=flags, timeout=RUN_TIMEOUT)
+    found = differences(plain, traced)
+    assert not found, diverges(
+        "{} does not compute what plain Python computes".format(traced.label),
+        "\n".join(found) + "\n\n{}\n\n{}".format(plain, traced),
+    )
+    assert_traced(project, " ".join(("run", *flags, SCRIPT)))
 
 
 # --- The trials ---------------------------------------------------------

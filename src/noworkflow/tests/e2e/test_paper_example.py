@@ -21,6 +21,13 @@ only (``goldens/REFERENCE``), like the goldens. With ``NOW_PAPER_DATASET``
 pointing at the real dataset the same tests run on it, the goldens
 excepted.
 
+The mirrors (#467) run the script of each distinct run of the history
+with plain Python and with ``now run`` under each configuration the paper
+uses (the default, ``-cg`` and the depth limits of its evaluation), from
+fresh copies, and compare the outcomes as the oracle does
+(``oracle.differences``): collecting provenance must not change what the
+script computes.
+
 The store drops the file accesses inside the harness's temporary directory
 (``drop_temporary_accesses``), a normalization the maintainer chose: from
 Python 3.15.1 on, on Linux, ``multiprocessing`` probes that directory when
@@ -49,10 +56,18 @@ from noworkflow.tests.e2e import golden
 from noworkflow.tests.e2e.golden import assert_golden
 from noworkflow.tests.e2e.harness import NowProject, runs_this_interpreter
 from noworkflow.tests.e2e.normalize import prolog_statements
+from noworkflow.tests.e2e.oracle import (
+    assert_traced,
+    differences,
+    empty_project,
+    run_plain,
+    run_traced,
+)
 from noworkflow.tests.e2e.paper import (
     DATASET,
     DATASET_VARIABLE,
     PAPER_CORPUS,
+    RUN_TIMEOUT,
     SCRIPT,
     STEPS,
     apply_patch,
@@ -62,6 +77,7 @@ from noworkflow.tests.e2e.paper import (
     run_trials_steps,
     synthetic_dataset,
     trial_sources,
+    write_dataset,
 )
 
 pytestmark = pytest.mark.paper
@@ -682,6 +698,116 @@ def test_the_synthetic_dataset_gives_stable_metrics_that_depend_on_pca_and_seed(
     assert not unstable, "out.txt changes from run to run: {}".format(unstable)
     assert outputs["1.1.1"] != outputs["6.1.1"]
     assert outputs["1.2.1"] != outputs["5.1.1"]
+
+
+# --- Collecting provenance changes nothing the script computes (#467) ---
+
+# The configurations of the paper, with the suffix of their ids: the
+# default, coarse granularity (Section 3) and the depth limits its
+# evaluation measures (Section 7).
+CONFIGURATIONS = (
+    ((), ""),
+    (("-cg",), "-cg"),
+    (("-d", "2"), "-d2"),
+    (("-d", "3"), "-d3"),
+    (("-cg", "-d", "2"), "-cg-d2"),
+    (("-cg", "-d", "3"), "-cg-d3"),
+)
+
+
+def distinct_runs():
+    """``{tag: (files, args, fails)}`` of the runs of the history, a run
+    with the files and arguments of an earlier one left out: 1.1.2 and
+    1.1.3 run 1.1.1 again"""
+    runs, seen = {}, set()
+    for tag, files, args, fails in trial_sources():
+        key = (tuple(sorted(files.items())), args)
+        if key not in seen:
+            seen.add(key)
+            runs[tag] = (files, args, fails)
+    return runs
+
+
+DISTINCT_RUNS = distinct_runs()
+MIRRORS = [
+    pytest.param(tag, flags, id=tag + suffix)
+    for tag in DISTINCT_RUNS
+    for flags, suffix in CONFIGURATIONS
+]
+
+
+def place_run(project, tag):
+    """Empty the project and put the files of the run ``tag`` in it, with
+    the dataset"""
+    empty_project(project)
+    files, _, _ = DISTINCT_RUNS[tag]
+    for name, text in files.items():
+        with open(project.path / name, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+    write_dataset(project.path / DATASET)
+
+
+@pytest.fixture(scope="module")
+def mirror_projects(tmp_path_factory):
+    """``{tag: (project, plain outcome)}``, filled on demand: one project
+    per run, where plain Python ran once and each configuration runs
+    from a fresh copy"""
+    if runs_this_interpreter():
+        missing = [
+            name for name in GROUP_MODULES if importlib.util.find_spec(name) is None
+        ]
+        if missing:
+            pytest.skip(
+                "needs the `paper` dependency group (uv sync "
+                "--group paper); missing: {}".format(", ".join(missing))
+            )
+    found = {}
+
+    def get(tag):
+        if tag not in found:
+            project = NowProject(tmp_path_factory.mktemp("mirror"))
+            place_run(project, tag)
+            _, args, _ = DISTINCT_RUNS[tag]
+            found[tag] = (
+                project,
+                run_plain(project, SCRIPT, *args, timeout=RUN_TIMEOUT),
+            )
+        return found[tag]
+
+    return get
+
+
+def last_line(outcome):
+    """``outcome`` with its stderr reduced to the last line: the exception
+    of a run that fails, whose traceback goes through the collector under
+    ``now run``"""
+    lines = outcome.stderr.strip().splitlines()
+    return dataclasses.replace(outcome, stderr=lines[-1] if lines else "")
+
+
+@pytest.mark.parametrize("tag, flags", MIRRORS)
+def test_each_run_of_the_history_computes_what_plain_python_computes(
+    mirror_projects, tag, flags
+):
+    """The script of each run of the history, run by plain Python and by
+    ``now run`` under each configuration of the paper from a fresh copy of
+    the same files, leaves the same status, outputs and files (out.txt,
+    the store excluded); 4.1.1, which fails on purpose, with the same
+    exception. A depth limit must only reduce what is collected (#243)."""
+    project, plain = mirror_projects(tag)
+    _, args, fails = DISTINCT_RUNS[tag]
+    assert plain.returncode == (1 if fails else 0), str(plain)
+    place_run(project, tag)
+    traced = run_traced(project, SCRIPT, *args, flags=flags, timeout=RUN_TIMEOUT)
+    if fails:
+        plain, traced = last_line(plain), last_line(traced)
+        assert "KeyError" in plain.stderr, str(plain)
+    found = differences(plain, traced)
+    assert not found, diverges(
+        "{} does not compute what plain Python computes".format(traced.label),
+        "\n".join(found) + "\n\n{}\n\n{}".format(plain, traced),
+    )
+    assert_traced(project, " ".join(("run", *flags, SCRIPT, *args)))
 
 
 # --- Section 4: storage, versioning and restore -------------------------

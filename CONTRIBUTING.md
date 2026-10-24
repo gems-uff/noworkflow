@@ -369,7 +369,7 @@ them on the reference platform, with SWI-Prolog for the Prolog query:
 
 ```bash
 uv sync --locked --group paper                           # scikit-learn, imbalanced-learn, pandas
-uv run pytest -m paper                                   # about a minute; the replay runs once
+uv run pytest -m paper                                   # minutes: the replay runs once, the mirrors once per configuration
 GOLDEN=require .github/reference-leg/run.sh -m paper     # as the job runs it, goldens included
 ```
 

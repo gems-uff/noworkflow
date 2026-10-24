@@ -559,7 +559,10 @@ purpose:
    on the copy in `src/noworkflow/tests/e2e/corpus/paper_example/` (its
    README names the tag) and checks what the paper shows, one test per
    figure or listing, in the `paper-example` job of `ci.yml`, so that a
-   change here cannot contradict the paper without a red build.
+   change here cannot contradict the paper without a red build. It also
+   mirrors each run of the sequence: plain Python against `now run` under
+   each configuration the paper uses (the default, `-cg` and the depth
+   limits of its evaluation), compared as the oracle compares.
 
 A change to the example, or to what the paper shows of it, in any of the
 three is carried to the other two. When the test of the example turns red,
@@ -572,7 +575,8 @@ The case study of the paper's "Beyond Python" section is a second example
 in the same three places: a Python wrapper that launches an R script and a
 C program, in `beyond-python/` of the package and in
 `src/noworkflow/tests/e2e/corpus/beyond_python/` here, replayed by
-`src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job.
+`src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job,
+mirrors included (with `--external-tracer none` among the configurations).
 `Examples/glue_pipeline/` ships the same files to users, byte for byte
 the corpus copy (`test_repository_examples.py` fails when they differ),
 so a change to the corpus is copied there in the same commit. The tests

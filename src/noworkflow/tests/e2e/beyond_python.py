@@ -25,6 +25,7 @@ import shutil
 import subprocess
 
 from .harness import CORPUS
+from .oracle import empty_project
 from .paper import DATASET_VARIABLE, apply_patch
 
 CASE_CORPUS = CORPUS / "beyond_python"
@@ -194,6 +195,20 @@ def place_sources(project):
     for name in (SCRIPT,) + SOURCES:
         shutil.copyfile(CASE_CORPUS / name, project.path / name)
     write_dataset(project.path / DATASET)
+
+
+def place_trial(project, tag):
+    """Empty the project and put in it the sources of the trial ``tag``,
+    as ``STEPS`` leaves them before its run, with the dataset"""
+    empty_project(project)
+    place_sources(project)
+    tags = iter(RUN_TAGS)
+    for step in STEPS:
+        if step[0] == "apply":
+            perform(project, step)
+        elif step == ("run",) and next(tags) == tag:
+            return
+    raise ValueError("no trial {} in STEPS".format(tag))
 
 
 def clean_outputs(directory):
