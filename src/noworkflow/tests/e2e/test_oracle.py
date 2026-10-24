@@ -59,9 +59,9 @@ evaluation measures (``-d 2``, ``-d 3``, ``-cg -d 2``, ``-cg -d 3``, ids
 package`` (``modules-package``), so that the local package is rewritten
 too; that case also requires the package's classes among the trial's
 code components, since the main script alone records evaluations. A
-depth limit must only reduce what is collected (#243): the defects it
-shows are in ``DEPTH_DEFECTS``, and a coarse-grained limit also carries
-the theme's ``-cg`` defects.
+depth limit only reduces what is collected (#243), so a case under one
+carries no defect of its own; a coarse-grained limit carries the theme's
+``-cg`` defects.
 
 Both runs use the harness's synthetic environment (UTF-8 mode, a fixed
 hash seed, terminal width and no colors), so the oracle compares what
@@ -801,55 +801,22 @@ COARSE_DEFECTS = {
 PACKAGE_CLASSES = ("Circle", "Square")
 
 # The depth limits of the paper's evaluation (#467), fine- and
-# coarse-grained, with the suffix of their ids.
+# coarse-grained, with the suffix of their ids. A depth limit only reduces
+# what is collected (#243), so a case under one carries no defect of its
+# own; under -cg -d 2 and -cg -d 3 the themes of COARSE_DEFECTS stop in
+# the transformer as under -cg (depth_defects).
 DEPTH_LIMITS = (
     (("-d", "2"), "-d2"),
     (("-d", "3"), "-d3"),
     (("-cg", "-d", "2"), "-cg-d2"),
     (("-cg", "-d", "3"), "-cg-d3"),
 )
-DEPTH_EMPTY_GENEXP = Defect(
-    "#243: under a depth limit, a generator expression or a comprehension "
-    "that runs below the limit, in a function called from a function, "
-    "yields nothing: in arguments.py, collect() called through forward() "
-    "and apply() joins an empty generator and returns '' instead of "
-    "'9:8' and 'k'; the run finishes with status 0 and nothing tells the "
-    "user",
-    signature="('', [('mode', 'fast')])",
-)
-DEPTH_INIT_BOUND = Defect(
-    "#243: under a depth limit, new_function_def (Collector._function_def, "
-    "collector.py) gives the activation of an __init__ the bound "
-    "dependency True when find_reference_dependency finds no evaluation of "
-    "the new object, which the call at the limit does not record; once the "
-    "__init__ returns, the code that marks that dependency as 'init' reads "
-    "True.mode: AttributeError in the collector, reported on stderr, and "
-    "the script stops with status 1. Any class with an __init__ "
-    "instantiated at the limit (Box() at the top level under -d 2, inside "
-    "a function under -d 3) is enough; -cg goes the same way, behind the "
-    "transformer crashes of its themes",
-    signature="[now] AttributeError(\"'bool' object has no attribute 'mode'\")",
-)
-# The themes that a depth limit does not run like plain Python, by the
-# suffix of the limit. Under -cg -d 2 and -cg -d 3 the themes of
-# COARSE_DEFECTS stop in the transformer first (depth_defects).
-DEPTH_DEFECTS = {
-    ("arguments.py", "-d2"): (DEPTH_EMPTY_GENEXP,),
-    ("arguments.py", "-cg-d2"): (DEPTH_EMPTY_GENEXP,),
-    ("classes.py", "-d2"): (DEPTH_INIT_BOUND,),
-    ("classes.py", "-d3"): (DEPTH_INIT_BOUND,),
-    ("evaluation_order.py", "-d2"): (DEPTH_INIT_BOUND,),
-    ("exceptions.py", "-d2"): (DEPTH_INIT_BOUND,),
-    ("generators.py", "-d2"): (DEPTH_INIT_BOUND,),
-    ("scopes.py", "-d2"): (DEPTH_INIT_BOUND,),
-}
 
 
-def depth_defects(script, flags, suffix):
-    """The known defects of a theme under a depth limit: its own, and
-    those of -cg when the limit is coarse-grained"""
-    coarse = COARSE_DEFECTS.get(script, ()) if "-cg" in flags else ()
-    return coarse + DEPTH_DEFECTS.get((script, suffix), ())
+def depth_defects(script, flags):
+    """The known defects of a theme under a depth limit: those of -cg when
+    the limit is coarse-grained, none otherwise"""
+    return COARSE_DEFECTS.get(script, ()) if "-cg" in flags else ()
 
 
 CASES = (
@@ -874,7 +841,7 @@ CASES = (
             *args,
             flags=flags,
             suffix=suffix,
-            defects=depth_defects(script, flags, suffix),
+            defects=depth_defects(script, flags),
             marks=THEME_MARKS.get(script, ()),
         )
         for flags, suffix in DEPTH_LIMITS

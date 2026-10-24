@@ -354,6 +354,9 @@ class Collector(object):
                 addr = "[{}]".format(nvindex)
                 value = vcontainer[vindex]
                 if not activation.active:
+                    # Nothing to record, but what access() pushed must go
+                    # (#243): one entry per read would stay on the stack
+                    activation.dependencies.pop()
                     return value
                 if value_dep is not None:
                     collection = value_dep.evaluation
@@ -363,6 +366,7 @@ class Collector(object):
                 addr = ".{}".format(vindex)
                 value = getattr(vcontainer, vindex)
                 if not activation.active:
+                    activation.dependencies.pop()
                     return value
                 if value_dep is not None:
                     self.full_member_lookup(
@@ -1327,9 +1331,12 @@ class Collector(object):
         return self.assign(activation, assign.sub(new_value, depas), star, back + 1)
 
     def assign(self, activation, assign, target_expr, back=1):
-        """Create dependencies"""
+        """Create dependencies. Return the number of targets assigned"""
         if not activation.active:
-            return 0
+            # Nothing to record, but a rewritten comprehension filters each
+            # of its items through this call (`if <now>.assign(...)`), so
+            # the result must be true, as for one target assigned (#243)
+            return 1
         ldepa = []
         _, _, depa = assign
         if isinstance(depa, list):
@@ -1659,7 +1666,14 @@ class Collector(object):
                     **kwargs,
                 )
                 bound_dependency = activation.bound_dependency
-                if function_def.__name__ == "__init__" and bound_dependency:
+                # Below the depth limit match_arguments records nothing and
+                # leaves the bound dependency as the True that stands for
+                # "unresolved"; there is no evaluation to tie to self (#243)
+                if (
+                    function_def.__name__ == "__init__"
+                    and activation.active
+                    and bound_dependency
+                ):
                     old_mode = bound_dependency.mode
                     depa = DependencyAware()
                     value = args[0]

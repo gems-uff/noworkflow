@@ -106,7 +106,7 @@ Collection options, from the cheapest to the most complete:
 |---|---|
 | `-cg` | coarse-grained: activations, arguments, returns and file accesses only (no variables, no dependencies) |
 | `-e relevant` / `-e none` | collect the values of activations, arguments and tagged evaluations only / no values |
-| `-d N` | limit the depth of collected activations. **It can change what the script computes** (#243): on a script that ran fine, `-d 1` made it fail with `IndexError`. Prefer `-cg`. |
+| `-d N` | limit the depth of collected activations: the first call past the limit is recorded as a black box (its arguments and its result), and nothing it does or calls is. The script computes what it computes without noWorkflow. |
 | `-b` | reuse the module dependencies of the previous trial (faster; fails without a previous trial) |
 | `--executable-cap SIZE` | the size above which the program a process runs (and a `ctypes` library) is stored as its hash only, which `now restore` cannot put back (default `16M`; bytes or a `K`, `M`, `G` suffix; `0` stores none) |
 | `-c main\|package\|all` | which functions count for `-d` |

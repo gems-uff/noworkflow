@@ -649,34 +649,36 @@ def test_run_script_that_keeps_a_cursor_on_its_store_desired(kept_cursor):
 DEPTH_ROWS = "[[0.0, 0.6], [1.0, 0.0]]\n"
 
 
-def test_run_with_a_limited_depth(project):
-    """``-d 1`` changes what the script computes: a list comprehension in a
-    function called below the depth limit comes back empty (characterization
-    of #243)"""
+@pytest.mark.parametrize("depth", ["0", "1", "2", "3"])
+def test_run_with_a_limited_depth_computes_what_python_computes(project, depth):
+    """A depth limit only reduces what is collected: the list comprehension
+    in a function called below the limit keeps its items, and the trial
+    is finished (#243)"""
     project.copy_corpus("depth")
-    result = project.run("run", "-d", "1", "nested.py")
-    assert result.stdout == "[[], []]\n", str(result)
+    result = project.run("run", "-d", depth, "nested.py")
+    assert result.stdout == DEPTH_ROWS, str(result)
     assert only_trial(project)["status"] == "finished"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#243: a depth limit should only reduce "
-    "what is collected, never change what the script computes",
-)
-def test_run_with_a_limited_depth_desired(project):
-    """With ``-d 1`` the script prints what it prints without noWorkflow"""
-    project.copy_corpus("depth")
-    result = project.run("run", "-d", "1", "nested.py")
-    assert result.stdout == DEPTH_ROWS, str(result)
-
-
 def test_run_with_the_default_depth_computes_what_python_computes(project):
-    """Control for the pair above: without ``-d`` the output is the one of
+    """Control for the test above: without ``-d`` the output is the one of
     plain Python"""
     project.copy_corpus("depth")
     assert project.run("run", "nested.py").stdout == DEPTH_ROWS
+
+
+@pytest.mark.parametrize("depth", ["0", "1", "2"])
+def test_run_with_a_limited_depth_writes_what_python_writes(project, depth):
+    """The weather example under a limit that leaves its functions
+    uncollected (``-d 0`` leaves even the script's activation inactive)
+    prints and writes what it does without one: ``csv_read``, three calls
+    deep, fills its rows, so ``extract_column`` finds them (#243)"""
+    build_weather(project)
+    expected = project.files()["output.csv"]
+    result = project.run("run", "-d", depth, *WEATHER_SCRIPT_ARGS)
+    assert result.stdout == "rows: 4\n", str(result)
+    assert project.files()["output.csv"] == expected
+    assert project.trials()[-1]["status"] == "finished"
 
 
 def test_run_bypass_modules_inherits_the_modules_of_the_previous_trial(project):
