@@ -17,6 +17,7 @@ import hashlib
 import os
 import pathlib
 import sys
+import types
 
 import pytest
 
@@ -39,6 +40,7 @@ from ...now.collection.prov_execution.external import (
     resolve_program,
     snapshot,
     split_command_line,
+    unrecorded_before,
 )
 
 POSIX = pytest.mark.skipif(
@@ -560,3 +562,31 @@ def test_executable_content_with_cap_zero_is_always_a_placeholder(tmp_path):
         path.write_bytes(data)
         expected = PLACEHOLDER.format(hashlib.sha1(data).hexdigest(), len(data))
         assert executable_content(str(path), cap=0) == expected.encode("ascii")
+
+
+# --- unrecorded_before (#206) ----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "mode, before, after, expected",
+    [
+        # A file an external process changed without naming it.
+        ("r+", None, "abc", True),
+        # An open of the script that failed: the file did not exist.
+        ("r", None, None, False),
+        ("r+", None, None, False),
+        # A file the script or a process created.
+        ("w", None, "abc", False),
+        ("a", None, "abc", False),
+        # Content before recorded.
+        ("r+", "abc", "def", False),
+        ("r", "abc", "abc", False),
+    ],
+)
+def test_unrecorded_before(mode, before, after, expected):
+    """Only ``r+`` with no content before and a content after is a file
+    that existed with an unknown content before"""
+    access = types.SimpleNamespace(
+        mode=mode, content_hash_before=before, content_hash_after=after
+    )
+    assert unrecorded_before(access) is expected

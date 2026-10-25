@@ -212,8 +212,9 @@ class Run(Command):
             "argv records the files their command lines name, with\n"
             "their content before and after, and the files they create\n"
             "in the project; none records nothing of them; strace\n"
-            "(Linux) also sees the files they open on their own\n"
-            "(not available yet: falls back to argv)",
+            "(Linux, with strace) also records every file of the\n"
+            "project they and their children open, and falls back to\n"
+            "argv with a warning where strace cannot trace",
         )
 
         # Other

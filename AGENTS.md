@@ -335,8 +335,12 @@ neither executes:
   probe runs on `python` in the suite and on `Rscript` and `cc` only in
   `test_beyond_python.py`; a child of
   `os.fork` or `multiprocessing` is not a launch and is tested as not
-  recorded; the `strace` backend has no test anywhere until #206
-  installs `strace` on a leg; and the kernel's own use of the tracer
+  recorded; the `strace` backend runs on the Linux legs only, which
+  install `strace` and set `NOW_STRACE=require` (on macOS, Windows, and
+  under Rosetta in the reference container on Apple silicon, where
+  strace logs nothing, its tests skip and only its fallback to `argv`
+  runs), never under a kernel, and a `Popen` with `user` or `group`,
+  which it leaves to `argv`, runs nowhere; and the kernel's own use of the tracer
   (around each cell, `kernel/shell.py`) runs for one `subprocess.run`
   and one `%%bash` cell only (`e2e/test_kernel.py`; the `%%bash` cell
   skips on Windows). The leak detector sees the children of the pytest
@@ -354,8 +358,8 @@ neither executes:
   (`test_beyond_python.py`), the only tests that run R and a C compiler:
   the job and the reference container install `r-base-core`, every other
   leg deselects `paper`, and a maintainer's machine without `Rscript`
-  skips them. Its strace variant runs nowhere until #206 installs
-  `strace` on a leg, and its two claims under rdtLite run only where the
+  skips them. Its strace variant runs in that job, which installs
+  `strace`, and its two claims under rdtLite run only where the
   rdtLite package is installed in R, which no leg does.
 - **The optional content engines** (`dulwich`, `pygit`, `gitdb`): only the
   `engines` job of `ci.yml` installs them (the `engines` group) and runs
@@ -527,7 +531,12 @@ and therefore the first suspects when an upgrade breaks something:
   the `exec` of the script (and around each cell in the kernel), replaces
   `subprocess.Popen.__init__`, `wait` and `poll` with wrappers that bind a
   launch to its `Popen` and see its end through `returncode`, which is
-  where `run`, `check_output`, `communicate` and `with Popen` meet. The
+  where `run`, `check_output`, `communicate` and `with Popen` meet, and
+  `os.system`; under `--external-tracer strace` (#206) the wrappers of
+  `__init__` (through the bound arguments of its signature) and of
+  `os.system` rewrite the launch to run under `strace` before the
+  process starts, and the audit event that follows is read as the
+  launch the script asked for. The
   class is not replaced, and the originals come back in the same
   `finally` as the finder.
 - `src/noworkflow/now/persistence/content/safeopen.py`: keeps the original
@@ -604,7 +613,8 @@ mirrors included (with `--external-tracer none` among the configurations).
 the corpus copy (`test_repository_examples.py` fails when they differ),
 so a change to the corpus is copied there in the same commit. The tests
 of the case study need `Rscript` and `cc` and skip without them (the job sets
-`NOW_RSCRIPT=require`). The claims that only #206 and #207 can
+`NOW_RSCRIPT=require`, and `NOW_STRACE=require` for its strace
+variant). The claims that only #207 can
 satisfy are `_desired` twins, `xfail(strict=True)` through
 `known_defects` with the signature of today's failure; the issue that
 makes one pass removes the mark in its own commit, and the issue that

@@ -211,6 +211,13 @@ Optional, each for one purpose:
   on macOS); the C compiler is the system's. Two of those tests also need
   the rdtLite package in R (`install.packages("rdtLite")`) and skip
   without it.
+- **strace** (Linux only, `apt install strace`), for the tests of `now run
+  --external-tracer strace`; they skip without it, and
+  `NOW_STRACE=require` fails them instead, as the Linux legs of CI set.
+  On macOS they run in the reference-leg container built for the host's
+  own architecture (`PLATFORM=linux/arm64 .github/reference-leg/run.sh`
+  on Apple silicon): under Rosetta, as in that container's default
+  `linux/amd64`, strace logs nothing and they skip.
 - **[issuefinder](https://github.com/gems-uff/issuefinder)**, cloned next to
   the checkout (`../issuefinder`), to search the existing issues before
   opening one: it finds an issue written with other words or in the other
@@ -387,8 +394,10 @@ launches an R script and a C program, three trials), from
 `src/noworkflow/tests/e2e/corpus/beyond_python/`. Its tests carry the same
 `paper` mark and run in the same job, which installs R; locally they need
 `Rscript` and `cc` on the PATH and skip without them, and
-`NOW_RSCRIPT=require` fails instead of skipping, as the job sets. The
-claims that wait for #206 and #207 are `_desired` twins marked
+`NOW_RSCRIPT=require` fails instead of skipping, as the job sets. Its
+strace variant needs Linux with `strace` (`NOW_STRACE=require` fails
+it instead of skipping, as the job sets). The
+claims that wait for #207 are `_desired` twins marked
 `xfail(strict=True)`: see "The paper's running example" in `AGENTS.md`.
 
 ### The vis in a browser

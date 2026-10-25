@@ -7,6 +7,8 @@
 #
 #   GOLDEN=overwrite .github/reference-leg/run.sh -m golden   # rewrite goldens
 #   GOLDEN=require .github/reference-leg/run.sh               # what CI runs
+#   PLATFORM=linux/arm64 .github/reference-leg/run.sh -k strace
+#                                   # the host's architecture (Apple silicon)
 #
 # The Python version is the reference leg's in .github/workflows/ci.yml. The
 # checkout is mounted at /work and the container runs as the calling user,
@@ -15,8 +17,15 @@
 # between runs; `.venv` of the host is never touched. PYTHONPYCACHEPREFIX
 # keeps the host's __pycache__ (compiled with host paths) out of the run.
 # The venv has the `demo` extra (as the reference leg of CI) and the `paper`
-# group, and the image has SWI-Prolog for the paper's query and Graphviz for
-# the tests that run `dot`, as the legs of CI. `-m paper` runs
+# group, and the image has SWI-Prolog for the paper's query, Graphviz for
+# the tests that run `dot` and strace for those of `--external-tracer
+# strace` (#206), as the legs of CI; the container gets SYS_PTRACE, and
+# NOW_STRACE passes through. Under Rosetta (Apple silicon) strace exits
+# with an empty log, the backend falls back to argv and those tests skip
+# (`NOW_STRACE=require` fails them): they run on an x86_64 host, or with
+# PLATFORM set to the host's architecture, which builds the image and
+# keeps the venv apart for it; goldens are recorded on linux/amd64 only.
+# `-m paper` runs
 # without the extra instead, in the environment of the `paper-example` job,
 # which has no matplotlib. The tests of the paper's running
 # example run here, and their goldens are recorded here like the others.
@@ -32,8 +41,11 @@ if [ -z "$python" ]; then
   echo "no 'reference: true' leg in .github/workflows/ci.yml" >&2
   exit 1
 fi
-image="noworkflow-reference:$python"
-cache="${XDG_CACHE_HOME:-$HOME/.cache}/noworkflow-reference/$python"
+platform="${PLATFORM:-linux/amd64}"
+tag="$python"
+[ "$platform" = "linux/amd64" ] || tag="$python-${platform##*/}"
+image="noworkflow-reference:$tag"
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/noworkflow-reference/$tag"
 mkdir -p "$cache/venv" "$cache/uv"
 
 extra="--extra demo"
@@ -43,13 +55,15 @@ for arg in "$@"; do
   prev=$arg
 done
 
-docker build --quiet --platform linux/amd64 --build-arg PYTHON="$python" \
-  -t "$image" "$here" >/dev/null
-docker run --rm --platform linux/amd64 \
+docker build --quiet --platform "$platform" --build-arg PLATFORM="$platform" \
+  --build-arg PYTHON="$python" -t "$image" "$here" >/dev/null
+docker run --rm --platform "$platform" \
   --user "$(id -u):$(id -g)" \
   -e GOLDEN="${GOLDEN:-}" \
   -e EXTRA="$extra" \
   -e NOW_LEAK_CHECK="${NOW_LEAK_CHECK:-fail}" \
+  -e NOW_STRACE="${NOW_STRACE:-}" \
+  --cap-add SYS_PTRACE \
   -v "$root":/work \
   -v "$cache/venv":/opt/venv \
   -v "$cache/uv":/opt/uv-cache \

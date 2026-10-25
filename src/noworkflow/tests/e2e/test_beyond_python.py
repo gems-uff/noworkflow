@@ -25,8 +25,8 @@ Structural assertions only, no goldens: a golden of a command that still
 fails cannot be recorded. With ``NOW_PAPER_DATASET`` pointing at the real
 dataset the same tests run on it.
 
-The claims that only #206 and #207 can satisfy are ``_desired``
-twins, marked ``xfail(strict=True)`` through ``known_defects`` with the
+The claim that only #207 can satisfy is a ``_desired``
+twin, marked ``xfail(strict=True)`` through ``known_defects`` with the
 issue, the mechanism and the signature of today's failure (measured on
 this tree). The issue that makes a twin pass removes the mark in the same
 commit (XPASS(strict) is the signal); the issue that changes how it fails
@@ -36,7 +36,6 @@ rewrites the ``Defect``'s signature. The map:
 twin                                                                 passes signature
                                                                      with   changes
 ==================================================================== ====== =========
-test_strace_tracer_records_the_file_model_r_sources_desired          #206
 test_rdtlite_file_entities_become_accesses_of_the_launch_desired     #207
 ==================================================================== ====== =========
 
@@ -76,6 +75,13 @@ access, the wrapper's own and the launches', a finding of these tests)
 passed with it and lost its mark and its suffix; the characterization of
 the export without them left.
 
+The claim of #206 (with ``--external-tracer strace``, the ``utils.R``
+that ``model.R`` sources, named on no command line, is a read of the
+``Rscript`` launch) passed with it and lost its mark and its suffix. It
+runs only where the strace backend can trace (Linux, with strace), skips
+elsewhere, and fails instead under ``NOW_STRACE=require``, which the
+``paper-example`` job sets.
+
 ``Examples/glue_pipeline/README.md`` shows users excerpts of what ``now``
 prints for this history; ``test_the_glue_pipeline_readme_shows_what_now_prints``
 runs each command it shows on the replay and finds the excerpt's lines,
@@ -102,7 +108,6 @@ import re
 import shlex
 import shutil
 import stat
-import sys
 from pathlib import Path
 
 import pytest
@@ -140,11 +145,11 @@ from noworkflow.tests.e2e.oracle import (
 )
 from noworkflow.tests.e2e.paper import apply_patch, labelled
 from noworkflow.tests.helpers.defects import Defect, known_defects
+from noworkflow.tests.helpers.strace import require_strace
 
 pytestmark = pytest.mark.paper
 
 REQUIRE_RSCRIPT = os.environ.get("NOW_RSCRIPT") == "require"
-REQUIRE_STRACE = os.environ.get("NOW_STRACE") == "require"
 # The command lines the wrapper launches, by the name of their program.
 LAUNCHES = {
     "Rscript": ("Rscript", "model.R", "prepared.csv", "pred.csv"),
@@ -192,17 +197,6 @@ def no_provjson_link(signature):
         "#207: nothing reads the PROV-JSON that rdtLite writes next to the "
         "launched script, so the files its entities name (what the R "
         "script read and wrote) are not accesses of the launch",
-        signature=signature,
-    )
-
-
-def no_strace_backend(signature):
-    """#206: no backend reads the files a child opens by itself"""
-    return Defect(
-        "#206: `--external-tracer strace` falls back to argv with a "
-        "warning (prov_execution/external.py), and no backend follows "
-        "the child's system calls; a file the R script opens by itself "
-        "(source) is named on no command line and left in no snapshot",
         signature=signature,
     )
 
@@ -1066,27 +1060,13 @@ def test_restore_f_of_the_compiled_binary_keeps_it_executable(case):
 # --- Section 6.2: the strace backend (#206) ---------------------------------
 
 
-# The signature is reasoned, not measured: the test runs only on Linux
-# with strace on the PATH, which no leg and no maintainer's machine has
-# until #206 installs it (the fallback to argv records model.R and leaves
-# utils.R, named on no command line, with no row).
-@known_defects(no_strace_backend("0 file accesses named utils.R"))
-def test_strace_tracer_records_the_file_model_r_sources_desired(tmp_path, tools):
+def test_strace_tracer_records_the_file_model_r_sources(tmp_path, tools):
     """With `--external-tracer strace`, a file the R script reads by
     itself (utils.R, sourced by the model.R of corpus/beyond_python/strace)
     is recorded as a read of the Rscript launch, although no command line
     names it. Linux with strace only: skips elsewhere, fails under
     NOW_STRACE=require"""
-    reasons = []
-    if sys.platform != "linux":
-        reasons.append("strace exists on Linux only")
-    if shutil.which("strace") is None:
-        reasons.append("strace is not on the PATH")
-    if reasons:
-        reason = "; ".join(reasons)
-        if REQUIRE_STRACE:
-            pytest.fail("{} (NOW_STRACE=require)".format(reason), pytrace=False)
-        pytest.skip(reason)
+    require_strace()
     project = case_project(tmp_path, tools)
     place_sources(project)
     shutil.copyfile(

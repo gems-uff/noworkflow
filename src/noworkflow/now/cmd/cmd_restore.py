@@ -16,7 +16,7 @@ from datetime import datetime
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
-from ..collection.prov_execution.external import is_placeholder
+from ..collection.prov_execution.external import is_placeholder, unrecorded_before
 from ..persistence import content, persistence_config
 from ..persistence.models import (
     Argument,
@@ -147,14 +147,38 @@ class Restore(Command):
             metascript.message or "Backup Trial {}".format(metascript.trial_id)
         )
 
-    def restore(self, path, code_hash, trial_id, mode="normal", executable=False):
+    def restore(
+        self,
+        path,
+        code_hash,
+        trial_id,
+        mode="normal",
+        executable=False,
+        unrecorded=False,
+    ):
         """Restore file with <code_hash> from <trial_id>
 
         ``executable``: the file is a program the trial launched, which
-        gets the executable bit when it is written (#205)
+        gets the executable bit when it is written (#205). ``unrecorded``:
+        the file existed when an external process changed it without
+        naming it, and its content then was not recorded (#206); a
+        version without content is not a file that did not exist, and the
+        file is left as it is
         """
+        # pylint: disable=too-many-arguments
         new_code_hash = file_hash(path)
         if code_hash == new_code_hash:
+            return False
+        if code_hash is None and unrecorded and mode != "script":
+            msg = "File {}".format(path)
+            if trial_id:
+                msg += " from trial {}".format(trial_id)
+            msg += (
+                " was changed by an external process that did not name it,"
+                " and its content before was not recorded: left as it is"
+            )
+            print_error(msg)
+            self.failed = True
             return False
         if code_hash is None and mode != "script":
             os.remove(path)
@@ -244,6 +268,7 @@ class Restore(Command):
                 self.create_backup(metascript, new_files, args)
 
             programs = launched_programs(trial)
+            unknown = unrecorded_paths(trial)
             for path, info in viewitems(restore_files):
                 self.restore(
                     path,
@@ -251,6 +276,7 @@ class Restore(Command):
                     trial.id,
                     mode=info["type"],
                     executable=real_path(path) in programs,
+                    unrecorded=real_path(path) in unknown,
                 )
 
             trial.create_head()
@@ -298,8 +324,15 @@ class Restore(Command):
             else:
                 path = parsed.target or parsed.path
                 executable = real_path(parsed.path) in launched_programs(trial)
+                unrecorded = real_path(parsed.path) in unrecorded_paths(trial)
                 if (
-                    not self.restore(path, restore[1], None, executable=executable)
+                    not self.restore(
+                        path,
+                        restore[1],
+                        None,
+                        executable=executable,
+                        unrecorded=unrecorded,
+                    )
                     and not self.failed
                 ):
                     print_msg("File has not changed!", self.print_msg)
@@ -385,6 +418,18 @@ def launched_programs(trial):
         if not imported:
             programs.add(real_path(module.path))
     return programs
+
+
+def unrecorded_paths(trial):
+    """The real paths of the files the trial saw changed by an external
+    process whose content before was not recorded (#206): for them, a
+    version without content is not a file that did not exist"""
+    # pylint: disable=not-an-iterable
+    return {
+        real_path(access.name)
+        for access in trial.file_accesses
+        if unrecorded_before(access)
+    }
 
 
 def real_path(path):

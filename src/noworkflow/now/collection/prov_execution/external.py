@@ -60,9 +60,33 @@ skipping ``.noworkflow``, ``.git`` and ``__pycache__``); a file that
 appeared is a write with no content before, which is what ``now restore``
 needs to remove it. Above ``SNAPSHOT_CAP`` entries the snapshot is
 disabled for the trial, with a warning. A file that existed, is not named
-on the command line and is modified by the process is not seen: with no
-hash before it, ``restore`` would delete it. That is the limit of the
-``argv`` backend; the optional tracer backend of #206 lifts it.
+on the command line and is modified by the process is not seen: that is
+the limit of the ``argv`` backend, which the ``strace`` backend lifts.
+
+**The strace backend** (#206, ``--external-tracer strace``, Linux). A
+launch it can rewrite runs under ``strace`` (``external_strace.py`` builds
+the command and parses the log): ``Popen.__init__`` replaces the
+arguments it was given, and ``os.system``, patched next to it, the line,
+before the process starts, and the audit event that follows is read as
+the launch the script asked for (``wrapping``). When the launch is
+finalized, ``record_trace`` adds, besides what ``argv`` records, every
+regular file under the project directory or the launch's directory that
+the process or its children opened (not inside ``SKIPPED_DIRECTORIES``
+or ``LIBRARY_DIRECTORIES``): a read is an access with the content at the
+end before and after; a write to a file the snapshot did not have at the
+launch is a file the process created (no content before, ``w``); a write
+to a file that existed, or that a disabled snapshot cannot place, is an
+access whose content before is unknown, with mode ``r+`` and no content
+before, which ``now restore`` leaves in place instead of deleting
+(``UNRECORDED_MODE``). A program executed under those directories is a
+module, like the program of the launch. Not rewritten, and recorded as
+``argv`` does: ``os.posix_spawn``, ``os.spawn``, ``os.exec``, a launch
+made while the tracer is suspended, a ``Popen`` given its own
+``executable`` without ``shell`` (strace would lose the ``argv[0]``) or
+another ``user`` or ``group`` (strace could not write its log), and a
+system without Linux or without a usable ``strace``, where the trial
+falls back to ``argv`` with a warning (``prepare_strace``, which runs
+``strace`` once per process to see that it can trace).
 
 **The programs** (#203). The program a launch runs is a deployment
 dependency of the trial, like an imported module: ``record_programs``
@@ -94,7 +118,9 @@ takes its rows with it.
 
 What is not covered: the children of ``os.fork`` and ``multiprocessing``
 (#375, #379), launches made by C code, nested launches (the child's own
-children), a launch that failed to start (nothing ran: its accesses are
+children) as launches of their own (under strace, their files and the
+programs they run in the project are the launch's), a launch that failed
+to start (nothing ran: its accesses are
 dropped), and on ``os.exec`` nothing is stored (#377): the pending
 launches are only closed in memory. Calls of the standard library that
 run a program (``platform.architecture`` runs ``file``) are recorded as
@@ -102,6 +128,7 @@ any other launch, which is harmless.
 """
 
 import hashlib
+import inspect
 import os
 import re
 import shlex
@@ -110,6 +137,7 @@ import shutil
 # Patches Popen's functions while a collection traces; starts no process
 import subprocess  # nosec B404
 import sys
+import tempfile
 import threading
 import weakref
 from contextlib import contextmanager
@@ -117,6 +145,7 @@ from functools import wraps
 
 from ...persistence import content
 from ...utils.io import print_error
+from .external_strace import parse_log, strace_command
 
 MODES = ("none", "argv", "strace")
 DEFAULT_MODE = "argv"
@@ -135,6 +164,14 @@ EVENTS = frozenset(
 SNAPSHOT_CAP = 20000
 # Directories the snapshot does not enter.
 SKIPPED_DIRECTORIES = frozenset({".noworkflow", ".git", "__pycache__"})
+# Directories of installed libraries: what a process loads from them (a
+# virtual environment inside the project) is no file the trace records.
+LIBRARY_DIRECTORIES = frozenset({"site-packages", "dist-packages"})
+# The mode of an access to a file that existed and that a process changed
+# without naming it (strace backend): its content before is unknown, and
+# `now restore` must not take the missing hash for a file that did not
+# exist (`unrecorded_before`).
+UNRECORDED_MODE = "r+"
 # Shell words that separate two commands.
 SEPARATORS = frozenset({"|", "||", "&&", ";", "&"})
 # Redirections: the operator and the mode of the file it names.
@@ -185,9 +222,18 @@ SNAPSHOT_WARNING = (
     "create without naming them on the command line are not recorded in "
     "this trial".format(SNAPSHOT_CAP)
 )
-STRACE_WARNING = (
-    "--external-tracer strace is not available yet (#206): falling back to argv"
-)
+STRACE_WARNING = "--external-tracer strace {}: falling back to argv"
+STRACE_NOT_LINUX = "runs on Linux only"
+STRACE_MISSING = "needs strace on the PATH"
+STRACE_FAILS = "cannot trace here ({})"
+STRACE_EMPTY_LOG = "its log shows no process"
+# The program of the strace backend, looked up in the PATH.
+STRACE_PROGRAM = "strace"
+# The shell of `shell=True` and of os.system on POSIX.
+POSIX_SHELL = "/bin/sh"
+# Arguments of Popen with which a launch is not run under strace: the
+# process would run as another user, who cannot write the log.
+UNWRAPPED_POPEN = ("user", "group", "extra_groups")
 
 
 class ExternalProcess:
@@ -223,6 +269,10 @@ class ExternalProcess:
         # The keys of the executables this launch added to the module
         # table (#203), which a launch that fails to start takes back.
         self.executables = []
+        # The directory relative paths of the launch resolve against, and
+        # the log of the strace backend (#206), or None.
+        self.base = cwd or os.getcwd()
+        self.log = None
 
 
 class ExternalProcessTracer:
@@ -251,6 +301,13 @@ class ExternalProcessTracer:
         self.executables = {}
         self.versions = {}
         self.executable_cap = EXECUTABLE_CAP
+        # The strace backend (#206): the program, the directory of the
+        # logs and the launches rewritten on each thread whose audit event
+        # has not come yet.
+        self.strace = None
+        self.log_dir = None
+        self.log_count = 0
+        self.wrapping = {}
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -258,14 +315,16 @@ class ExternalProcessTracer:
         """Start tracing for a collection, with the mode of ``metascript``
 
         ``none`` records nothing; ``strace`` falls back to ``argv`` with a
-        warning until #206 lands.
+        warning where it cannot trace (``prepare_strace``).
         """
         mode = getattr(metascript, "external_tracer", DEFAULT_MODE) or DEFAULT_MODE
         if mode not in MODES:
             raise ValueError("unknown external tracer {!r}".format(mode))
         if mode == "strace":
-            self.warn(STRACE_WARNING)
-            mode = "argv"
+            reason = self.prepare_strace()
+            if reason is not None:
+                self.warn(STRACE_WARNING.format(reason))
+                mode = "argv"
         self.mode = mode
         self.project_dir = getattr(metascript, "dir", None) or None
         self.executable_cap = getattr(metascript, "executable_cap", EXECUTABLE_CAP)
@@ -287,6 +346,22 @@ class ExternalProcessTracer:
         self.started = False
         unpatch_popen()
         _pop(self)
+
+    def prepare_strace(self):
+        """Find a ``strace`` that can trace here: None when there is one,
+        the reason to fall back to ``argv`` otherwise"""
+        if not sys.platform.startswith("linux"):
+            return STRACE_NOT_LINUX
+        strace = shutil.which(STRACE_PROGRAM)
+        if strace is None:
+            return STRACE_MISSING
+        strace = os.path.abspath(strace)
+        with self.suspended(), content.use_safe_open():
+            detail = strace_support(strace)
+        if detail is not None:
+            return STRACE_FAILS.format(detail)
+        self.strace = strace
+        return None
 
     @contextmanager
     def suspended(self):
@@ -319,7 +394,12 @@ class ExternalProcessTracer:
             if event == "subprocess.Popen":
                 self.popen_event(*args)
             elif event == "os.system":
-                self.launch("system", None, None, shell_command=as_text(args[0]))
+                wrap = self.unwrap()
+                if wrap is not None:
+                    launch = self.launch("system", None, None, shell_command=wrap[0])
+                    self.attach_log(launch, wrap[2])
+                else:
+                    self.launch("system", None, None, shell_command=as_text(args[0]))
             elif event == "os.posix_spawn":
                 self.launch("posix_spawn", args[1], None, program=args[0], env=args[2])
             elif event == "os.spawn":
@@ -343,8 +423,18 @@ class ExternalProcessTracer:
         """``subprocess.Popen``: an argument list, or the shell's line
 
         ``executable`` is what the process runs: ``executable=`` when given,
-        the first word otherwise (POSIX; None on Windows).
+        the first word otherwise (POSIX; None on Windows). A launch the
+        strace backend rewrote is read as the script gave it.
         """
+        wrap = self.unwrap()
+        if wrap is not None:
+            line, words, log = wrap
+            if line is not None:
+                launch = self.launch("popen", None, cwd, shell_command=line, env=env)
+            else:
+                launch = self.launch("popen", words, cwd, env=env)
+            self.attach_log(launch, log)
+            return launch
         if isinstance(args, (str, bytes)):
             # Windows: Popen joins the list into one string (list2cmdline),
             # and with shell=True wraps it as `cmd.exe /c "line"`.
@@ -367,6 +457,155 @@ class ExternalProcessTracer:
         ):
             return self.launch("popen", None, cwd, shell_command=words[2], env=env)
         return self.launch("popen", words, cwd, program=executable, env=env)
+
+    # --- the strace backend (#206) -----------------------------------------
+
+    def can_wrap(self):
+        """Whether a launch made now runs under strace"""
+        return (
+            self.mode == "strace"
+            and self.strace is not None
+            and not self.suspend_depth
+            and not content.should_use_safe_open()
+            and self.collector.current_activation() is not None
+        )
+
+    def wrap_popen(self, bound):
+        """Rewrite the bound arguments of a ``Popen.__init__`` to run under
+        strace, and keep what the script gave for the audit event; False
+        when the launch is left as it is"""
+        if not self.can_wrap():
+            return False
+        arguments = bound.arguments
+        if any(arguments.get(name) is not None for name in UNWRAPPED_POPEN):
+            return False
+        args = arguments.get("args")
+        executable = arguments.get("executable")
+        shell = arguments.get("shell", False)
+        parts = [args] if isinstance(args, (str, bytes, os.PathLike)) else list(args)
+        if not parts:
+            return False
+        if shell:
+            line = as_text(parts[0])
+            argv = [executable or POSIX_SHELL, "-c"] + parts
+            words = None
+        elif executable is not None:
+            return False
+        else:
+            line = None
+            argv = parts
+            words = [as_text(word) for word in parts]
+        log = self.new_log()
+        arguments["args"] = strace_command(self.strace, log, argv)
+        arguments["shell"] = False
+        arguments["executable"] = None
+        self.wrapping[threading.get_ident()] = (line, words, log)
+        return True
+
+    def wrap_system(self, command):
+        """The line ``os.system`` runs instead of ``command``, under
+        strace, or None when the launch is left as it is"""
+        if not self.can_wrap():
+            return None
+        line = as_text(command)
+        log = self.new_log()
+        # `exec`: the shell becomes strace, whose status is the command's
+        wrapped = "exec " + shlex.join(
+            strace_command(self.strace, log, [POSIX_SHELL, "-c", line])
+        )
+        self.wrapping[threading.get_ident()] = (line, None, log)
+        return wrapped
+
+    def unwrap(self):
+        """The launch this thread rewrote, ``(line, words, log)``, which
+        the audit event that follows reads; None when there is none"""
+        return self.wrapping.pop(threading.get_ident(), None)
+
+    def new_log(self):
+        """A path for the log of one launch, in a directory of this
+        tracer, created on the first launch"""
+        with self.lock:
+            if self.log_dir is None:
+                # tempfile opens a file to test the directory: not the
+                # script's, so the collector's os.open steps aside
+                with content.use_safe_open():
+                    self.log_dir = tempfile.mkdtemp(prefix="now-strace-")
+            self.log_count += 1
+            return os.path.join(self.log_dir, "{}.log".format(self.log_count))
+
+    def attach_log(self, launch, log):
+        """Give the launch its log; a launch that is not recorded (no
+        activation) has its log removed"""
+        if launch is None:
+            remove_file(log)
+            return
+        launch.log = log
+
+    def remove_logs(self):
+        """Remove the directory of the logs, when every log was read"""
+        with self.lock:
+            log_dir, self.log_dir = self.log_dir, None
+        if log_dir is not None:
+            # rmtree opens the directory through os.open
+            with content.use_safe_open():
+                shutil.rmtree(log_dir, ignore_errors=True)
+
+    def record_trace(self, launch, recorded):
+        """Add the files the strace log of a launch shows, under the
+        project directory and the launch's directory, that ``recorded``
+        (the real paths the launch already accounts for) does not have;
+        the programs it executed there become modules"""
+        log, launch.log = launch.log, None
+        try:
+            with content.std_open(log, "rb") as handle:
+                text = handle.read().decode("utf-8", "surrogateescape")
+        except OSError:
+            return
+        finally:
+            remove_file(log)
+        trace = parse_log(text, launch.base)
+        roots = [
+            os.path.realpath(root) for root in (self.project_dir, launch.base) if root
+        ]
+        executed = set()
+        for path in trace.executed:
+            real = os.path.realpath(path)
+            executed.add(os.path.normcase(real))
+            if (
+                self.records_modules()
+                and traced_file(real, roots)
+                and is_regular_file(real)
+            ):
+                self.add_executable(program_name(path), real, probe=False)
+        before = None
+        if launch.before is not None:
+            before = {os.path.normcase(path) for path in launch.before}
+        collector = self.collector
+        for path, write in trace.opened.items():
+            real = os.path.realpath(path)
+            key = os.path.normcase(real)
+            if key in recorded or key in executed:
+                continue
+            if not traced_file(real, roots) or not is_regular_file(real):
+                continue
+            recorded.add(key)
+            name = relative_to_cwd(real)
+            if write and before is not None and key not in before:
+                self.add_written(launch, name, real, "w")
+                continue
+            if write:
+                access = collector.add_file_access(
+                    name, launch.activation, launch.checkpoint, path=None
+                )
+                access.content_hash_after = hash_file(real)
+                access.mode = UNRECORDED_MODE
+            else:
+                access = collector.add_file_access(
+                    name, launch.activation, launch.checkpoint, path=real
+                )
+                access.content_hash_after = access.content_hash_before
+                access.mode = "r"
+            access.done = True
 
     # --- launches ----------------------------------------------------------
 
@@ -467,6 +706,9 @@ class ExternalProcessTracer:
         for access, _, _ in launch.accesses:
             del store[access.id]
         launch.accesses = []
+        if launch.log is not None:
+            remove_file(launch.log)
+            launch.log = None
         metascript = self.collector.metascript
         for key in launch.executables:
             with self.lock:
@@ -596,6 +838,8 @@ class ExternalProcessTracer:
         for launch in launches:
             returncode = launch.popen.returncode if launch.popen is not None else None
             self.finalize(launch, returncode)
+        if final:
+            self.remove_logs()
 
     def close_all(self):
         """``os.exec``: the image is about to be replaced, nothing will be
@@ -628,6 +872,8 @@ class ExternalProcessTracer:
                 continue
             self.add_written(launch, name, resolved, declared or "w")
             recorded.add(os.path.normcase(os.path.realpath(resolved)))
+        if launch.log is not None:
+            self.record_trace(launch, recorded)
         if launch.before is None:
             return
         after = self.snapshot(launch.cwd)
@@ -682,6 +928,8 @@ _current = None
 _originals = None
 _patch_depth = 0
 _lock = threading.Lock()
+# strace path -> why it cannot trace, or None, measured once (#206).
+_strace_support = {}
 
 
 def _audit(event, args):
@@ -741,8 +989,9 @@ def _pop(tracer):
 
 def patch_popen():
     """Patch ``Popen.__init__``, ``wait`` and ``poll`` to tell the current
-    tracer when a launch is bound and when its process ended; nested
-    collections patch once"""
+    tracer when a launch is bound and when its process ended, and
+    ``__init__`` and ``os.system`` to let the strace backend rewrite a
+    launch (#206); nested collections patch once"""
     global _originals, _patch_depth  # pylint: disable=global-statement
     with _lock:
         _patch_depth += 1
@@ -754,18 +1003,35 @@ def patch_popen():
             popen.wait,
             popen.poll,
         )
-        _originals = (original_init, original_wait, original_poll)
+        original_system = getattr(os, "system", None)
+        _originals = (original_init, original_wait, original_poll, original_system)
+        signature = inspect.signature(original_init)
 
         @wraps(original_init)
         def __init__(self, *args, **kwargs):
             tracer = _current
+            wrapped = False
+            if tracer is not None:
+                try:
+                    bound = signature.bind(self, *args, **kwargs)
+                except TypeError:
+                    # The original raises the error the script expects
+                    pass
+                else:
+                    wrapped = tracer.wrap_popen(bound)
+                    if wrapped:
+                        args, kwargs = bound.args[1:], bound.kwargs
             try:
                 original_init(self, *args, **kwargs)
             except BaseException:
                 if tracer is not None:
+                    if wrapped:
+                        tracer.unwrap()
                     tracer.launch_failed()
                 raise
             if tracer is not None:
+                if wrapped:
+                    tracer.unwrap()
                 tracer.bind(self)
 
         @wraps(original_wait)
@@ -787,6 +1053,20 @@ def patch_popen():
         popen.__init__ = __init__
         popen.wait = wait
         popen.poll = poll
+        if original_system is not None:
+
+            @wraps(original_system)
+            def system(command):
+                tracer = _current
+                line = tracer.wrap_system(command) if tracer is not None else None
+                if line is None:
+                    return original_system(command)
+                try:
+                    return original_system(line)
+                finally:
+                    tracer.unwrap()
+
+            os.system = system
 
 
 def unpatch_popen():
@@ -799,7 +1079,9 @@ def unpatch_popen():
         if _patch_depth > 0:
             return
         popen = subprocess.Popen
-        popen.__init__, popen.wait, popen.poll = _originals
+        popen.__init__, popen.wait, popen.poll, original_system = _originals
+        if original_system is not None:
+            os.system = original_system
         _originals = None
 
 
@@ -893,6 +1175,96 @@ def probe_version(path, flag, timeout=PROBE_TIMEOUT):
     if completed.returncode != 0:
         return None
     return first_line(completed.stdout)
+
+
+def strace_support(strace, timeout=PROBE_TIMEOUT):
+    """Why a ``strace`` cannot trace a process here, or None when it can;
+    measured once per path per process
+
+    It runs this interpreter on an empty program under ``strace``, which
+    must exit with 0 and log the interpreter's ``execve``: in a container
+    without ptrace strace fails, and under an emulator (Rosetta in a Linux
+    VM on Apple silicon) it may exit with 0, an empty log and a program
+    that did not run as asked.
+    """
+    if strace in _strace_support:
+        return _strace_support[strace]
+    # tempfile and rmtree open through os.open, which is not the script's
+    with content.use_safe_open():
+        log_dir = tempfile.mkdtemp(prefix="now-strace-")
+    try:
+        detail = probe_strace(strace, os.path.join(log_dir, "probe.log"), timeout)
+    finally:
+        with content.use_safe_open():
+            shutil.rmtree(log_dir, ignore_errors=True)
+    _strace_support[strace] = detail
+    return detail
+
+
+def probe_strace(strace, log, timeout):
+    """Run the probe of ``strace_support``"""
+    command = strace_command(strace, log, [sys.executable, "-c", ""])
+    try:
+        # strace by its path from shutil.which, running this interpreter
+        # on an empty program: the probe of #206
+        completed = subprocess.run(  # nosec B603
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        return "{}: {}".format(type(error).__name__, error)
+    if completed.returncode != 0:
+        return first_line(completed.stderr) or "exit status {}".format(
+            completed.returncode
+        )
+    try:
+        with content.std_open(log, "rb") as handle:
+            text = handle.read().decode("utf-8", "surrogateescape")
+    except OSError:
+        text = ""
+    if not parse_log(text, os.getcwd()).executed:
+        return STRACE_EMPTY_LOG
+    return None
+
+
+def traced_file(real, roots):
+    """Whether a real path the strace log shows is one the trial records:
+    under one of ``roots`` (real paths), outside ``SKIPPED_DIRECTORIES``
+    and ``LIBRARY_DIRECTORIES``"""
+    for root in roots:
+        if real != root and not real.startswith(root.rstrip(os.sep) + os.sep):
+            continue
+        parts = os.path.relpath(real, root).split(os.sep)
+        return not any(
+            part in SKIPPED_DIRECTORIES or part in LIBRARY_DIRECTORIES
+            for part in parts[:-1]
+        )
+    return False
+
+
+def unrecorded_before(access):
+    """Whether an access is to a file that existed and whose content
+    before was not recorded (#206): ``UNRECORDED_MODE``, no content
+    before and a content after. An open of the script that fails leaves
+    no content before or after (a file that did not exist), whatever its
+    mode"""
+    return (
+        access.mode == UNRECORDED_MODE
+        and access.content_hash_before is None
+        and access.content_hash_after is not None
+    )
+
+
+def remove_file(path):
+    """Remove a file, if it is there"""
+    try:
+        os.remove(path)
+    except OSError:
+        pass
 
 
 def first_line(output):

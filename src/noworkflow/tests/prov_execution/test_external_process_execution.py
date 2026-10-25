@@ -33,12 +33,14 @@ import subprocess
 import sys
 import tempfile
 from subprocess import Popen  # noqa: F401  (imported before the script on purpose)
+from unittest import mock
 
 import pytest
 
 from ...now.collection.prov_execution import external
 from ...now.persistence.content import safeopen
 from ..collection_testcase import CollectionTestCase
+from ..helpers.strace import require_strace
 
 SUCCESS = "the execution of trial -1 finished successfully"
 INPUT = b"input\n"
@@ -105,6 +107,7 @@ class ExternalProcessTestCase(CollectionTestCase):
             subprocess.Popen.__init__,
             subprocess.Popen.wait,
             subprocess.Popen.poll,
+            os.system,
         )
 
     def tearDown(self):
@@ -573,13 +576,20 @@ class TestExternalProcessLimits(ExternalProcessTestCase):
         self.assertEqual(self.read("out.txt"), OUTPUT)
 
     def test_strace_falls_back_to_argv_with_a_warning(self):
-        """Until #206 lands, ``strace`` records as ``argv`` does and says
-        so once on stderr"""
-        self.collect_ok(run_script("in.txt", "out.txt"), external_tracer="strace")
+        """Where the strace backend cannot trace (here: no strace on the
+        PATH, or no Linux), ``strace`` records as ``argv`` does and says
+        why once on stderr (#206)"""
+        with mock.patch.object(external, "STRACE_PROGRAM", "now-no-such-strace"):
+            self.collect_ok(run_script("in.txt", "out.txt"), external_tracer="strace")
         self.assert_child_files("run")
         tracer = self.metascript.execution.collector.external
         self.assertEqual(tracer.mode, "argv")
-        self.assertEqual(tracer.warned, {external.STRACE_WARNING})
+        reason = (
+            external.STRACE_MISSING
+            if sys.platform.startswith("linux")
+            else external.STRACE_NOT_LINUX
+        )
+        self.assertEqual(tracer.warned, {external.STRACE_WARNING.format(reason)})
 
     def test_the_snapshot_is_disabled_above_the_cap_with_a_warning(self):
         """A project with more entries than the cap: the files named on the
@@ -596,15 +606,21 @@ class TestExternalProcessLimits(ExternalProcessTestCase):
         self.assertEqual(tracer.warned, {external.SNAPSHOT_WARNING})
 
     def test_after_the_collection_the_hook_is_inert_and_popen_is_itself(self):
-        """Once the script ends, ``Popen.__init__``, ``wait`` and ``poll``
-        are the originals, no tracer is current, and a process started
-        here records nothing, although the audit hook stays installed"""
+        """Once the script ends, ``Popen.__init__``, ``wait``, ``poll``
+        and ``os.system`` (#206) are the originals, no tracer is current,
+        and a process started here records nothing, although the audit
+        hook stays installed"""
         self.collect_ok(run_script("in.txt", "out.txt"))
         self.assertTrue(external.hook_installed())
         self.assertIsNone(external.current())
         self.assertFalse(external.popen_patched())
         self.assertEqual(
-            (subprocess.Popen.__init__, subprocess.Popen.wait, subprocess.Popen.poll),
+            (
+                subprocess.Popen.__init__,
+                subprocess.Popen.wait,
+                subprocess.Popen.poll,
+                os.system,
+            ),
             self.originals,
         )
         before = len(self.accesses())
@@ -845,3 +861,233 @@ class TestProgramsAsModules(ExternalProcessTestCase):
         )
         self.assertEqual(self.code_hash(row), sha1(b"not really a library"))
         self.assertEqual(tracer.failures, [])
+
+
+# A child that names nothing on its command line: it reads one file,
+# appends to one that exists and creates a third (#206).
+CHILD_HIDDEN = """\
+import sys
+with open("hidden_in.txt", encoding="utf-8") as source:
+    data = source.read()
+with open("existing.txt", "a", encoding="utf-8", newline="\\n") as existing:
+    existing.write("more\\n")
+with open("hidden_out.txt", "w", encoding="utf-8", newline="\\n") as target:
+    target.write("hidden:" + data)
+sys.exit(int(sys.argv[1]) if len(sys.argv) > 1 else 0)
+"""
+# A child that starts a program of the project: a launch the audit hook
+# of the script does not see, the child's own.
+CHILD_NESTED = """\
+import subprocess
+subprocess.run(["./tool", "in.txt"], check=True, timeout=60)
+"""
+EXISTING = b"existing\n"
+HIDDEN_TOOL = '#!/bin/sh\ncat "$1" > /dev/null\n'
+
+
+class TestStraceBackend(ExternalProcessTestCase):
+    """``--external-tracer strace`` (#206): the files a child opens by
+    itself, through the strace log, on Linux with a strace that can
+    trace; skips elsewhere, fails under ``NOW_STRACE=require``"""
+
+    # pylint: disable=invalid-name
+
+    def setUp(self):
+        require_strace()
+        super(TestStraceBackend, self).setUp()
+        self.write("child_hidden.py", CHILD_HIDDEN)
+        self.write("child_nested.py", CHILD_NESTED)
+        self.write("hidden_in.txt", INPUT.decode("utf-8"))
+        self.write("existing.txt", EXISTING.decode("utf-8"))
+
+    def collect_strace(self, code, **kwargs):
+        """Collect ``code`` with the strace backend, which must not have
+        fallen back"""
+        self.collect_ok(code, external_tracer="strace", **kwargs)
+        tracer = self.metascript.execution.collector.external
+        self.assertEqual(tracer.mode, "strace")
+        self.assertEqual(tracer.warned, set())
+        return tracer
+
+    def assert_hidden_files(self, activation_name):
+        """The three files the hidden child names nowhere, as accesses of
+        the named activation: the read with the same content before and
+        after; the file that existed with mode ``r+`` and no content
+        before (``UNRECORDED_MODE``); the new file written"""
+        activation = self.activation(activation_name)
+        source = self.access("hidden_in.txt")
+        existing = self.access("existing.txt")
+        target = self.access("hidden_out.txt")
+        for access in (source, existing, target):
+            self.assertEqual(access.activation_id, activation.id, access.name)
+            self.assertTrue(access.done, access.name)
+        self.assertEqual(
+            (source.mode, source.content_hash_before, source.content_hash_after),
+            ("r", sha1(INPUT), sha1(INPUT)),
+        )
+        self.assertEqual(
+            (existing.mode, existing.content_hash_before, existing.content_hash_after),
+            (external.UNRECORDED_MODE, None, sha1(EXISTING + b"more\n")),
+        )
+        self.assertEqual(
+            (target.mode, target.content_hash_before, target.content_hash_after),
+            ("w", None, sha1(b"hidden:" + INPUT)),
+        )
+        return activation
+
+    def test_the_files_a_child_opens_without_naming_them(self):
+        """``run`` with a list: the child's script, named, and the three
+        files it names nowhere; nothing of the interpreter's own files,
+        outside the project or in ``__pycache__``"""
+        self.collect_strace(
+            "# script.py\n"
+            "import subprocess\n"
+            "import sys\n"
+            "result = subprocess.run([sys.executable, 'child_hidden.py'], timeout=60)\n"
+        )
+        self.assert_hidden_files("run")
+        names = sorted(access.name for access in self.accesses())
+        self.assertEqual(
+            names,
+            ["child_hidden.py", "existing.txt", "hidden_in.txt", "hidden_out.txt"],
+        )
+
+    def test_argv_does_not_see_them(self):
+        """The control: the same script under ``argv`` records the
+        child's script and, through the snapshot, the new file only"""
+        self.collect_ok(
+            "# script.py\n"
+            "import subprocess\n"
+            "import sys\n"
+            "result = subprocess.run([sys.executable, 'child_hidden.py'], timeout=60)\n"
+        )
+        names = sorted(access.name for access in self.accesses())
+        self.assertEqual(names, ["child_hidden.py", "hidden_out.txt"])
+
+    def test_shell_true_and_its_redirection(self):
+        """``shell=True``: the line runs under strace, the redirection is
+        still a declared output, and the hidden files are found"""
+        self.collect_strace(
+            "# script.py\n"
+            "import shlex\n"
+            "import subprocess\n"
+            "import sys\n"
+            "line = shlex.quote(sys.executable) + ' child_hidden.py > log.txt'\n"
+            "result = subprocess.run(line, shell=True, timeout=60)\n"
+        )
+        self.assert_hidden_files("run")
+        log = self.access("log.txt")
+        self.assertEqual((log.mode, log.content_hash_before), ("w", None))
+
+    def test_os_system(self):
+        """``os.system`` runs the line under strace, returns the wait
+        status the line gives, and is the original again afterwards"""
+        self.collect_strace(
+            "# script.py\n"
+            "import os\n"
+            "import shlex\n"
+            "import sys\n"
+            "status = os.system(shlex.quote(sys.executable) + ' child_hidden.py 3')\n"
+        )
+        self.assert_hidden_files("system")
+        self.assertEqual(
+            os.waitstatus_to_exitcode(self.metascript.namespace["status"]), 3
+        )
+        self.assertIs(os.system, self.originals[3])
+
+    def test_the_status_and_the_streams_of_the_child(self):
+        """Under strace the child's exit status, its stdin and its stdout
+        are the script's, and ``terminate`` reaches the child"""
+        self.collect_strace(
+            "# script.py\n"
+            "import subprocess\n"
+            "import sys\n"
+            "code = subprocess.run([sys.executable, 'child_hidden.py', '5'], timeout=60).returncode\n"
+            "out = subprocess.check_output([sys.executable, 'child_stdin.py'], input=b'abc', timeout=60)\n"
+            "process = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
+            "process.terminate()\n"
+            "killed = process.wait(60)\n"
+        )
+        namespace = self.metascript.namespace
+        self.assertEqual(namespace["code"], 5)
+        self.assertEqual(namespace["out"], b"child:abc")
+        self.assertEqual(namespace["killed"], -15)
+
+    def test_a_launch_ends_with_its_command_not_its_background(self):
+        """``strace -D``: the launch ends when the command does, as
+        without strace, while a process it left in the background still
+        runs under the detached tracer; ``Popen.pid`` is the command's
+        once strace has started tracing it"""
+        self.collect_strace(
+            "# script.py\n"
+            "import subprocess\n"
+            "import time\n"
+            "start = time.monotonic()\n"
+            "subprocess.run(['sh', '-c', 'sleep 3 > /dev/null 2>&1 &'], timeout=60)\n"
+            "elapsed = time.monotonic() - start\n"
+            "process = subprocess.Popen(['sleep', '60'])\n"
+            "deadline = time.monotonic() + 30\n"
+            "name = None\n"
+            "while name != 'sleep' and time.monotonic() < deadline:\n"
+            "    with open('/proc/{}/comm'.format(process.pid)) as comm:\n"
+            "        name = comm.read().strip()\n"
+            "process.kill()\n"
+            "process.wait(60)\n"
+        )
+        namespace = self.metascript.namespace
+        self.assertLess(namespace["elapsed"], 2.5)
+        self.assertEqual(namespace["name"], "sleep")
+
+    def test_a_popen_with_its_own_executable_is_left_to_argv(self):
+        """``executable=`` without ``shell``: strace would lose the
+        ``argv[0]`` the script chose, so the launch is not rewritten and
+        only its command line is read"""
+        self.collect_strace(
+            "# script.py\n"
+            "import subprocess\n"
+            "import sys\n"
+            "result = subprocess.run(['renamed', 'child_hidden.py'],\n"
+            "                        executable=sys.executable, timeout=60)\n"
+        )
+        names = sorted(access.name for access in self.accesses())
+        self.assertEqual(names, ["child_hidden.py", "hidden_out.txt"])
+
+    def test_a_program_the_child_starts_in_the_project(self):
+        """A launch of the child's own, which the script's hook does not
+        see: the program it runs in the project is a module, and the file
+        its command line names is an access of the script's launch"""
+        self.write("tool", HIDDEN_TOOL)
+        os.chmod("tool", 0o755)
+        self.collect_strace(
+            "# script.py\n"
+            "import subprocess\n"
+            "import sys\n"
+            "result = subprocess.run([sys.executable, 'child_nested.py'], timeout=60)\n",
+            bypass_modules=False,
+        )
+        activation = self.activation("run")
+        self.assertEqual(self.access("in.txt").activation_id, activation.id)
+        self.assertEqual(self.accesses("tool"), [])
+        tools = [
+            module
+            for module in self.metascript.modules_store.store.values()
+            if module is not None and module.name == "tool"
+        ]
+        self.assertEqual(len(tools), 1)
+        self.assertEqual(tools[0].path, os.path.realpath("tool"))
+
+    def test_the_logs_are_removed(self):
+        """Each log is removed once read, and the directory of the logs
+        when the trial is stored"""
+        tracer = self.collect_strace(
+            "# script.py\n"
+            "import subprocess\n"
+            "import sys\n"
+            "result = subprocess.run([sys.executable, 'child_hidden.py'], timeout=60)\n"
+        )
+        log_dir = tracer.log_dir
+        self.assertIsNotNone(log_dir)
+        self.assertEqual(os.listdir(log_dir), [])
+        tracer.finalize_pending(final=True)
+        self.assertIsNone(tracer.log_dir)
+        self.assertFalse(os.path.exists(log_dir))

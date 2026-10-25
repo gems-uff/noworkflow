@@ -38,9 +38,9 @@ jobs:
         # turns UTF-8 mode on by default (PEP 686), so the Windows legs read
         # files differently below and from 3.15.
         include:
-          - { os: ubuntu-latest, min-tests: 3305, workers: 4 }
-          - { os: macos-latest, min-tests: 3305, workers: 3 }
-          - { os: windows-latest, min-tests: 3305, workers: 0, warn-encoding: "1" }
+          - { os: ubuntu-latest, min-tests: 3345, workers: 4 }
+          - { os: macos-latest, min-tests: 3345, workers: 3 }
+          - { os: windows-latest, min-tests: 3345, workers: 0, warn-encoding: "1" }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     env:
@@ -75,12 +75,14 @@ jobs:
       # SWI-Prolog and Graphviz on the Linux and macOS legs, as in ci.yml:
       # without swipl the patterns tests and the Prolog-fact tests skip, and
       # without `dot` the tests that run Graphviz, as they do on the Windows
-      # legs.
-      - name: Install SWI-Prolog and Graphviz (Linux)
+      # legs. strace on Linux only, the one system of the strace backend
+      # (#206), where NOW_STRACE=require fails its tests instead of
+      # skipping them.
+      - name: Install SWI-Prolog, Graphviz and strace (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz strace
 
       - name: Install SWI-Prolog and Graphviz (macOS)
         if: runner.os == 'macOS'
@@ -93,6 +95,8 @@ jobs:
       # tests run in its paper-example job and the `browser` ones in its
       # vis-browser job.
       - name: Run tests
+        env:
+          NOW_STRACE: ${{ runner.os == 'Linux' && 'require' || '' }}
         run: |
           set -o pipefail
           uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper and not browser and not engines" | tee pytest.log

@@ -205,16 +205,16 @@ jobs:
         # and counted by the paper-example, vis-browser and engines jobs.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 3305 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 3305 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 3305 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 3305 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 3345 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 3345 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 3345 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 3345 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 3333, reference: true }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 3373, reference: true }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -247,10 +247,13 @@ jobs:
       # package of the paper-example job and of the reference container.
       # Graphviz too: the tests of run_dot, of %%dot, of the %now_schema
       # diagrams and of flow.pdf run the real `dot` and skip without it.
-      - name: Install SWI-Prolog and Graphviz
+      # strace: the tests of `--external-tracer strace` (#206) run where it
+      # can trace and skip elsewhere; NOW_STRACE=require below fails them
+      # instead.
+      - name: Install SWI-Prolog, Graphviz and strace
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz strace
 
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference
@@ -271,6 +274,7 @@ jobs:
         env:
           GOLDEN: ${{ matrix.reference && 'require' || '' }}
           GOLDEN_ACTUAL_DIR: ${{ runner.temp }}/golden-actual
+          NOW_STRACE: require
         run: |
           set -o pipefail
           args=(-n 4)
@@ -475,11 +479,13 @@ jobs:
 
       # r-base-core: Rscript for the case study's model.R (base R, no
       # package); NOW_RSCRIPT=require below fails its tests instead of
-      # skipping them when Rscript or cc is missing.
-      - name: Install SWI-Prolog and R
+      # skipping them when Rscript or cc is missing. strace: the case
+      # study's strace variant (#206), which NOW_STRACE=require fails
+      # instead of skipping where strace cannot trace.
+      - name: Install SWI-Prolog, R and strace
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox r-base-core
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox r-base-core strace
 
       - name: Install dependencies
         run: uv sync --locked --group paper
@@ -489,21 +495,21 @@ jobs:
           GOLDEN: require
           GOLDEN_ACTUAL_DIR: ${{ runner.temp }}/golden-actual
           NOW_RSCRIPT: require
+          NOW_STRACE: require
         run: |
           set -o pipefail
           uv run --no-sync pytest -m paper | tee pytest.log
 
       # min-tests: every test of the two modules; none skipped here (the
-      # group, swipl, Rscript, cc and the reference platform are all
-      # present) but the strace variant of the case study, which skips
-      # until #206 installs strace, and its two claims under rdtLite, which
-      # no leg installs; a skip counts.
+      # group, swipl, Rscript, cc, strace and the reference platform are
+      # all present) but the two claims of the case study under rdtLite,
+      # which no leg installs; a skip counts.
       - name: Record the test count
         if: ${{ !cancelled() }}
         run: |
           bash .github/scripts/pytest-summary.sh pytest.log 146 \
             "paper example (ubuntu-latest, 3.15)" \
-            'uv sync --locked --group paper && GOLDEN=require NOW_RSCRIPT=require uv run --no-sync pytest -m paper'
+            'uv sync --locked --group paper && GOLDEN=require NOW_RSCRIPT=require NOW_STRACE=require uv run --no-sync pytest -m paper'
 
       - name: Upload the outputs that differ from the goldens
         if: failure()

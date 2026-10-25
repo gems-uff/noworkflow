@@ -746,17 +746,17 @@ def test_run_external_tracer_none_records_nothing_of_the_child(project):
     assert [row["value"] for row in arguments] == ["'none'"]
 
 
-def test_run_external_tracer_strace_falls_back_to_argv_with_a_warning(project):
-    """Until #206 lands, ``--external-tracer strace`` records what ``argv``
-    records, warns once on stderr and exits with the script's status"""
+def assert_falls_back_to_argv(project, reason):
+    """``now run --external-tracer strace`` of the processes corpus that
+    falls back: it records what ``argv`` records, warns once on stderr
+    with the reason and exits with the script's status"""
     project.copy_corpus("processes")
     result = project.run(
         "run", "--external-tracer", "strace", "run.py", allow_stderr=True
     )
     assert result.stdout == "0 child-done\n"
     assert result.stderr.splitlines() == [
-        "[now] --external-tracer strace is not available yet (#206): "
-        "falling back to argv"
+        "[now] --external-tracer strace {}: falling back to argv".format(reason)
     ]
     trial = only_trial(project)
     rows = project.query(
@@ -769,6 +769,47 @@ def test_run_external_tracer_strace_falls_back_to_argv_with_a_warning(project):
         ("child_in.txt", "r"),
         ("child_out.txt", "w"),
     ]
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("linux"), reason="the strace backend runs on Linux"
+)
+def test_run_external_tracer_strace_falls_back_to_argv_off_linux(project):
+    """Off Linux, ``--external-tracer strace`` falls back to ``argv``
+    (#206)"""
+    assert_falls_back_to_argv(project, "runs on Linux only")
+
+
+# What strace prints when the kernel or a container refuses ptrace.
+NO_PTRACE = "strace: ptrace(PTRACE_TRACEME, ...): Operation not permitted"
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("linux"), reason="the strace backend runs on Linux"
+)
+@pytest.mark.parametrize(
+    "fake, detail",
+    [
+        # A container without ptrace: strace fails.
+        ("echo '{}' >&2\nexit 1".format(NO_PTRACE), NO_PTRACE),
+        # An emulator (Rosetta): strace exits with 0 and logs nothing.
+        ("exit 0", "its log shows no process"),
+    ],
+    ids=["fails", "logs_nothing"],
+)
+def test_run_external_tracer_strace_falls_back_where_strace_cannot_trace(
+    project, fake, detail
+):
+    """On Linux, a strace that cannot trace (here a fake one, first on the
+    PATH) makes ``--external-tracer strace`` fall back to ``argv`` before
+    any launch, which would otherwise not run, or not run as asked
+    (#206)"""
+    directory = project.root / "fake-bin"
+    directory.mkdir()
+    (directory / "strace").write_text("#!/bin/sh\n{}\n".format(fake), encoding="utf-8")
+    (directory / "strace").chmod(0o755)
+    project.env["PATH"] = os.pathsep.join([str(directory), project.env["PATH"]])
+    assert_falls_back_to_argv(project, "cannot trace here ({})".format(detail))
 
 
 def test_run_external_tracer_rejects_another_value(project):

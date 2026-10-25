@@ -309,16 +309,18 @@ An executable larger than 16 MB is not stored, only its hash and its size, so `n
 ```bash
 $ now run --external-tracer none script.py    # nothing of the processes
 $ now run --external-tracer argv script.py    # the default: the files named on the command lines and the new files of the project
-$ now run --external-tracer strace script.py  # also the files the processes open on their own (Linux; not available yet, falls back to argv)
+$ now run --external-tracer strace script.py  # also every file of the project the processes and their children open (Linux, with strace)
 ```
+
+With *strace*, each launch runs under [`strace`](https://strace.io/), which must be installed (`apt install strace`): every file of the project directory that the process or its own children open, read or write, is then a file access of the launch, whether a command line names it or not, and a program they run from the project is a dependency of the trial. A file that existed and that the process changed without naming it has no content before, because its name is only known once the process has written it: it is recorded with mode `r+`, and `now restore` of the trial leaves it as it is, with a message, instead of removing it as a file the trial created. Where strace cannot trace (another system than Linux, strace missing, a container without ptrace, an emulator), the trial falls back to *argv* with a warning. Launches through `os.posix_spawn` and `os.spawn`, and a `Popen` given its own `executable`, are recorded as with *argv*. A launch still ends when its command does; strace goes on following the processes the command left running in the background, and keeps the launch's standard streams open until they end, so reading a pipe of the launch to its end waits for them.
 
 [`Examples/glue_pipeline`](https://github.com/gems-uff/noworkflow/tree/main/Examples/glue_pipeline) is a Python script that prepares data with pandas, fits a model in R and computes its metrics in C, with three trials that edit the R script and then the C program. Its README shows what `now diff`, `now show -m` and `now export dataflow` print for them.
 
 What is not recorded:
 
-- **Inside the program.** Its variables, its functions and the files it opens without naming them on its command line are not seen. A provenance tool of the other language, such as rdtLite for R, can record them; the files it writes in the project are then recorded as files the process created.
-- **Changes the content does not show.** A file the process modifies without naming it on its command line is not seen, and a file it rewrites with the same content is recorded as a read. Delete the outputs before each trial when that matters.
-- **Other ways to start a process.** The children of `os.fork` and `multiprocessing` are not launches and are not recorded, and neither are a process that a launched program starts in turn, a process started from compiled code, and the program that `os.exec` puts in the place of the script, which also leaves the trial unfinished.
+- **Inside the program.** Its variables and its functions are not seen, and, without *strace*, neither are the files it opens without naming them on its command line. A provenance tool of the other language, such as rdtLite for R, can record them; the files it writes in the project are then recorded as files the process created.
+- **Changes the content does not show.** Without *strace*, a file the process modifies without naming it on its command line is not seen; with it, the content the file had before is not known. A file the process rewrites with the same content is recorded as a read. Delete the outputs before each trial when that matters.
+- **Other ways to start a process.** The children of `os.fork` and `multiprocessing` are not launches and are not recorded, and neither are a process that a launched program starts in turn (with *strace*, the files it opens and the program it runs from the project are recorded with the launch), a process started from compiled code, and the program that `os.exec` puts in the place of the script, which also leaves the trial unfinished.
 
 Examples
 --------
