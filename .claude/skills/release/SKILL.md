@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cuts a release of noWorkflow from an integrated main — the prerequisites, what ships and the version number, the bump of version.txt, a wheel and an sdist built and inspected from the exact commit, the dry run, the annotated tag, PyPI, the GitHub release, the milestone, and whether the Jupyter extension needs a release of its own. Use when the maintainer decides to release, or to rehearse a release without publishing anything.
+description: Cuts a release of noWorkflow from an integrated main — the prerequisites, what ships and the version number, the bump of version.txt, a wheel and an sdist built and inspected from the exact commit, the dry run, a gate on the candidate when the release has one, the annotated tag, PyPI, the GitHub release, the milestone, and whether the Jupyter extension needs a release of its own. Use when the maintainer decides to release, or to rehearse a release without publishing anything.
 ---
 
 # Releasing noWorkflow
@@ -280,10 +280,43 @@ this very file is already on PyPI). `Local file and index file do not match`
 `Trusted publishing failed` is printed when there is no CI token, and is not
 the verdict.
 
+### 4b. A gate on the candidate, when the release has one
+
+The maintainer may hold a release to a gate beyond the inspection: a set of
+scripts run with the candidate, where a result that differs from what the
+gate expects (what plain Python computes, say) stops the release. The
+release's `Task` issue, or an issue it links, says that the release has a
+gate, what it runs, where its harness lives and what passes; this step holds
+what any gate needs:
+
+- **The candidate is the wheel of step 4, by its sha256**, never a rebuild:
+  every result of the gate carries the sha256 of the wheel it ran, and step 6
+  uploads the same files (`shasum -a 256` against that sha256). Keep
+  `<outside>/nw-release` until then.
+- **`main` holds still while the gate runs.** It starts on a milestone with
+  nothing left but the release's own issues, and anything integrated before
+  the tag makes a new candidate.
+- **On a stop**: no tag, nothing published. The defect gets an issue, or
+  reopens the one it belongs to, and its fix is integrated like any other.
+  The release then restarts at step 3 on the new `main`: `version.txt`
+  already holds the number, so the candidate's commit is the new head of
+  `main`, the prerequisites of the tag (CI, the pre-release matrix) run again
+  on it, step 4 builds and inspects its wheel, and the gate starts over, its
+  results apart from the previous candidate's. A gate of several passes runs
+  all of them on the same candidate.
+- **A gate that runs on a shared machine**: running there, reserving it, any
+  step as root and the start of each pass are the maintainer's, or wait for
+  the maintainer's go-ahead; whatever the gate changes on the machine is
+  undone before the reservation ends.
+- **On a clean gate**, steps 5 to 7 with the files that passed; the results
+  are published where the issue says before step 7, so that the note can
+  link them.
+
 ### 5. The tag
 
 Annotated, never lightweight, with the version as its message, on the bump
-commit; created and pushed by the maintainer:
+commit, or on the commit of the candidate that passed the gate (4b);
+created and pushed by the maintainer:
 
 ```bash
 git tag -a <version> -m "<version>" <bump commit>
@@ -298,9 +331,9 @@ After the upload, the fix is a new version.
 
 ### 6. PyPI
 
-The upload is the maintainer's, of the files inspected in step 4, not a
-rebuild, with the token in their own shell (or, when the repository has a
-publishing workflow, the tag triggers it and this step is checking its run):
+The upload is the maintainer's, of the files inspected in step 4 (and
+passed by the gate of 4b, when there is one), not a rebuild, with the token
+in their own shell (or, when the repository has a publishing workflow, the tag triggers it and this step is checking its run):
 
 ```bash
 uv publish <outside>/nw-release/dist/noworkflow-<version>*
@@ -334,6 +367,7 @@ The note, written for users:
   this one writes; any change of `Requires-Python` or of a dependency's
   range — which release stays the last one for a Python that left;
 - what the audits found and the maintainer decided to ship;
+- when the release passed a gate (4b), a link to its results;
 - the compare link, `https://github.com/gems-uff/noworkflow/compare/<previous tag>...<version>`.
 
 A security fix has an issue like any other bug, and the note cites the issue.
@@ -379,7 +413,9 @@ Check the prerequisites that can be read (none dispatches anything: for the
 pre-release matrix and the experimental leg, write what would run and which previous run it would be
 compared with). Then steps 1 to 4 in that worktree — `uv build` takes the
 bump from the working files — the dry run included, and the note of step 7
-drafted in `<scratch>/notes.md` from what step 1 found.
+drafted in `<scratch>/notes.md` from what step 1 found. When the release
+has a gate, 4b is rehearsed here with the rehearsal's wheel, on whatever
+subset its harness allows, never on a shared machine.
 
 The tag is the maintainer's (`AGENTS.md`), also in a rehearsal. With their
 go-ahead, the command is tried in a throwaway clone, so that no tag ever
