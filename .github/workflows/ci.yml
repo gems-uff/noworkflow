@@ -205,16 +205,16 @@ jobs:
         # and counted by the paper-example, vis-browser and engines jobs.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 3264 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 3264 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 3264 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 3264 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 3302 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 3302 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 3302 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 3302 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 3292, reference: true }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 3330, reference: true }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:

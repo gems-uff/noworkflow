@@ -2,7 +2,6 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
 """Convert database to clusterized structure"""
 
 import weakref
@@ -11,8 +10,7 @@ from itertools import chain
 
 from future.utils import viewitems
 
-from ...persistence import relational
-from ...persistence.models import CodeComponent, UniqueFileAccess
+from ...persistence.models import Evaluation, UniqueFileAccess
 from .attributes import ACCESS_ATTR, EMPTY_ATTR, PROPAGATED_ATTR, REFERENCE_ATTR
 from .config import DependencyConfig
 from .node_types import AccessNode, ActivationNode, ClusterNode, EvaluationNode
@@ -78,6 +76,7 @@ class Clusterizer(object):
 
         for member in node.evaluation.memberships_as_collection:
             self.process_evaluation(member.member, cluster, True)
+
         if not is_type:
             for member in node.evaluation.memberships_as_member:
                 self.process_evaluation(member.collection, cluster, False)
@@ -89,6 +88,7 @@ class Clusterizer(object):
         act = evaluation.this_activation
         if act is not None:
             return self.process_activation(act, evaluation, cluster, is_type)
+
         return self.add_evaluation_node(EvaluationNode(evaluation), cluster, is_type)
 
     def _activation_node_condition(self, activation, cluster):
@@ -104,10 +104,11 @@ class Clusterizer(object):
             )
         else:
             node = self.add_cluster_node(activation, evaluation, cluster, is_type)
+
         if node is None or not self.filter.show_accesses:
             return node
 
-        # Add accesses
+        # Add acesses
         departing_arrows = self.departing_arrows
         arriving_arrows = self.arriving_arrows
         nid = node.node_id
@@ -229,6 +230,7 @@ class Clusterizer(object):
                     attrs = attr_arriving | attr_departing | {PROPAGATED_ATTR}
                     departing_arrows[source][target] |= attrs
                     arriving_arrows[target][source] |= attrs
+
             del arriving_arrows[nid]
             for target, attr_departing in viewitems(departing_arrows[nid]):
                 for source, attr_arriving in viewitems(arriving_arrows[nid]):
@@ -316,27 +318,65 @@ class ActivationClusterizer(Clusterizer):
 
 
 class RetrospectiveClusterizer(Clusterizer):
-    """Create an activation graph"""
+    """Create an activation graph with the parameters, the return values and
+    the assignments of each call"""
 
     def __init__(self, *args, **kwargs):
         super(RetrospectiveClusterizer, self).__init__(*args, **kwargs)
         self.clusters = []
+        # Evaluations whose activation had no node yet when they were reached
+        self.deferred = []
 
     def process_cluster(self, cluster):
         """Process cluster"""
         self.clusters.append(cluster)
-        created = self.created
-        for activation in cluster.activation.activations:
-            evaluation = activation.this_evaluation
-            self.process_activation(activation, evaluation, cluster, False)
+        self.process_activations(cluster.activation, cluster)
+
+    def process_activations(self, activation, cluster):
+        """Add the activations called by ``activation`` to ``cluster``, each
+        with the evaluations its call reads and the ones that read it"""
+        for child in activation.activations:
+            evaluation = child.this_evaluation
+            self.process_activation(child, evaluation, cluster, False)
             for dep in chain(evaluation.dependencies, evaluation.dependents):
-                dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
-                if dep_act_node_id not in created:
-                    continue
-                dep_cluster = created[dep_act_node_id][1]
-                if not isinstance(dep_cluster, ClusterNode):
-                    continue
-                self.process_evaluation(dep, dep_cluster, False)
+                self.place_evaluation(dep, defer=True)
+
+    def cluster_of(self, activation_id):
+        """Node that draws the activation, or None when it has none"""
+        node_id = EvaluationNode.get_node_id(activation_id)
+        return self.created.get(node_id, (None, None))[1]
+
+    def place_evaluation(self, evaluation, defer=False):
+        """Add the evaluation to the cluster of its activation
+
+        An activation reached later in the trial (the function that receives
+        an argument, the function that ``map`` calls) has no node yet: with
+        ``defer``, the evaluation waits until every cluster exists. An
+        activation that still has none was left out on purpose (a filter, the
+        depth), and so is the evaluation; one drawn as a single node holds no
+        evaluation.
+        """
+        dep_cluster = self.cluster_of(evaluation.activation_id)
+        if dep_cluster is None and defer:
+            self.deferred.append(evaluation)
+        elif isinstance(dep_cluster, ClusterNode):
+            self.process_evaluation(evaluation, dep_cluster, False)
+
+    def place_target(self):
+        """Add the evaluation that ``-w`` names, which a coarse graph draws
+        only when it is a parameter, a return value or an assignment"""
+        config = self.config
+        if config.show_only_was_derived_from:
+            key = (self.trial().id, config.show_only_was_derived_from_eid)
+            self.place_evaluation(Evaluation(key))
+
+    def process_dependencies(self):
+        """Place what waited for a cluster, then load dependencies from db"""
+        deferred, self.deferred = self.deferred, []
+        for evaluation in deferred:
+            self.place_evaluation(evaluation)
+        self.place_target()
+        super(RetrospectiveClusterizer, self).process_dependencies()
 
     def run(self):
         """Process main_cluster to create nodes"""
@@ -346,31 +386,32 @@ class RetrospectiveClusterizer(Clusterizer):
         return result
 
 
-class ProspectiveClusterizer(Clusterizer):
-    """Create an activation graph"""
+class ProspectiveClusterizer(RetrospectiveClusterizer):
+    """Create an activation graph that draws a call repeated in a loop once
+
+    Two evaluations of the same code component, of the same kind (an
+    activation or not), inside the same cluster are the same node: the first
+    one is drawn, and the others are merged into it. What a merged activation
+    calls is added to the cluster of the first one, so a call that only a
+    later iteration makes is drawn too.
+    """
 
     def __init__(self, *args, **kwargs):
         super(ProspectiveClusterizer, self).__init__(*args, **kwargs)
-        self.clusters = []
-        self.code_components_added = []
+        # (code component, is activation, cluster) -> first node
+        self.firsts = {}
+        # node_id of a merged node -> first node
+        self.merged = {}
 
-    def check_if_function_call_was_added(self, evaluation):
-        code_component = (
-            relational.session.query(CodeComponent.m)
-            .filter(
-                CodeComponent.m.id == evaluation.code_component_id,
-                CodeComponent.m.trial_id == evaluation.trial_id,
-            )
-            .all()[0]
-        )
-        # if code_component.type == "call":
-        if code_component in self.code_components_added:
-            return True
-        self.code_components_added.append(code_component)
-        return False
+    def cluster_of(self, activation_id):
+        """Node that draws the activation, or None when it has none"""
+        node_id = EvaluationNode.get_node_id(activation_id)
+        if node_id in self.merged:
+            return self.merged[node_id]
+        return super(ProspectiveClusterizer, self).cluster_of(activation_id)
 
     def add_node(self, node, cluster):
-        """Add node to graph"""
+        """Add node to graph, or merge it into the first of its kind"""
         created = self.created
         filter_ = self.filter
         synonymer = self.synonymer
@@ -382,35 +423,24 @@ class ProspectiveClusterizer(Clusterizer):
             return None, "after"
         if nid in created:
             return node, "exists"
-        if (type(node) is not AccessNode) and self.check_if_function_call_was_added(
-            node.evaluation
-        ):
-            return node, "done"
+        if nid in self.merged:
+            return self.merged[nid], "merged"
+        key = None
+        if isinstance(node, EvaluationNode):
+            key = (
+                node.evaluation.code_component_id,
+                isinstance(node, ActivationNode),
+                cluster.node_id,
+            )
+            first = self.firsts.get(key)
+            if first is not None:
+                self.merged[nid] = first
+                if isinstance(node, ClusterNode) and isinstance(first, ClusterNode):
+                    self.process_activations(node.activation, first)
+                return first, "merged"
         created[nid] = (cluster, node)
         cluster.add(node)
         synonymer.set(node)
+        if key is not None:
+            self.firsts[key] = node
         return node, "done"
-
-    def process_cluster(self, cluster):
-        """Process cluster"""
-        self.clusters.append(cluster)
-        created = self.created
-        for activation in cluster.activation.activations:
-            evaluation = activation.this_evaluation
-            # if(not self.check_if_function_call_was_added(evaluation)):
-            self.process_activation(activation, evaluation, cluster, False)
-            for dep in chain(evaluation.dependencies, evaluation.dependents):
-                dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
-                if dep_act_node_id not in created:
-                    continue
-                dep_cluster = created[dep_act_node_id][1]
-                if not isinstance(dep_cluster, ClusterNode):
-                    continue
-                self.process_evaluation(dep, dep_cluster, False)
-
-    def run(self):
-        """Process main_cluster to create nodes"""
-        result = super(ProspectiveClusterizer, self).run()
-        for cluster in self.clusters:
-            self.config.rank(cluster)
-        return result

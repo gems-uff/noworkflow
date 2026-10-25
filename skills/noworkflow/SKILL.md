@@ -197,11 +197,11 @@ now export ipynb diff:1:2                # Diff-1-2.ipynb
 
 - `export dataflow` modes (`-m`): `activation`, `coarseGrain` (default),
   `looplessCoarseGrain`, `fineGrain`, `all`. `-w ID` keeps only an
-  evaluation and what it was derived from (the id comes from
-  `now evaluation`, below); use it with `-m fineGrain`, `-m activation` or
-  `-m all`, since in the default mode it can crash with `KeyError` (#200).
-  On a nested or repeated call to a user function, `coarseGrain` and
-  `looplessCoarseGrain` can crash the same way without `-w` (#242).
+  evaluation and what it was derived from, inside the clusters of the
+  activations that hold them (the id comes from `now evaluation`, below);
+  `-m activation` draws only the activations among them.
+  `looplessCoarseGrain` draws a call that a loop repeats once, with
+  everything any of its iterations called inside it.
 - `export prolog -r` appends inference rules that do not match the facts
   (#249); query the facts directly (recipe below).
 - `export ast` fails from Python 3.14 on (#241; on 3.14, `-d` still works).

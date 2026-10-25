@@ -8,7 +8,7 @@ from argparse import Namespace
 
 from ...cmd.cmd_evaluation import query_evaluations
 from ...persistence import relational
-from ...persistence.models import Activation, CodeComponent, Dependency
+from ...persistence.models import Activation, CodeComponent, Dependency, Evaluation
 from ...persistence.models.base import proxy, proxy_gen
 from .node_types import AccessNode, ClusterNode, EvaluationNode
 
@@ -168,7 +168,12 @@ class FilterNotFromCodeOut(AcceptAllNodesFilter):
 
 
 class FilterWasDerivedFrom(AcceptAllNodesFilter):
-    """Filter that accepts only one evaluation and the ones that derived it"""
+    """Filter that accepts only one evaluation and the ones that derived it
+
+    A cluster is accepted when its activation holds, at any depth, one of
+    those evaluations, even if the value of its call did not derive the
+    evaluation: the cluster is where the evaluation is drawn.
+    """
 
     # pylint: disable=too-few-public-methods
     was_derived_from_list = None
@@ -177,11 +182,36 @@ class FilterWasDerivedFrom(AcceptAllNodesFilter):
         if self.was_derived_from_list is None:
             # TODO This class is being disnecessarily instantiated twice
             self.was_derived_from_list = self.get_was_derived_from_list(eid, trial)
+            self.holding_activations = self.get_holding_activations(
+                self.was_derived_from_list
+            )
 
     def __contains__(self, node):
+        if isinstance(node, ClusterNode):
+            if node.activation.id in self.holding_activations:
+                return True
         if isinstance(node, EvaluationNode):
             return not node.evaluation not in self.was_derived_from_list
         return super(FilterWasDerivedFrom, self).__contains__(node)
+
+    @staticmethod
+    def get_holding_activations(evaluations):
+        """Ids of the activations that hold one of ``evaluations``, at any
+        depth"""
+        holding = set()
+        if not evaluations:
+            return holding
+        parent = dict(
+            relational.session.query(Evaluation.m.id, Evaluation.m.activation_id)
+            .filter(Evaluation.m.trial_id == evaluations[0].trial_id)
+            .all()
+        )
+        for evaluation in evaluations:
+            activation_id = evaluation.activation_id
+            while activation_id and activation_id not in holding:
+                holding.add(activation_id)
+                activation_id = parent.get(activation_id)
+        return holding
 
     def get_was_derived_from_list(self, eid, trial):
         args = Namespace(trial=trial, eid=eid, wdf_trial=trial)

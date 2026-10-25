@@ -6,12 +6,14 @@
 The prolog, prov, ast and prospective exports read the shared
 ``two_trial_project`` and never write to it: they only print to stdout.
 ``export dataflow`` runs on the dataflow corpus, built once per module and
-read-only afterwards: ``simulation.py``, on which the five modes work and
-whose ``-w`` graphs are checked against the whole graph of the same mode
-(the clustered modes crash with ``-w`` on one of its writes, #200), and the
-two scripts that crash the clustered modes without ``-w``
-(#242); a store of its own holds the script of #258, whose ``-w`` on a
-parameter fineGrain leaves out. ``export ast`` fails on recent Pythons: the
+read-only afterwards: ``simulation.py``, whose ``-w`` graphs are checked
+against the whole graph of the same mode (the clustered modes,
+coarseGrain and looplessCoarseGrain, crashed with ``-w`` on one of its
+writes, #200), and the three scripts that crashed them without ``-w``
+(#242); stores of their own hold the scripts on which a fix that skipped
+what the clustered modes could not place drew a graph that omits
+provenance, and the scripts of #258, whose ``-w`` on a parameter left out
+the activations that hold it. ``export ast`` fails on recent Pythons: the
 text and ``-j`` forms from 3.14 (#241), every form from
 3.15 (#241); ``harness.export_ast_failure`` says which form
 fails where. ``export ipynb`` writes a notebook into the current directory,
@@ -101,56 +103,37 @@ DATAFLOW_MODES = (
     "fineGrain",
     "all",
 )
-# `-w` with the write of `data` crashes the clustered modes, and so does the
-# default mode (coarseGrain) when `-m` is omitted.
-WDF_CRASHES = [
-    pytest.param(("-m", "coarseGrain"), id="coarseGrain"),
-    pytest.param(("-m", "looplessCoarseGrain"), id="looplessCoarseGrain"),
-    pytest.param((), id="default"),
+# Each mode named by `-m`, and the default mode (coarseGrain), which `-m`
+# omitted selects.
+MODE_ARGS = [pytest.param(("-m", mode), id=mode) for mode in DATAFLOW_MODES] + [
+    pytest.param((), id="default")
 ]
-WDF_REASON = (
-    "#200: `export dataflow -w` with the write of `data` crashes with "
-    "KeyError in coarseGrain and looplessCoarseGrain, the default mode "
-    "included"
-)
-# `-w` works in the three unclustered modes with the write of `data`, and in
-# every mode with the write of `size`.
-WDF_CONTROLS = [(mode, "data") for mode in ("activation", "fineGrain", "all")] + [
-    (mode, "size") for mode in DATAFLOW_MODES
+# The modes that draw evaluations besides activations: every one but
+# activation.
+EVALUATION_MODE_ARGS = [param for param in MODE_ARGS if param.id != "activation"]
+# The modes that draw evaluations inside the cluster of their activation:
+# fineGrain, and the clustered modes, coarseGrain and looplessCoarseGrain.
+CLUSTER_MODE_ARGS = [param for param in EVALUATION_MODE_ARGS if param.id != "all"]
+WDF_CASES = [
+    pytest.param(param.values[0], variable, id="{}-{}".format(param.id, variable))
+    for param in MODE_ARGS
+    for variable in ("data", "size")
 ]
 # The label of a DOT node or cluster: `label="..."` or `label = "..."`.
 DOT_LABEL = re.compile(r'\blabel\s*=\s*"((?:[^"\\]|\\.)*)"')
 # A file access node: `a_<n> [label="<file name>" ...`.
 ACCESS_NODE = re.compile(r'^\s*a_\d+ \[label="((?:[^"\\]|\\.)*)"', re.MULTILINE)
 PLOT = re.compile(r"\bplot\b")
-CALL_SCRIPTS = ("nested_call.py", "repeated_call.py")
-# f(g(x)) crashes both clustered modes; a call site that runs more than once
-# crashes looplessCoarseGrain.
-CALL_CRASHES = [
-    ("nested_call.py", "coarseGrain"),
-    ("nested_call.py", "looplessCoarseGrain"),
-    ("repeated_call.py", "looplessCoarseGrain"),
-]
-CALL_CONTROLS = [
-    (script, mode)
-    for script in CALL_SCRIPTS
-    for mode in DATAFLOW_MODES
-    if (script, mode) not in CALL_CRASHES
-]
-CALL_REASON = (
-    "#242: `export dataflow` without -w crashes with "
-    "KeyError on a nested call to a user function (coarseGrain and "
-    "looplessCoarseGrain) and on a call site that runs more than once "
-    "(looplessCoarseGrain)"
-)
-KEY_ERROR = re.compile(r"KeyError: 'e_\d+'")
+# A user function called inside another call's arguments, a call site that
+# runs more than once, and an instantiation that runs `__init__`: the
+# clustered modes crashed on each (#242).
+CALL_SCRIPTS = ("nested_call.py", "repeated_call.py", "init_call.py")
 # The script of #258: the parameter `x` is an evaluation inside the
-# activation of `f`.
-PARAMETER_SCRIPT = "def f(x):\n    pass\n\nf(1)\n"
-PARAMETER_REASON = (
-    "#258: `export dataflow -m fineGrain -w` on an evaluation inside a "
-    "function draws neither it nor the activation that holds it"
-)
+# activation of `f`; in the nested one, inside `f` called by `g`.
+PARAMETER_SCRIPTS = {
+    "direct": "def f(x):\n    pass\n\nf(1)\n",
+    "nested": "def f(x):\n    pass\n\ndef g(y):\n    f(y)\n\ng(1)\n",
+}
 # Scripts whose text writes a double quote or a backslash into a label
 # (#401), each run in a project of its own.
 ESCAPED_QUOTE_SCRIPT = 'print("say \\"hi\\"")\n'
@@ -926,92 +909,63 @@ def test_export_dataflow_defaults_to_coarse_grain(dataflow_project):
     assert default.stdout == coarse.stdout
 
 
-@pytest.mark.parametrize("mode, variable", WDF_CONTROLS)
+@pytest.mark.parametrize("mode_args, variable", WDF_CASES)
 def test_export_dataflow_wdf_draws_only_what_derived_the_evaluation(
-    dataflow_project, mode, variable
+    dataflow_project, mode_args, variable
 ):
     """``-w <eid>`` draws a smaller graph than the same mode without it,
     keeping what derived the evaluation and leaving out what did not
 
-    Control for #200, measured on ``simulation.py``: ``-w`` works in
-    activation, fineGrain and all with the write of ``data``, and in every
-    mode, coarseGrain and looplessCoarseGrain included, with the write of
-    ``size``. The crash of the clustered modes therefore depends on the
-    evaluation, not on the mode alone.
+    Measured on ``simulation.py`` in every mode, with the write of
+    ``data``, on which the clustered modes crashed (#200), and with the
+    write of ``size``.
     """
-    assert_derivation_graph(dataflow_project, ("-m", mode), variable)
+    assert_derivation_graph(dataflow_project, mode_args, variable)
 
 
-@pytest.mark.parametrize("mode_args", WDF_CRASHES)
-def test_export_dataflow_wdf_in_a_clustered_mode(dataflow_project, mode_args):
-    """``-w`` with the write of ``data`` in coarseGrain, looplessCoarseGrain
-    or the default mode exits with 1 and a ``KeyError`` traceback
-
-    Characterization of #200: ``RetrospectiveClusterizer.process_cluster``
-    looks up the activation node of a dependency that the
-    ``wasDerivedFrom`` filter of ``-w`` left out of the graph.
+@pytest.mark.parametrize("script", CALL_SCRIPTS)
+@pytest.mark.parametrize("mode_args", MODE_ARGS)
+def test_export_dataflow_of_nested_and_repeated_calls(call_projects, mode_args, script):
+    """Every mode draws the graph of a nested call ``f(g(x))``, of a call
+    site that runs more than once and of an instantiation that runs
+    ``__init__``, on which the clustered modes crashed (#242)
     """
-    eid = written_evaluation(dataflow_project, "data")
-    result = dataflow_project.run(
-        "export", "dataflow", *mode_args, "-w", eid, expect=1, allow_stderr=True
-    )
-    assert result.stdout == "", str(result)
-    assert "Traceback (most recent call last):" in result.stderr, str(result)
-    assert KEY_ERROR.fullmatch(last_line(result.stderr)), str(result)
-
-
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=WDF_REASON)
-@pytest.mark.parametrize("mode_args", WDF_CRASHES)
-def test_export_dataflow_wdf_in_a_clustered_mode_desired(dataflow_project, mode_args):
-    """``-w`` with the write of ``data`` draws, in the clustered modes too,
-    only what derived the evaluation
-    """
-    assert_derivation_graph(dataflow_project, mode_args, "data")
-
-
-@pytest.mark.parametrize("script, mode", CALL_CRASHES)
-def test_export_dataflow_of_nested_and_repeated_calls(call_projects, script, mode):
-    """Without ``-w``, a nested call ``f(g(x))`` crashes both clustered
-    modes and a call site that runs more than once crashes
-    looplessCoarseGrain: rc 1 and a ``KeyError`` traceback
-
-    Characterization of #242. The lookup that fails is
-    the one of #200 (``created[dep_act_node_id]`` in ``process_cluster``),
-    but no ``-w`` filter is involved: the graph is the whole trial.
-    """
-    result = call_projects[script].run(
-        "export", "dataflow", "-m", mode, expect=1, allow_stderr=True
-    )
-    assert result.stdout == "", str(result)
-    assert "Traceback (most recent call last):" in result.stderr, str(result)
-    assert KEY_ERROR.fullmatch(last_line(result.stderr)), str(result)
-
-
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=CALL_REASON)
-@pytest.mark.parametrize("script, mode", CALL_CRASHES)
-def test_export_dataflow_of_nested_and_repeated_calls_desired(
-    call_projects, script, mode
-):
-    """Every mode draws the graph of a nested or repeated call"""
-    result = call_projects[script].run("export", "dataflow", "-m", mode)
+    result = call_projects[script].run("export", "dataflow", *mode_args)
     assert_digraph(result)
 
 
-@pytest.mark.parametrize("script, mode", CALL_CONTROLS)
-def test_export_dataflow_of_nested_and_repeated_calls_in_the_other_modes(
-    call_projects, script, mode
+@pytest.mark.parametrize("script", CALL_SCRIPTS)
+@pytest.mark.parametrize("mode", ("coarseGrain", "looplessCoarseGrain"))
+def test_export_dataflow_of_nested_and_repeated_calls_under_a_depth_limit(
+    call_projects, mode, script
 ):
-    """The modes that #242 does not break draw the same
-    scripts
+    """``-d 1`` draws the graph of the same scripts in the clustered modes,
+    where an evaluation inside an activation beyond the limit has no
+    cluster to go to
     """
-    result = call_projects[script].run("export", "dataflow", "-m", mode)
+    result = call_projects[script].run("export", "dataflow", "-m", mode, "-d", 1)
     assert_digraph(result)
 
 
-# --- what the clustered modes draw once they stop crashing (#200, #242) -----
+@pytest.mark.parametrize("mode", ("fineGrain", "coarseGrain", "looplessCoarseGrain"))
+def test_export_dataflow_draws_init_only_when_internals_are_shown(call_projects, mode):
+    """The cluster of ``__init__`` is drawn under ``-H`` and left out
+    without it, as the name starts with an underscore, in the clustered
+    modes as in fineGrain
+    """
+    project = call_projects["init_call.py"]
+    hidden, result = clustered_graph(project, "-m", mode)
+    assert "__init__" not in drawn_cluster_labels(hidden), str(result)
+    shown, result = clustered_graph(project, "-m", mode, "-H")
+    assert "__init__" in drawn_cluster_labels(shown), str(result)
+
+
+# --- what the clustered modes draw (#200, #242) -----------------------------
 
 # Scripts on which skipping the activations missing from `created` (#450)
-# turns the KeyError of #200 or #242 into a graph that omits provenance.
+# turned the KeyError of #200 or #242 into a graph that omits provenance,
+# and a function called from two call sites, whose second parameter
+# looplessCoarseGrain merged into the first.
 CLUSTERED_SCRIPTS = {
     "arguments": (
         "def double(v):\n"
@@ -1034,6 +988,10 @@ CLUSTERED_SCRIPTS = {
         "    total += increment(i)\n"
     ),
     "mapped": ("def sq(x):\n    return x * x\n\nys = list(map(sq, [5]))\n"),
+    # The `for` consumes the map, so `sq` runs in the cluster of its `def`.
+    "mapped_in_a_loop": (
+        "def sq(x):\n    return x * x\n\nfor y in map(sq, [5, 6]):\n    pass\n"
+    ),
     "late_call": (
         "def helper():\n"
         "    pass\n"
@@ -1045,6 +1003,7 @@ CLUSTERED_SCRIPTS = {
         "for i in range(3):\n"
         "    step(i)\n"
     ),
+    "two_sites": ("def f(x):\n    return x\n\na = f(1)\nb = f(2)\n"),
 }
 
 
@@ -1075,7 +1034,25 @@ def clustered_graph(project, *args):
     return DotGraph(result.stdout), result
 
 
-@pytest.mark.parametrize("mode_args", WDF_CRASHES)
+def evaluations_of(project, kind, name):
+    """Ids of the evaluations of the code component ``kind``/``name`` in the
+    last trial
+    """
+    trial_id = project.trials()[-1]["id"]
+    rows = project.query(
+        "SELECT evaluation.id FROM evaluation JOIN code_component "
+        "ON code_component.id = evaluation.code_component_id "
+        "AND code_component.trial_id = evaluation.trial_id "
+        "WHERE evaluation.trial_id = ? AND code_component.type = ? "
+        "AND code_component.name = ?",
+        trial_id,
+        kind,
+        name,
+    )
+    return [row["id"] for row in rows]
+
+
+@pytest.mark.parametrize("mode_args", CLUSTER_MODE_ARGS)
 def test_export_dataflow_wdf_draws_an_evaluation_inside_a_function(
     dataflow_project, mode_args
 ):
@@ -1088,7 +1065,7 @@ def test_export_dataflow_wdf_draws_an_evaluation_inside_a_function(
     assert "run_simulation" in drawn_cluster_labels(graph), str(result)
 
 
-@pytest.mark.parametrize("mode_args", WDF_CRASHES)
+@pytest.mark.parametrize("mode_args", EVALUATION_MODE_ARGS)
 def test_export_dataflow_wdf_draws_a_module_level_write(dataflow_project, mode_args):
     """``-w`` on the write of ``data_b``, at module level, draws it, as
     fineGrain does
@@ -1120,14 +1097,28 @@ def test_export_dataflow_loopless_draws_a_repeated_call_with_a_nested_call(
     clustered_graph(clustered_projects["nested_repeated"], "-m", "looplessCoarseGrain")
 
 
+def test_export_dataflow_loopless_draws_a_repeated_call_once(clustered_projects):
+    """looplessCoarseGrain draws one cluster for ``increment(i)``, which
+    runs three times in a loop, where coarseGrain draws three
+    """
+    project = clustered_projects["nested_repeated"]
+    for mode, count in (("coarseGrain", 3), ("looplessCoarseGrain", 1)):
+        graph, result = clustered_graph(project, "-m", mode)
+        labels = drawn_cluster_labels(graph)
+        assert labels.count("increment") == count, str(result)
+        assert labels.count("add_one") == count, str(result)
+
+
+@pytest.mark.parametrize("script", ("mapped", "mapped_in_a_loop"))
 def test_export_dataflow_loopless_draws_a_function_called_from_c_code(
-    clustered_projects,
+    clustered_projects, script
 ):
     """looplessCoarseGrain draws the activation of ``sq``, which ``map``
-    calls, as coarseGrain does
+    calls, as coarseGrain does, apart from the evaluation of its ``def``,
+    which has the same code component
     """
     graph, result = clustered_graph(
-        clustered_projects["mapped"], "-m", "looplessCoarseGrain"
+        clustered_projects[script], "-m", "looplessCoarseGrain"
     )
     assert "sq" in drawn_cluster_labels(graph), str(result)
 
@@ -1143,6 +1134,33 @@ def test_export_dataflow_loopless_declares_every_node_its_edges_join(
     )
     joined = {node for tail, head, _ in graph.edges for node in (tail, head)}
     assert joined - set(graph.nodes) == set(), str(result)
+
+
+@pytest.mark.parametrize("mode", ("coarseGrain", "looplessCoarseGrain"))
+def test_export_dataflow_draws_a_call_only_a_later_iteration_makes(
+    clustered_projects, mode
+):
+    """The clustered modes draw ``helper()``, which only the third call of
+    ``step`` makes: looplessCoarseGrain inside the one cluster of ``step``
+    """
+    graph, result = clustered_graph(clustered_projects["late_call"], "-m", mode)
+    assert "helper" in drawn_cluster_labels(graph), str(result)
+
+
+@pytest.mark.parametrize("mode", ("coarseGrain", "looplessCoarseGrain"))
+def test_export_dataflow_draws_the_parameter_of_each_call_site(
+    clustered_projects, mode
+):
+    """The clustered modes draw the parameter ``x`` of ``f(1)`` and of
+    ``f(2)``: two call sites outside a loop are not merged
+    """
+    project = clustered_projects["two_sites"]
+    graph, result = clustered_graph(project, "-m", mode)
+    parameters = evaluations_of(project, "param", "x")
+    assert len(parameters) == 2, parameters
+    for eid in parameters:
+        assert "e_{}".format(eid) in graph.nodes, str(result)
+    assert drawn_cluster_labels(graph) == ["f", "f"], str(result)
 
 
 @pytest.mark.parametrize("mode", DATAFLOW_MODES)
@@ -1161,77 +1179,53 @@ def test_export_dataflow_reads_as_dot_in_each_mode(dataflow_project, mode):
 
 
 @pytest.fixture(scope="module")
-def _parameter_store(tmp_path_factory):
-    project = NowProject(tmp_path_factory.mktemp("parameter"))
-    project.write("script.py", PARAMETER_SCRIPT)
-    project.run("run", "script.py")
-    return project
+def _parameter_stores(tmp_path_factory):
+    stores = {}
+    for name, script in PARAMETER_SCRIPTS.items():
+        project = NowProject(tmp_path_factory.mktemp("parameter"))
+        project.write("script.py", script)
+        project.run("run", "script.py")
+        stores[name] = project
+    return stores
 
 
-@pytest.fixture
-def parameter_project(_parameter_store):
-    """``PARAMETER_SCRIPT`` after one run, with the evaluation ids of the
-    parameter ``x`` and of the call ``f(1)``, whose activation holds it:
-    read-only
+@pytest.fixture(params=sorted(PARAMETER_SCRIPTS))
+def parameter_project(request, _parameter_stores):
+    """``PARAMETER_SCRIPTS`` after one run, with the evaluation id of the
+    parameter ``x`` and the ids of the calls whose activations hold it,
+    outermost first: read-only
     """
-    for _ in read_only(_parameter_store):
+    project = _parameter_stores[request.param]
+    calls = ["f(1)"] if request.param == "direct" else ["g(1)", "f(y)"]
+    for _ in read_only(project):
         yield (
-            _parameter_store,
-            evaluation_of(_parameter_store, "param", "x"),
-            evaluation_of(_parameter_store, "call", "f(1)"),
+            project,
+            evaluation_of(project, "param", "x"),
+            [evaluation_of(project, "call", call) for call in calls],
         )
 
 
-def wdf_graph(project, mode, eid):
-    """``export dataflow -m <mode> -w <eid>``, which must print a whole DOT
-    graph, read by ``DotGraph``
-    """
-    result = project.run("export", "dataflow", "-m", mode, "-w", eid)
-    assert_digraph(result)
-    return DotGraph(result.stdout), result
-
-
 def test_export_dataflow_wdf_of_a_parameter_in_all_mode(parameter_project):
-    """``-m all -w <x>`` draws the parameter ``x`` that ``-w`` names
-
-    Control for #258: the evaluation is drawable, so what leaves it out of
-    fineGrain is the filter of ``-w``.
-    """
+    """``-m all -w <x>`` draws the parameter ``x`` that ``-w`` names"""
     project, parameter, _ = parameter_project
-    graph, result = wdf_graph(project, "all", parameter)
+    graph, result = clustered_graph(project, "-m", "all", "-w", parameter)
     assert "e_{}".format(parameter) in graph.nodes, str(result)
 
 
-def test_export_dataflow_wdf_of_a_parameter_in_fine_grain(parameter_project):
-    """``-m fineGrain -w <x>`` exits 0 and draws neither the parameter ``x``
-    that ``-w`` names nor the activation of ``f`` that holds it
-
-    Characterization of #258: ``FilterWasDerivedFrom.__contains__``
-    (``dependency_graph/filters.py``) judges an ``ActivationNode``, a
-    subclass of ``EvaluationNode``, by the evaluation of its call alone,
-    which did not derive ``x``, so the activation of ``f`` and everything
-    inside it are left out.
-    """
-    project, parameter, call = parameter_project
-    graph, result = wdf_graph(project, "fineGrain", parameter)
-    assert graph.nodes, str(result)
-    assert "e_{}".format(parameter) not in graph.nodes, str(result)
-    subgraphs = [name for name, _ in graph.subgraphs]
-    assert "cluster_{}".format(call) not in subgraphs, str(result)
-
-
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=PARAMETER_REASON)
-def test_export_dataflow_wdf_of_a_parameter_in_fine_grain_desired(
-    parameter_project,
+@pytest.mark.parametrize("mode_args", CLUSTER_MODE_ARGS)
+def test_export_dataflow_wdf_of_a_parameter_draws_it_inside_its_activations(
+    parameter_project, mode_args
 ):
-    """``-m fineGrain -w <x>`` draws the parameter ``x`` inside the
-    activation of ``f``
+    """``-w <x>`` draws the parameter ``x`` inside the cluster of ``f``, and
+    that one inside the cluster of ``g`` when ``g`` calls ``f``, although
+    neither call derived ``x`` (#258)
     """
-    project, parameter, call = parameter_project
-    graph, result = wdf_graph(project, "fineGrain", parameter)
+    project, parameter, calls = parameter_project
+    graph, result = clustered_graph(project, *mode_args, "-w", parameter)
     assert "e_{}".format(parameter) in graph.nodes, str(result)
     subgraphs = [name for name, _ in graph.subgraphs]
-    assert "cluster_{}".format(call) in subgraphs, str(result)
+    for call in calls:
+        assert "cluster_{}".format(call) in subgraphs, str(result)
 
 
 def test_export_dataflow_of_a_string_literal_with_an_escaped_quote(project):
