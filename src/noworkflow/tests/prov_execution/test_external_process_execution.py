@@ -21,6 +21,8 @@ launch that fails to start leaves nothing, and once the collection ends
 the hook is inert and ``subprocess.Popen`` has its own functions back.
 ``TestProgramsAsModules`` (#203) reads the ``module`` rows of the
 programs the launches run and of the libraries loaded through ``ctypes``.
+``TestRProvenanceDocuments`` (#207) runs a child that writes a PROV-JSON
+document as rdtLite does and reads the accesses it adds to the launch.
 
 ``e2e/test_external_processes.py`` pins the same from a real store, for
 ``now run`` as a process; ``test_external_parsing.py`` the pure functions.
@@ -1091,3 +1093,215 @@ class TestStraceBackend(ExternalProcessTestCase):
         tracer.finalize_pending(final=True)
         self.assertIsNone(tracer.log_dir)
         self.assertFalse(os.path.exists(log_dir))
+
+
+# A child that does what rdtLite does for an R script (#207): it reads
+# data.csv and writes result.csv, which its command line does not name,
+# then deletes and recreates prov_analysis/ and writes there a PROV-JSON
+# document that names them, analysis.R as its script and the files that
+# extra.txt lists, one per line, as more reads; with the argument
+# `broken`, a document that is no JSON.
+CHILD_RDT = """\
+import json
+import os
+import shutil
+import sys
+with open("data.csv", encoding="utf-8") as source:
+    data = source.read()
+with open("result.csv", "w", encoding="utf-8", newline="\\n") as target:
+    target.write(data.upper())
+shutil.rmtree("prov_analysis", ignore_errors=True)
+os.mkdir("prov_analysis")
+here = os.getcwd()
+entities = {
+    "rdt:environment": {
+        "rdt:script": os.path.join(here, "analysis.R"),
+        "rdt:sourcedScripts": "",
+        "rdt:workingDirectory": here,
+    },
+    "rdt:d1": {"rdt:type": "File", "rdt:location": os.path.join(here, "data.csv")},
+    "rdt:d2": {"rdt:type": "File", "rdt:location": os.path.join(here, "result.csv")},
+}
+used = {"rdt:dp1": {"prov:entity": "rdt:d1", "prov:activity": "rdt:p1"}}
+extra = []
+if os.path.exists("extra.txt"):
+    with open("extra.txt", encoding="utf-8") as listed:
+        extra = listed.read().split()
+for index, path in enumerate(extra):
+    entities["rdt:x{}".format(index)] = {"rdt:type": "File", "rdt:location": path}
+    used["rdt:xp{}".format(index)] = {"prov:entity": "rdt:x{}".format(index)}
+document = {
+    "entity": entities,
+    "used": used,
+    "wasGeneratedBy": {"rdt:pd2": {"prov:activity": "rdt:p2", "prov:entity": "rdt:d2"}},
+}
+with open(os.path.join("prov_analysis", "prov.json"), "w", encoding="utf-8") as out:
+    out.write("not json" if "broken" in sys.argv else json.dumps(document))
+"""
+DATA = b"a,b\n1,2\n"
+ANALYSIS = b"data <- read.csv('data.csv')\n"
+DOCUMENT = os.path.join("prov_analysis", "prov.json")
+
+
+def rdt_script(*words):
+    """A script that runs the rdtLite-like child with ``words``"""
+    arguments = "".join(", {!r}".format(word) for word in words)
+    return (
+        "# script.py\n"
+        "import subprocess\n"
+        "import sys\n"
+        "result = subprocess.run([sys.executable, 'child_rdt.py'{}], timeout=60)\n"
+    ).format(arguments)
+
+
+class TestRProvenanceDocuments(ExternalProcessTestCase):
+    """The PROV-JSON a launch writes (#207): the files it names become
+    accesses of the launch, as the files of a strace log do"""
+
+    # pylint: disable=invalid-name
+
+    def setUp(self):
+        super(TestRProvenanceDocuments, self).setUp()
+        self.write("child_rdt.py", CHILD_RDT)
+        self.write("data.csv", DATA.decode("utf-8"))
+        self.write("analysis.R", ANALYSIS.decode("utf-8"))
+
+    def assert_document_files(self, activation_name="run"):
+        """data.csv and analysis.R, named only by the document, are reads
+        of the launch with their content before and after; result.csv,
+        which the snapshot also finds, is one write; the document itself
+        a write"""
+        activation = self.activation(activation_name)
+        source = self.access("data.csv")
+        script = self.access("analysis.R")
+        target = self.access("result.csv")
+        document = self.access("prov.json")
+        for access in (source, script, target, document):
+            self.assertEqual(access.activation_id, activation.id, access.name)
+            self.assertTrue(access.done, access.name)
+        self.assertEqual(
+            (source.mode, source.content_hash_before, source.content_hash_after),
+            ("r", sha1(DATA), sha1(DATA)),
+        )
+        self.assertEqual(
+            (script.mode, script.content_hash_before, script.content_hash_after),
+            ("r", sha1(ANALYSIS), sha1(ANALYSIS)),
+        )
+        self.assertEqual(
+            (target.mode, target.content_hash_before, target.content_hash_after),
+            ("w", None, sha1(DATA.upper())),
+        )
+        self.assertEqual(os.path.normpath(document.name), DOCUMENT)
+        self.assertEqual(document.content_hash_after, sha1(self.read(DOCUMENT)))
+        return document
+
+    def test_the_files_a_document_names_are_accesses_of_the_launch(self):
+        """A new document, found by the snapshot: the files it names,
+        named on no command line, are accesses of the launch"""
+        self.collect_ok(rdt_script())
+        document = self.assert_document_files()
+        self.assertEqual((document.mode, document.content_hash_before), ("w", None))
+        names = sorted(os.path.normpath(access.name) for access in self.accesses())
+        self.assertEqual(
+            names,
+            sorted(["analysis.R", "child_rdt.py", "data.csv", DOCUMENT, "result.csv"]),
+        )
+
+    def test_argv_without_the_document_does_not_see_them(self):
+        """The control: the same child without the document leaves only
+        its script and the new result.csv"""
+        self.write("child_rdt.py", CHILD_RDT.replace("prov.json", "other.json"))
+        self.collect_ok(rdt_script())
+        names = sorted(os.path.normpath(access.name) for access in self.accesses())
+        self.assertEqual(
+            names,
+            sorted(
+                [
+                    "child_rdt.py",
+                    os.path.join("prov_analysis", "other.json"),
+                    "result.csv",
+                ]
+            ),
+        )
+
+    def test_a_rewritten_document_is_read(self):
+        """A document left by an earlier run, deleted and recreated by the
+        launch (as rdtLite does), which the set of paths does not show: it
+        is recorded as changed without its content before, and read"""
+        os.mkdir("prov_analysis")
+        self.write(DOCUMENT, "{}")
+        self.collect_ok(rdt_script())
+        document = self.assert_document_files()
+        self.assertEqual(
+            (document.mode, document.content_hash_before),
+            (external.UNRECORDED_MODE, None),
+        )
+
+    def test_an_existing_file_the_document_names_as_written(self):
+        """result.csv existed: the snapshot does not see the rewrite, the
+        document does, and its content before is unknown"""
+        self.write("result.csv", "old\n")
+        self.collect_ok(rdt_script())
+        target = self.access("result.csv")
+        self.assertEqual(
+            (target.mode, target.content_hash_before, target.content_hash_after),
+            (external.UNRECORDED_MODE, None, sha1(DATA.upper())),
+        )
+
+    def test_a_document_the_launch_did_not_write_is_not_read(self):
+        """A document already in the project, which a launch leaves alone,
+        names no file of that launch"""
+        os.mkdir("prov_analysis")
+        self.write(
+            DOCUMENT,
+            '{"entity": {"rdt:d1": {"rdt:type": "File", "rdt:location": "%s"}},'
+            ' "used": {"rdt:dp1": {"prov:entity": "rdt:d1"}}}'
+            % os.path.join(self.tmpdir, "data.csv").replace("\\", "\\\\"),
+        )
+        self.collect_ok(run_script("in.txt", "out.txt"))
+        self.assert_child_files("run")
+        self.assertEqual(self.accesses("data.csv"), [])
+        self.assertEqual(self.accesses("prov.json"), [])
+
+    def test_a_file_outside_the_project_is_not_recorded(self):
+        """A file the document names outside the project and the launch's
+        directory, as R's own libraries, is no access"""
+        outside = tempfile.mkdtemp()
+        try:
+            path = os.path.join(outside, "library.R")
+            with safeopen.std_open(path, "w", encoding="utf-8") as handle:
+                handle.write("x <- 1\n")
+            self.write("extra.txt", path + "\n")
+            self.collect_ok(rdt_script())
+        finally:
+            shutil.rmtree(outside, ignore_errors=True)
+        self.assert_document_files()
+        # Not vacuous: the document names it.
+        self.assertIn(path.replace("\\", "\\\\"), self.read(DOCUMENT).decode("utf-8"))
+        self.assertEqual(self.accesses("library.R"), [])
+
+    def test_a_document_that_is_no_prov_json_is_reported(self):
+        """A ``prov.json`` that is no JSON: a warning on stderr, the script
+        succeeds, and the document is a file the launch created"""
+        self.collect_ok(rdt_script("broken"))
+        tracer = self.metascript.execution.collector.external
+        self.assertEqual(len(tracer.warned), 1)
+        (warning,) = tracer.warned
+        self.assertTrue(
+            warning.startswith(external.PROV_JSON_WARNING.split("{")[0]), warning
+        )
+        self.assertEqual(self.access("prov.json").mode, "w")
+        self.assertEqual(self.accesses("data.csv"), [])
+
+    def test_external_tracer_none_reads_no_document(self):
+        self.collect_ok(rdt_script(), external_tracer="none")
+        self.assertEqual(self.accesses(), [])
+
+    def test_the_strace_backend_reads_the_document_too(self):
+        """Under strace (Linux), the files of the document are those the
+        log shows; one access each, the script of the document included"""
+        require_strace()
+        self.collect_ok(rdt_script(), external_tracer="strace")
+        tracer = self.metascript.execution.collector.external
+        self.assertEqual((tracer.mode, tracer.warned), ("strace", set()))
+        self.assert_document_files()

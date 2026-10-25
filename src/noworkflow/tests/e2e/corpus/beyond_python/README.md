@@ -18,9 +18,9 @@ script and a C program.
 | `metrics.c` | precision, recall and F1 of the predictions |
 | `patch_2_threshold.patch` | the change of trial 1.1.2: the threshold of `model.R`, 0.5 to 0.3 |
 | `patch_3_accuracy.patch` | the change of trial 1.1.3: `metrics.c` also writes the accuracy |
-| `run.sh` | the sequence of `now run` that builds the history 1.1.1 to 1.1.3, the listings of the section and the final `now restore` |
+| `run.sh` | the sequence of `now run` that builds the history 1.1.1 to 1.1.3, the listings of the section and the final `now restore`; then, when R has rdtLite, the fourth trial in a project of its own and its `now show -f` |
 | `strace/model_sourced.R`, `strace/utils.R` | the variant of `model.R` that sources a file named on no command line, for the strace backend (#206) |
-| `rdtlite/fraud_pipeline.py` | the wrapper of the fourth trial, which runs `model.R` under rdtLite (`prov.run`), for the PROV-JSON claims (#202, #207); it differs from the wrapper in its Rscript line only |
+| `rdtlite/fraud_pipeline.py` | the wrapper of the fourth trial, which runs `model.R` under rdtLite (`prov.run`), for the PROV-JSON claims (#202, #207) and the fourth trial of `run.sh`; it differs from the wrapper in its Rscript line only |
 
 Not copied: the dataset.
 
@@ -33,9 +33,9 @@ checks the paper against the tool). A change to the case study, or to what
 the paper shows of it, in any of the three is carried to the other two;
 see "The paper's running example" in `AGENTS.md`.
 
-`Examples/glue_pipeline/` at the root of the repository ships the six
-files of the table above, without the variants, to users, with a README
-of its own. They are byte for byte these, and
+`Examples/glue_pipeline/` at the root of the repository ships the seven
+files of the table above, the rdtLite wrapper included and the strace
+variant left out, to users, with a README of its own. They are byte for byte these, and
 `src/noworkflow/tests/test_repository_examples.py` fails when the two
 copies differ: a change here is copied there in the same commit.
 
@@ -50,13 +50,13 @@ are run by the tests that check them, not by the replay.
 
 The tests need `Rscript` and `cc` on the PATH and skip without them;
 `NOW_RSCRIPT=require` fails instead of skipping (the `paper-example` job
-of CI sets it). The two claims of the fourth trial need the rdtLite
+of CI sets it). The three claims of the fourth trial need the rdtLite
 package in R (`install.packages("rdtLite")`) and skip without it, in CI
 too. The strace variant needs Linux with `strace`, and skips elsewhere
-(`NOW_STRACE=require`, which the job also sets, fails it instead). The
-test of each claim that only #207 can satisfy is a `_desired` twin
-marked `xfail(strict=True)` until that issue lands; the module
-docstring has the map.
+(`NOW_STRACE=require`, which the job also sets, fails it instead). A
+claim the tool cannot satisfy yet is a `_desired` twin marked
+`xfail(strict=True)` until its issue lands; the module docstring says
+which issue turned each one, and none is left.
 
 The Kaggle dataset is not committed. The replay writes a small synthetic
 `creditcard.csv` with the same columns (`synthetic_dataset` in

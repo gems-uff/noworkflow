@@ -208,8 +208,8 @@ Optional, each for one purpose:
   (`src/noworkflow/tests/e2e/test_beyond_python.py`, see [The paper's
   running example](#the-papers-running-example)); they skip without them.
   Base R is enough (`r-base-core` on Debian and Ubuntu, `brew install r`
-  on macOS); the C compiler is the system's. Two of those tests also need
-  the rdtLite package in R (`install.packages("rdtLite")`) and skip
+  on macOS); the C compiler is the system's. Three of those tests also
+  need the rdtLite package in R (`install.packages("rdtLite")`) and skip
   without it.
 - **strace** (Linux only, `apt install strace`), for the tests of `now run
   --external-tracer strace`; they skip without it, and

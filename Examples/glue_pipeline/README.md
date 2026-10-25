@@ -11,7 +11,8 @@ with Python as the glue between an R script and a C program.
 | `metrics.c` | precision, recall and F1 of the predictions, written to `out.txt` |
 | `patch_2_threshold.patch` | the change of the second trial: the threshold of `model.R`, 0.5 to 0.3 |
 | `patch_3_accuracy.patch` | the change of the third trial: `metrics.c` also writes the accuracy |
-| `run.sh` | builds the three trials, writes the listings below and restores the first trial |
+| `run.sh` | builds the three trials, writes the listings below and restores the first trial; then, when R has the rdtLite package, runs a fourth trial in a project of its own |
+| `rdtlite/fraud_pipeline.py` | the script of the fourth trial: the same pipeline, with `model.R` run under [rdtLite](https://cran.r-project.org/package=rdtLite), the provenance collector of R |
 
 The Python script never changes. Everything noWorkflow shows between the
 trials comes from the code it launches.
@@ -187,13 +188,42 @@ the current state of the project as the backup trial 2.0.0.
 `now restore 1.1.3 -f metrics` brings back the binary of the third
 trial, executable.
 
+## The R script under rdtLite
+
+rdtLite records the provenance of an R script from inside R. The fourth
+trial runs the same pipeline with one line changed, the launch of the R
+script:
+
+```python
+run("Rscript", "-e", 'rdtLite::prov.run("model.R", prov.dir = ".")')
+```
+
+rdtLite writes its provenance to `prov_model/prov.json`, a PROV-JSON
+document, next to copies of the files the script read and wrote. Its
+command line no longer names `model.R`, `prepared.csv` or `pred.csv`, but
+the document does: noWorkflow reads it when the launch ends, and records
+the script, the file it read and the file it wrote as file accesses of
+the launch of `Rscript`, with their content, as it does for the files of
+a command line. `run.sh` runs this trial in `run/rdtlite/`, when R has
+the rdtLite package (`Rscript -e 'install.packages("rdtLite")'`), and
+writes what `now show -f` prints for it to
+`run/listings/show-rdtlite-1.1.1-f.txt`: the accesses of the first three
+trials, `model.R` among them, plus `prov_model/prov.json` and the copies
+rdtLite keeps, as files the launch created. The document itself is in the
+content database, so the fine-grained provenance of the R script is kept
+with the trial; pass `prov.dir` a directory of the project, since by
+default rdtLite writes it to a temporary directory of R, where noWorkflow
+does not look.
+
 ## What is not seen
 
 noWorkflow records the boundary of each launch, not what happens inside
-the R script or the binary: no R variable, no C function. A file that a
-launched program reads or writes without naming it on its command line
-(a file that `model.R` sources, for example) is not recorded. See "Beyond
-Python: wrapped non-Python code" in the
+the R script or the binary: no R variable, no C function, unless a
+provenance tool of the language records them, as rdtLite does for R. A
+file that a launched program reads or writes without naming it on its
+command line (a file that `model.R` sources, for example) is not
+recorded, unless the program is traced with `--external-tracer strace`
+or runs under rdtLite. See "Beyond Python: wrapped non-Python code" in the
 [README](https://github.com/gems-uff/noworkflow#beyond-python-wrapped-non-python-code)
 of noWorkflow.
 

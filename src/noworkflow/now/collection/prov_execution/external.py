@@ -88,6 +88,27 @@ system without Linux or without a usable ``strace``, where the trial
 falls back to ``argv`` with a warning (``prepare_strace``, which runs
 ``strace`` once per process to see that it can trace).
 
+**R provenance tools** (#207). An R script run under rdtLite
+(``Rscript -e 'rdtLite::prov.run("model.R", prov.dir = ".")'``) leaves a
+PROV-JSON document, ``prov_model/prov.json``, that names the files the
+script read and wrote, the script and what it sourced, none of them on
+the command line. When a launch wrote such a document (``prov.json`` in
+a directory whose name starts with ``prov``; ``external_provjson.py``
+finds and reads it), ``link_prov_json`` adds each file it names, under
+the project directory or the launch's directory, as an access of the
+launch, as ``record_trace`` does with the files of a strace log: a read
+with the content at the end before and after, a write to a new file
+with no content before, a write to a file that existed as
+``UNRECORDED_MODE``; a file the launch already accounts for keeps its
+access. A document is found whichever backend runs: a new one by the
+snapshot or the strace log, a rewritten one (rdtLite deletes and
+recreates its directory on each run) by the inode, size and mtime that
+the launch noted of every document the snapshot held, which also makes
+the document itself an ``UNRECORDED_MODE`` access. A document that is no
+PROV-JSON is reported on stderr and read no further; a document written
+outside the project (rdtLite's default ``prov.dir`` is R's temporary
+directory) is not seen.
+
 **The programs** (#203). The program a launch runs is a deployment
 dependency of the trial, like an imported module: ``record_programs``
 resolves it as the system does (``resolve_program``: the ``PATH`` of the
@@ -145,6 +166,12 @@ from functools import wraps
 
 from ...persistence import content
 from ...utils.io import print_error
+from .external_provjson import (
+    changed_documents,
+    documents_in,
+    is_prov_json,
+    read_prov_json,
+)
 from .external_strace import parse_log, strace_command
 
 MODES = ("none", "argv", "strace")
@@ -227,6 +254,7 @@ STRACE_NOT_LINUX = "runs on Linux only"
 STRACE_MISSING = "needs strace on the PATH"
 STRACE_FAILS = "cannot trace here ({})"
 STRACE_EMPTY_LOG = "its log shows no process"
+PROV_JSON_WARNING = "the PROV-JSON {} was not read: {}"
 # The program of the strace backend, looked up in the PATH.
 STRACE_PROGRAM = "strace"
 # The shell of `shell=True` and of os.system on POSIX.
@@ -273,6 +301,11 @@ class ExternalProcess:
         # the log of the strace backend (#206), or None.
         self.base = cwd or os.getcwd()
         self.log = None
+        # The real paths of the files the launch wrote, and the documents
+        # of R provenance tools in the project at the launch, with their
+        # signature (#207).
+        self.written = []
+        self.documents = {}
 
 
 class ExternalProcessTracer:
@@ -577,11 +610,21 @@ class ExternalProcessTracer:
                 and is_regular_file(real)
             ):
                 self.add_executable(program_name(path), real, probe=False)
+        self.record_opened(launch, trace.opened, recorded, roots, executed)
+
+    def record_opened(self, launch, opened, recorded, roots, executed=frozenset()):
+        """Add the files of ``opened`` (``{path: written}``, from a strace
+        log or a PROV-JSON document) under ``roots`` that ``recorded`` does
+        not have: a read with the content at the end before and after; a
+        write to a file the snapshot did not have at the launch, a file
+        the process created; a write to any other, a file whose content
+        before is unknown (``UNRECORDED_MODE``)"""
+        # pylint: disable=too-many-arguments
         before = None
         if launch.before is not None:
             before = {os.path.normcase(path) for path in launch.before}
         collector = self.collector
-        for path, write in trace.opened.items():
+        for path, write in opened.items():
             real = os.path.realpath(path)
             key = os.path.normcase(real)
             if key in recorded or key in executed:
@@ -594,18 +637,49 @@ class ExternalProcessTracer:
                 self.add_written(launch, name, real, "w")
                 continue
             if write:
-                access = collector.add_file_access(
-                    name, launch.activation, launch.checkpoint, path=None
-                )
-                access.content_hash_after = hash_file(real)
-                access.mode = UNRECORDED_MODE
+                self.add_unrecorded(launch, name, real)
             else:
                 access = collector.add_file_access(
                     name, launch.activation, launch.checkpoint, path=real
                 )
                 access.content_hash_after = access.content_hash_before
                 access.mode = "r"
-            access.done = True
+                access.done = True
+
+    def add_unrecorded(self, launch, name, real):
+        """An access to a file that existed and that the process changed,
+        whose content before is unknown"""
+        access = self.collector.add_file_access(
+            name, launch.activation, launch.checkpoint, path=None
+        )
+        access.content_hash_after = hash_file(real)
+        access.mode = UNRECORDED_MODE
+        access.done = True
+        launch.written.append(real)
+        return access
+
+    # --- R provenance tools (#207) -----------------------------------------
+
+    def link_prov_json(self, launch, recorded):
+        """Read the PROV-JSON documents the launch wrote and add the files
+        they name, under the project directory or the launch's directory,
+        as accesses of the launch; a document that cannot be read is
+        reported on stderr, never raised"""
+        documents = [path for path in launch.written if is_prov_json(path)]
+        if not documents:
+            return
+        roots = [
+            os.path.realpath(root) for root in (self.project_dir, launch.base) if root
+        ]
+        for document in dict.fromkeys(documents):
+            try:
+                with content.std_open(document, "rb") as handle:
+                    text = handle.read().decode("utf-8", "surrogateescape")
+                opened = read_prov_json(text, launch.base)
+            except (OSError, ValueError) as error:
+                self.warn(PROV_JSON_WARNING.format(relative_to_cwd(document), error))
+                continue
+            self.record_opened(launch, opened, recorded, roots)
 
     # --- launches ----------------------------------------------------------
 
@@ -652,6 +726,8 @@ class ExternalProcessTracer:
                 else:
                     launch.candidates.append((recorded, resolved, mode))
         launch.before = self.snapshot(cwd)
+        if launch.before is not None:
+            launch.documents = documents_in(launch.before)
         if shell_command is not None:
             programs = [command[0][0] for command in commands if command[0]]
         else:
@@ -866,24 +942,41 @@ class ExternalProcessTracer:
             access.content_hash_after = after
             access.mode = infer_mode(access.content_hash_before, after, declared)
             access.done = True
-            recorded.add(os.path.normcase(os.path.realpath(resolved)))
+            real = os.path.realpath(resolved)
+            recorded.add(os.path.normcase(real))
+            if access.mode != "r":
+                launch.written.append(real)
         for name, resolved, declared in launch.candidates:
             if not os.path.isfile(resolved):
                 continue
             self.add_written(launch, name, resolved, declared or "w")
             recorded.add(os.path.normcase(os.path.realpath(resolved)))
-        if launch.log is not None:
-            self.record_trace(launch, recorded)
-        if launch.before is None:
-            return
-        after = self.snapshot(launch.cwd)
-        if after is None:
-            return
-        for path in sorted(after - launch.before):
+        # A document an R provenance tool rewrote: rdtLite deletes and
+        # recreates its directory, which the set of paths does not show.
+        for path in changed_documents(launch.documents):
             key = os.path.normcase(os.path.realpath(path))
             if key in recorded or key in self.recorded_since(launch.checkpoint):
                 continue
+            recorded.add(key)
+            self.add_unrecorded(launch, relative_to_cwd(path), path)
+        if launch.log is not None:
+            self.record_trace(launch, recorded)
+        after = self.snapshot(launch.cwd) if launch.before is not None else None
+        for path in sorted(after - launch.before) if after is not None else ():
+            key = os.path.normcase(os.path.realpath(path))
+            if key in recorded or key in self.recorded_since(launch.checkpoint):
+                continue
+            recorded.add(key)
             self.add_written(launch, relative_to_cwd(path), path, "w")
+        # Last, once every file the launch wrote is known.
+        try:
+            self.link_prov_json(launch, recorded)
+        except Exception as error:  # pylint: disable=broad-except
+            self.failures.append(error)
+            self.warn(
+                "the external process tracer recorded no file of a PROV-JSON "
+                "document: {}: {}".format(type(error).__name__, error)
+            )
 
     def add_written(self, launch, name, resolved, mode):
         """An access to a file the process created: no content before"""
@@ -893,6 +986,7 @@ class ExternalProcessTracer:
         access.content_hash_after = hash_file(resolved)
         access.mode = mode
         access.done = True
+        launch.written.append(os.path.realpath(resolved))
         return access
 
     def recorded_since(self, checkpoint):

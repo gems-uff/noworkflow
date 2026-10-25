@@ -25,19 +25,11 @@ Structural assertions only, no goldens: a golden of a command that still
 fails cannot be recorded. With ``NOW_PAPER_DATASET`` pointing at the real
 dataset the same tests run on it.
 
-The claim that only #207 can satisfy is a ``_desired``
-twin, marked ``xfail(strict=True)`` through ``known_defects`` with the
-issue, the mechanism and the signature of today's failure (measured on
-this tree). The issue that makes a twin pass removes the mark in the same
-commit (XPASS(strict) is the signal); the issue that changes how it fails
-rewrites the ``Defect``'s signature. The map:
-
-==================================================================== ====== =========
-twin                                                                 passes signature
-                                                                     with   changes
-==================================================================== ====== =========
-test_rdtlite_file_entities_become_accesses_of_the_launch_desired     #207
-==================================================================== ====== =========
+Each claim the tool could not satisfy yet was a ``_desired`` twin,
+marked ``xfail(strict=True)`` through ``known_defects`` with the issue,
+the mechanism and the signature of the failure; the issue that made it
+pass removed the mark and the suffix in the same commit (XPASS(strict)
+was the signal). None is left.
 
 The claims of #202 (the files the launches exchange, ``now show -f``,
 ``now diff -f``, the restore, the dataflow, ``--external-tracer none``,
@@ -82,6 +74,13 @@ runs only where the strace backend can trace (Linux, with strace), skips
 elsewhere, and fails instead under ``NOW_STRACE=require``, which the
 ``paper-example`` job sets.
 
+The claim of #207 (the files rdtLite's PROV-JSON names, ``prepared.csv``
+read and ``pred.csv`` written by ``model.R``, are accesses of the
+``Rscript`` launch) passed with it and lost its mark and its suffix; a
+new claim states that ``model.R``, the script of the document, is a read
+of the launch too, since the command line of the fourth trial names it
+only inside the ``-e`` expression.
+
 ``Examples/glue_pipeline/README.md`` shows users excerpts of what ``now``
 prints for this history; ``test_the_glue_pipeline_readme_shows_what_now_prints``
 runs each command it shows on the replay and finds the excerpt's lines,
@@ -94,7 +93,7 @@ under each configuration the paper uses (the default argv tracer,
 evaluation), from fresh copies, and compare the outcomes as the oracle
 does (``oracle.differences``).
 
-The two rdtLite tests run a fourth trial of their own, the wrapper of
+The three rdtLite tests run a fourth trial of their own, the wrapper of
 ``corpus/beyond_python/rdtlite`` (``model.R`` under rdtLite's
 ``prov.run``), and skip without the rdtLite package, in CI too.
 """
@@ -144,7 +143,6 @@ from noworkflow.tests.e2e.oracle import (
     run_traced,
 )
 from noworkflow.tests.e2e.paper import apply_patch, labelled
-from noworkflow.tests.helpers.defects import Defect, known_defects
 from noworkflow.tests.helpers.strace import require_strace
 
 pytestmark = pytest.mark.paper
@@ -189,16 +187,6 @@ SHOW_MODULES = "[now] this trial depends on the following modules:"
 def read_kind(mode):
     """A mode as the section states it: a read is ``r``, binary or not"""
     return "r" if mode in ("r", "rb") else mode
-
-
-def no_provjson_link(signature):
-    """#207: the PROV-JSON a launch writes is not read"""
-    return Defect(
-        "#207: nothing reads the PROV-JSON that rdtLite writes next to the "
-        "launched script, so the files its entities name (what the R "
-        "script read and wrote) are not accesses of the launch",
-        signature=signature,
-    )
 
 
 def diverges(label, detail=""):
@@ -1171,13 +1159,12 @@ def test_rdtlite_prov_json_is_discovered_as_a_new_file(rdtlite):
     assert access["activation_id"] == launch
 
 
-@known_defects(no_provjson_link("0 reads of prepared.csv by the Rscript launch"))
-def test_rdtlite_file_entities_become_accesses_of_the_launch_desired(rdtlite):
+def test_rdtlite_file_entities_become_accesses_of_the_launch(rdtlite):
     """In the fourth trial, the File entities of rdtLite's PROV-JSON,
     prepared.csv (read by model.R) and pred.csv (written by it), are
-    accesses of the launch of Rscript: a read of prepared.csv with the
-    hash of what the wrapper wrote, a write of pred.csv with the hash of
-    the predictions"""
+    accesses of the launch of Rscript (#207): a read of prepared.csv with
+    the hash of what the wrapper wrote, one write of pred.csv with the
+    hash of the predictions, which the snapshot also found"""
     files = prov_json_files(rdtlite)
     assert sorted(files) == ["pred.csv", "prepared.csv"], files
     trial_id, launch = rdtlite_launch(rdtlite)
@@ -1202,6 +1189,32 @@ def test_rdtlite_file_entities_become_accesses_of_the_launch_desired(rdtlite):
     assert writes[0]["content_hash_after"] == sha1(
         (rdtlite.path / "pred.csv").read_bytes()
     )
+    assert len(rdtlite_accesses(rdtlite, trial_id, "pred.csv")) == 2, (
+        "pred.csv is written by Rscript and read by ./metrics, once each"
+    )
+
+
+def test_rdtlite_script_is_a_read_of_the_launch(rdtlite):
+    """In the fourth trial, model.R, which the command line names only
+    inside the expression of ``Rscript -e``, is a read of the launch of
+    Rscript with its content before and after: the script of rdtLite's
+    PROV-JSON (#207)"""
+    document = json.loads((rdtlite.path / PROV_JSON).read_text(encoding="utf-8"))
+    script = document["entity"]["rdt:environment"]["rdt:script"]
+    assert same_path(script, rdtlite.path / "model.R"), script
+    trial_id, launch = rdtlite_launch(rdtlite)
+    # rdtLite keeps a copy, prov_model/scripts/model.R, a file it created.
+    found = [
+        access
+        for access in rdtlite_accesses(rdtlite, trial_id, "model.R")
+        if os.path.normpath(access["name"]) == "model.R"
+    ]
+    assert len(found) == 1, "{} file accesses to model.R".format(len(found))
+    (access,) = found
+    assert access["mode"] == "r"
+    source = sha1((rdtlite.path / "model.R").read_bytes())
+    assert access["content_hash_before"] == access["content_hash_after"] == source
+    assert access["activation_id"] == launch
 
 
 # --- The PROV export (#461) --------------------------------------------------

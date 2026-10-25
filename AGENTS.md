@@ -359,8 +359,12 @@ neither executes:
   the job and the reference container install `r-base-core`, every other
   leg deselects `paper`, and a maintainer's machine without `Rscript`
   skips them. Its strace variant runs in that job, which installs
-  `strace`, and its two claims under rdtLite run only where the
-  rdtLite package is installed in R, which no leg does.
+  `strace`, and its three claims under rdtLite run only where the
+  rdtLite package is installed in R, which no leg does; what the tracer
+  reads of a PROV-JSON document (#207) runs in process on every leg, on
+  documents a Python child writes in rdtLite's format
+  (`TestRProvenanceDocuments`), so a change of that format in a new
+  rdtLite is seen by no leg.
 - **The optional content engines** (`dulwich`, `pygit`, `gitdb`): only the
   `engines` job of `ci.yml` installs them (the `engines` group) and runs
   the tests marked `engines`, the contract tests of

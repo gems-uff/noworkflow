@@ -205,16 +205,16 @@ jobs:
         # and counted by the paper-example, vis-browser and engines jobs.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 3345 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 3345 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 3345 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 3345 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 3371 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 3371 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 3371 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 3371 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 3373, reference: true }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 3399, reference: true }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -502,12 +502,12 @@ jobs:
 
       # min-tests: every test of the two modules; none skipped here (the
       # group, swipl, Rscript, cc, strace and the reference platform are
-      # all present) but the two claims of the case study under rdtLite,
+      # all present) but the three claims of the case study under rdtLite,
       # which no leg installs; a skip counts.
       - name: Record the test count
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh pytest.log 146 \
+          bash .github/scripts/pytest-summary.sh pytest.log 147 \
             "paper example (ubuntu-latest, 3.15)" \
             'uv sync --locked --group paper && GOLDEN=require NOW_RSCRIPT=require NOW_STRACE=require uv run --no-sync pytest -m paper'
 

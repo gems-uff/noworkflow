@@ -45,6 +45,7 @@ KNOWN_EXAMPLES = {
     "Examples/demo_1/simulation_complete.py",
     "Examples/demo_1/simulator.py",
     "Examples/glue_pipeline/fraud_pipeline.py",
+    "Examples/glue_pipeline/rdtlite/fraud_pipeline.py",
 }
 # The constant modes the scan finds at least, so that a moved directory
 # cannot leave the mode check with nothing to check.
@@ -59,6 +60,7 @@ CASE_STUDY_FILES = (
     "patch_2_threshold.patch",
     "patch_3_accuracy.patch",
     "run.sh",
+    "rdtlite/fraud_pipeline.py",
 )
 # A statement that each Python version introduced. The control of the
 # compile check takes the one of the version right after the floor.

@@ -4,12 +4,16 @@
 # noWorkflow 2 paper: a Python wrapper (fraud_pipeline.py) that prepares the
 # credit card fraud dataset with pandas, fits a logistic regression in an R
 # script (model.R) and computes the metrics with a C program (metrics.c);
-# three trials, with model.R and then metrics.c edited between them.
+# three trials, with model.R and then metrics.c edited between them, and,
+# when R has the rdtLite package, a fourth trial in a project of its own
+# with model.R run under rdtLite.
 #
 # Requirements (in the EXECUTION environment):
 #   - noWorkflow 2.2.0 (provides the `now` command)
 #   - Python package: pandas
 #   - R 4 or later (`Rscript`), a C compiler (`cc`) and Graphviz (`dot`)
+#   - optional, for the fourth trial: the rdtLite package in R
+#     (`Rscript -e 'install.packages("rdtLite")'`)
 #   - The Kaggle "Credit Card Fraud Detection" dataset as creditcard.csv
 #     https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 #
@@ -70,3 +74,18 @@ dot -Tpdf listings/dataflow-1.1.3-activation.dot -o listings/dataflow-1.1.3-acti
 # Back to the baseline: model.R and metrics.c as 1.1.1 read them, and the
 # outputs 1.1.1 created removed.
 now restore 1.1.1
+
+# --- Fourth trial: model.R under rdtLite -------------------------------------
+# The baseline in a project of its own, rdtlite/, with the wrapper of
+# rdtlite/fraud_pipeline.py, which runs model.R through rdtLite's prov.run
+# (its only difference). rdtLite writes prov_model/prov.json; noWorkflow
+# reads it and records the files the R script read and wrote, and the
+# script itself, as file accesses of the Rscript launch.
+if Rscript -e 'quit(status = !requireNamespace("rdtLite", quietly = TRUE))' >/dev/null 2>&1; then
+  mkdir -p rdtlite
+  cp "$HERE/rdtlite/fraud_pipeline.py" "$HERE/model.R" "$HERE/metrics.c" creditcard.csv rdtlite/
+  (cd rdtlite && run)                    # 1.1.1 of rdtlite/
+  (cd rdtlite && now show 1.1.1 -f)      > listings/show-rdtlite-1.1.1-f.txt
+else
+  echo ">> rdtLite is not installed in R: the fourth trial is skipped"
+fi
