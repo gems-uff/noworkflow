@@ -1,0 +1,1274 @@
+# Copyright (c) 2026 Universidade Federal Fluminense (UFF)
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
+"""External processes a traced script starts: the call boundary, the
+files exchanged with them (#202) and the programs they run (#203)
+
+A script that calls ``subprocess.run(["Rscript", "model.R", "data.csv",
+"pred.csv"])`` is recorded, like any call the collector does not trace, as
+an activation whose arguments are the command line and whose value is the
+``CompletedProcess``. ``ExternalProcessTracer`` adds what the process did
+to the project, without a change to the script and without a new table:
+every file the command line names, and every file the process creates in
+the project, becomes a ``file_access`` of that activation, with the hash
+of its content before and after the process and a mode inferred from the
+two (``infer_mode``).
+
+**Detection.** One audit hook (PEP 578, ``sys.addaudithook``) is installed
+once per process and never removed; it does nothing unless a collection
+is tracing (``_current``). It sees ``subprocess.Popen`` (``run``, ``call``,
+``check_output``, ``os.popen`` and a ``Popen`` imported before the script
+all pass through it), ``os.system``, ``os.posix_spawn`` (and
+``posix_spawnp``), ``os.spawn`` (Windows: on POSIX ``os.spawn*`` is a
+fork, which is not recorded) and ``os.exec``. A launch made while the
+tracer is ``suspended()``, or while the content store runs its own
+commands (``safeopen.use_safe_open``), is not recorded.
+
+**Completion.** Audit hooks report the launch, not the end. While a
+collection traces, ``subprocess.Popen.__init__``, ``wait`` and ``poll``
+are the patched functions of ``patch_popen`` (the class itself is not
+replaced: ``type(p) is subprocess.Popen`` stays true); ``__init__`` binds
+the launch to its ``Popen`` and ``wait``/``poll`` finalize it once
+``returncode`` is set, which covers ``run``, ``check_output``, ``with
+Popen`` and ``communicate``. ``os.system`` and a waiting ``os.spawn`` are
+finalized when the activation that made the call closes; ``os.posix_spawn``,
+a ``Popen`` that is never waited for and a launch whose end the patch did
+not see are finalized by ``Collector.store`` at the end of the trial, so
+their "after" hashes reflect that moment. The patch is installed by
+``Execution.collect_provenance`` around the ``exec`` of the script, next
+to the import finder, and removed in the same ``finally``; the Jupyter
+kernel installs it around each cell.
+
+**The command line** (``parse_command``, ``classify_tokens``, pure
+functions): an argument list, or the string of ``shell=True`` and
+``os.system`` split with ``shlex`` and cut at ``|``, ``||``, ``&&``, ``;``
+and ``&``, with leading ``VAR=value`` words and ``env`` dropped and the
+redirections ``>``, ``>>``, ``2>``, ``&>`` (a declared output) and ``<``
+(an input) read, attached or not to their target. The program itself
+(``argv[0]``) never becomes a file access: #203 records it in the module
+table. Every other word, and the part after ``=`` of ``--opt=file``, that
+names an existing regular file (relative to the launch's ``cwd``) is read
+and hashed at the launch; a word that looks like a path (a separator, or
+an extension) and names no file yet is an output candidate, recorded if
+the file exists when the launch is finalized.
+
+**New files.** A process writes files its command line does not name
+(``prov.json`` of rdtLite, the binary of ``cc -o``). The set of paths
+under the project directory, the current directory and the launch's
+``cwd`` is taken at the launch and again at the end (``snapshot``,
+skipping ``.noworkflow``, ``.git`` and ``__pycache__``); a file that
+appeared is a write with no content before, which is what ``now restore``
+needs to remove it. Above ``SNAPSHOT_CAP`` entries the snapshot is
+disabled for the trial, with a warning. A file that existed, is not named
+on the command line and is modified by the process is not seen: with no
+hash before it, ``restore`` would delete it. That is the limit of the
+``argv`` backend; the optional tracer backend of #206 lifts it.
+
+**The programs** (#203). The program a launch runs is a deployment
+dependency of the trial, like an imported module: ``record_programs``
+resolves it as the system does (``resolve_program``: the ``PATH`` of the
+``env`` given to the process, or of the script's environment, and the
+launch's ``cwd`` for a name with a separator, then the real path) and
+adds a ``module`` row named as the command line names it, with that path
+and a binary code block, so that ``code_hash`` is the hash of the
+executable's bytes; above the cap (``--executable-cap`` of ``now run``,
+``EXECUTABLE_CAP`` by default, #463) the code block is a placeholder
+that carries the SHA-1 of the file, computed by streaming, so the hash
+still changes when the binary does. For an argument list the
+program is the executable ``Popen`` runs (``executable=``, or the first
+word); for a line run through a shell, the program of each of its
+commands, not the shell. One row per ``(real path, size, mtime)`` per
+trial: a binary rebuilt in the middle of a trial gets a second row with
+its new hash. An interpreter or a compiler of ``PROBED`` (or a
+``python*``) gets a version, the first line of what ``<program>
+--version`` (``-version`` for ``java``) prints, probed once per path per
+trial under ``suspended()``, with no input and a timeout; any other
+program is never run to probe it, and has no version. A shared library
+loaded through ``ctypes`` (the ``ctypes.dlopen`` audit event), which no
+import finder sees, gets a row the same way, without a version, when the
+name it is loaded by is a path (absolute, or relative to the current
+directory); a bare name (``libm.so.6``) is found by the loader's own
+search, which is not reproduced here. ``-b`` (``bypass_modules``) skips
+all of this and keeps the file accesses; a launch that fails to start
+takes its rows with it.
+
+What is not covered: the children of ``os.fork`` and ``multiprocessing``
+(#375, #379), launches made by C code, nested launches (the child's own
+children), a launch that failed to start (nothing ran: its accesses are
+dropped), and on ``os.exec`` nothing is stored (#377): the pending
+launches are only closed in memory. Calls of the standard library that
+run a program (``platform.architecture`` runs ``file``) are recorded as
+any other launch, which is harmless.
+"""
+
+import hashlib
+import os
+import re
+import shlex
+import shutil
+
+# Patches Popen's functions while a collection traces; starts no process
+import subprocess  # nosec B404
+import sys
+import threading
+import weakref
+from contextlib import contextmanager
+from functools import wraps
+
+from ...persistence import content
+from ...utils.io import print_error
+
+MODES = ("none", "argv", "strace")
+DEFAULT_MODE = "argv"
+# The audit events the hook reads.
+EVENTS = frozenset(
+    {
+        "subprocess.Popen",
+        "os.system",
+        "os.posix_spawn",
+        "os.spawn",
+        "os.exec",
+        "ctypes.dlopen",
+    }
+)
+# Entries of the project above which the snapshot is disabled for the trial.
+SNAPSHOT_CAP = 20000
+# Directories the snapshot does not enter.
+SKIPPED_DIRECTORIES = frozenset({".noworkflow", ".git", "__pycache__"})
+# Shell words that separate two commands.
+SEPARATORS = frozenset({"|", "||", "&&", ";", "&"})
+# Redirections: the operator and the mode of the file it names.
+REDIRECTIONS = (
+    ("&>>", "a"),
+    ("&>", "w"),
+    (">>", "a"),
+    (">", "w"),
+    ("<", "r"),
+)
+# Executables above this size are not stored: their code block is a
+# placeholder with the SHA-1 of the file (#203). The default of
+# `now run --executable-cap` (#463).
+EXECUTABLE_CAP = 16 * 1024 * 1024
+# The programs whose version is probed (#203), by the name the command
+# line gives them; any other program is never run to probe it. On Windows
+# the comparison ignores case and a trailing ".exe".
+PROBED = frozenset(
+    {
+        "Rscript",
+        "R",
+        "julia",
+        "bash",
+        "perl",
+        "node",
+        "ruby",
+        "java",
+        "gcc",
+        "cc",
+        "clang",
+        "g++",
+        "make",
+        "octave",
+    }
+)
+# python, python3, python3.15, pythonw: probed as well.
+PYTHON_NAME = re.compile(r"python[0-9.]*w?\Z")
+# The code block of an executable above EXECUTABLE_CAP: not its bytes,
+# which `now restore` must never write in its place.
+PLACEHOLDER = "<noWorkflow: executable not stored; sha1={}; size={}>"
+PLACEHOLDER_PREFIX = PLACEHOLDER.split("{")[0].encode("ascii")
+# Seconds a version probe may take, and the length of the version kept.
+PROBE_TIMEOUT = 5
+VERSION_LENGTH = 200
+# The messages the tracer prints on stderr, once per trial each.
+SNAPSHOT_WARNING = (
+    "the project has more than {} entries: files that external processes "
+    "create without naming them on the command line are not recorded in "
+    "this trial".format(SNAPSHOT_CAP)
+)
+STRACE_WARNING = (
+    "--external-tracer strace is not available yet (#206): falling back to argv"
+)
+
+
+class ExternalProcess:
+    """One launch: its command line, where it is attached and what it
+    exchanged
+
+    ``accesses`` are the ``FileAccessLW`` created at the launch, for the
+    files that existed then; ``candidates`` the output candidates, as
+    ``(name, resolved path, declared mode or None)``, which become
+    accesses if the file exists at the end; ``before`` the snapshot of the
+    project, or None. ``activation`` is the closest active activation at
+    the launch, where the accesses go; ``call_activation`` the innermost
+    one, which closing finalizes a launch that ``finalize_on_close``.
+    """
+
+    # pylint: disable=too-many-instance-attributes, too-few-public-methods
+
+    def __init__(self, kind, command, cwd, activation, call_activation, checkpoint):
+        # pylint: disable=too-many-arguments
+        self.kind = kind
+        self.command = command
+        self.cwd = cwd
+        self.activation = activation
+        self.call_activation = call_activation
+        self.checkpoint = checkpoint
+        self.accesses = []
+        self.candidates = []
+        self.before = None
+        self.finalize_on_close = kind == "system"
+        self.popen = None
+        self.finished = False
+        self.returncode = None
+        # The keys of the executables this launch added to the module
+        # table (#203), which a launch that fails to start takes back.
+        self.executables = []
+
+
+class ExternalProcessTracer:
+    """Records the launches of one collector (``Collector.external``)"""
+
+    # pylint: disable=too-many-instance-attributes
+
+    def __init__(self, collector):
+        self.collector = collector
+        self.mode = DEFAULT_MODE
+        self.project_dir = None
+        self.started = False
+        self.pending = []
+        self.by_popen = weakref.WeakKeyDictionary()
+        self.unbound = {}
+        self.waiting_close = set()
+        self.suspend_depth = 0
+        self.snapshot_cap = SNAPSHOT_CAP
+        self.snapshot_disabled = False
+        self.warned = set()
+        self.failures = []
+        self.lock = threading.RLock()
+        # (real path, size, mtime_ns) -> (module id, code block id) of the
+        # executables recorded in this trial, and the probed versions by
+        # path (#203).
+        self.executables = {}
+        self.versions = {}
+        self.executable_cap = EXECUTABLE_CAP
+
+    # --- lifecycle ---------------------------------------------------------
+
+    def start(self, metascript):
+        """Start tracing for a collection, with the mode of ``metascript``
+
+        ``none`` records nothing; ``strace`` falls back to ``argv`` with a
+        warning until #206 lands.
+        """
+        mode = getattr(metascript, "external_tracer", DEFAULT_MODE) or DEFAULT_MODE
+        if mode not in MODES:
+            raise ValueError("unknown external tracer {!r}".format(mode))
+        if mode == "strace":
+            self.warn(STRACE_WARNING)
+            mode = "argv"
+        self.mode = mode
+        self.project_dir = getattr(metascript, "dir", None) or None
+        self.executable_cap = getattr(metascript, "executable_cap", EXECUTABLE_CAP)
+        if mode == "none" or self.started:
+            return
+        install_hook()
+        _push(self)
+        patch_popen()
+        self.started = True
+
+    def stop(self):
+        """Stop tracing: the patch leaves, the hook goes inert
+
+        The launches still pending are finalized by ``finalize_pending``
+        when the trial is stored.
+        """
+        if not self.started:
+            return
+        self.started = False
+        unpatch_popen()
+        _pop(self)
+
+    @contextmanager
+    def suspended(self):
+        """Launches made inside are noWorkflow's own and are not recorded"""
+        with self.lock:
+            self.suspend_depth += 1
+        try:
+            yield
+        finally:
+            with self.lock:
+                self.suspend_depth -= 1
+
+    def warn(self, message):
+        """Print a warning on stderr once per tracer"""
+        if message not in self.warned:
+            self.warned.add(message)
+            print_error(message)
+
+    # --- the hook ----------------------------------------------------------
+
+    def event(self, event, args):
+        """An audit event of ``EVENTS``, while this tracer is current
+
+        A failure of the tracer never reaches the script: it is reported
+        on stderr and kept in ``failures``.
+        """
+        if self.suspend_depth or content.should_use_safe_open():
+            return
+        try:
+            if event == "subprocess.Popen":
+                self.popen_event(*args)
+            elif event == "os.system":
+                self.launch("system", None, None, shell_command=as_text(args[0]))
+            elif event == "os.posix_spawn":
+                self.launch("posix_spawn", args[1], None, program=args[0], env=args[2])
+            elif event == "os.spawn":
+                launch = self.launch(
+                    "spawn", args[2], None, program=args[1], env=args[3]
+                )
+                if launch is not None:
+                    launch.finalize_on_close = args[0] == getattr(os, "P_WAIT", 0)
+            elif event == "os.exec":
+                self.close_all()
+            elif event == "ctypes.dlopen":
+                self.library_loaded(args[0])
+        except Exception as error:  # pylint: disable=broad-except
+            self.failures.append(error)
+            self.warn(
+                "the external process tracer failed and recorded nothing of "
+                "a launch: {}: {}".format(type(error).__name__, error)
+            )
+
+    def popen_event(self, executable, args, cwd, env):
+        """``subprocess.Popen``: an argument list, or the shell's line
+
+        ``executable`` is what the process runs: ``executable=`` when given,
+        the first word otherwise (POSIX; None on Windows).
+        """
+        if isinstance(args, (str, bytes)):
+            # Windows: Popen joins the list into one string (list2cmdline),
+            # and with shell=True wraps it as `cmd.exe /c "line"`.
+            line = as_text(args)
+            inner = windows_shell_command(line)
+            if inner is not None:
+                return self.launch("popen", None, cwd, shell_command=inner, env=env)
+            return self.launch(
+                "popen",
+                split_windows_command_line(line),
+                cwd,
+                program=executable,
+                env=env,
+            )
+        words = [as_text(word) for word in args]
+        if (
+            len(words) >= 3
+            and words[1] == "-c"
+            and os.path.basename(words[0]).endswith("sh")
+        ):
+            return self.launch("popen", None, cwd, shell_command=words[2], env=env)
+        return self.launch("popen", words, cwd, program=executable, env=env)
+
+    # --- launches ----------------------------------------------------------
+
+    def launch(self, kind, words, cwd, shell_command=None, program=None, env=None):
+        """Record a launch: the files it names now, the candidates, the
+        snapshot and the programs it runs (``program``, or the first word;
+        for a shell line, the first word of each command), resolved with
+        ``env``; returns the ``ExternalProcess``, or None when nothing is
+        collecting"""
+        # pylint: disable=too-many-arguments
+        collector = self.collector
+        activation = collector.current_activation()
+        if activation is None:
+            return None
+        cwd = os.path.abspath(as_text(cwd)) if cwd else None
+        base = cwd or os.getcwd()
+        if shell_command is not None:
+            # A keyword of parse_command, which reads the line: no shell runs here
+            commands = parse_command(shell_command, shell=True)  # nosec B604
+        else:
+            commands = parse_command(words)
+        launch = ExternalProcess(
+            kind,
+            shell_command if shell_command is not None else words,
+            cwd,
+            activation,
+            collector.last_activation,
+            collector.get_time(),
+        )
+        seen = set()
+        for command in commands:
+            for name, mode in classify_tokens(command, base):
+                resolved = os.path.join(base, name)
+                key = os.path.normcase(os.path.realpath(resolved))
+                if key in seen:
+                    continue
+                seen.add(key)
+                recorded = self.recorded_name(name, cwd)
+                if os.path.isfile(resolved):
+                    access = collector.add_file_access(
+                        recorded, activation, launch.checkpoint, path=resolved
+                    )
+                    launch.accesses.append((access, resolved, mode))
+                else:
+                    launch.candidates.append((recorded, resolved, mode))
+        launch.before = self.snapshot(cwd)
+        if shell_command is not None:
+            programs = [command[0][0] for command in commands if command[0]]
+        else:
+            programs = [program or (words[0] if words else None)]
+        # Before the launch is bound: a version probe starts a process of
+        # its own, whose Popen must find nothing to bind on this thread.
+        self.record_programs(launch, programs, base, env)
+        with self.lock:
+            self.pending.append(launch)
+            if kind == "popen":
+                self.unbound[threading.get_ident()] = launch
+            if launch.finalize_on_close:
+                self.waiting_close.add(id(launch.call_activation))
+        return launch
+
+    def recorded_name(self, name, cwd):
+        """The name an access gets: the word as the command line gives it,
+        or, for a launch with its own ``cwd``, the path as the script's
+        own directory sees it"""
+        if cwd is None:
+            return name
+        resolved = os.path.join(cwd, name)
+        return relative_to_cwd(resolved)
+
+    def bind(self, popen):
+        """Attach the launch of the ``Popen.__init__`` that just returned
+        on this thread to its ``Popen``"""
+        with self.lock:
+            launch = self.unbound.pop(threading.get_ident(), None)
+            if launch is None:
+                return
+            launch.popen = popen
+            self.by_popen[popen] = launch
+
+    def launch_failed(self):
+        """``Popen.__init__`` raised on this thread: the process never ran,
+        so the launch and its accesses are dropped"""
+        with self.lock:
+            launch = self.unbound.pop(threading.get_ident(), None)
+            if launch is None:
+                return
+            self.discard(launch)
+
+    def discard(self, launch):
+        """Forget a launch and the accesses it created"""
+        with self.lock:
+            launch.finished = True
+            if launch in self.pending:
+                self.pending.remove(launch)
+            self.waiting_close.discard(id(launch.call_activation))
+        store = self.collector.file_accesses
+        for access, _, _ in launch.accesses:
+            del store[access.id]
+        launch.accesses = []
+        metascript = self.collector.metascript
+        for key in launch.executables:
+            with self.lock:
+                ids = self.executables.pop(key, None)
+            if ids is None:
+                continue
+            module_id, code_id = ids
+            del metascript.modules_store[module_id]
+            del metascript.code_components_store[code_id]
+            del metascript.code_blocks_store[code_id]
+        launch.executables = []
+
+    # --- the programs (#203) -------------------------------------------------
+
+    def records_modules(self):
+        """Whether the programs go to the module table: not under ``-b``"""
+        return not getattr(self.collector.metascript, "bypass_modules", True)
+
+    def record_programs(self, launch, programs, base, env):
+        """Add the programs of a launch to the module table; a program
+        that resolves to no file (a shell builtin, a missing program) is
+        skipped, and a failure is reported, never raised"""
+        if not self.records_modules():
+            return
+        for program in programs:
+            try:
+                path = resolve_program(program, base, env)
+                if path is None:
+                    continue
+                key = self.add_executable(program_name(program), path, probe=True)
+            except Exception as error:  # pylint: disable=broad-except
+                self.failures.append(error)
+                self.warn(
+                    "the external process tracer recorded no module for a "
+                    "program: {}: {}".format(type(error).__name__, error)
+                )
+                continue
+            if key is not None:
+                launch.executables.append(key)
+
+    def library_loaded(self, name):
+        """``ctypes.dlopen``: a library loaded by a path is a module"""
+        if not self.records_modules():
+            return
+        name = as_text(name)
+        if not name or not os.path.dirname(name):
+            return
+        path = os.path.realpath(os.path.join(os.getcwd(), name))
+        if is_regular_file(path):
+            self.add_executable(os.path.basename(name), path, probe=False)
+
+    def add_executable(self, name, path, probe):
+        """A ``module`` row for the file at ``path`` (a real path), with a
+        binary code block and, when ``probe`` and the name is in the
+        allowlist, a version; returns its key, or None when this file, as
+        it is now, already has a row in the trial"""
+        info = os.stat(path)
+        key = (os.path.normcase(path), info.st_size, info.st_mtime_ns)
+        with self.lock:
+            if key in self.executables:
+                return None
+            self.executables[key] = None
+        try:
+            version = self.version_of(name, path) if probe else None
+            data = executable_content(path, self.executable_cap)
+            metascript = self.collector.metascript
+            _, code_id = metascript.definition.create_code_block(
+                data, path, "module", True, False
+            )
+            module_id = metascript.deployment.add_module(
+                name, version, path, code_id, False, None
+            )
+        except BaseException:
+            with self.lock:
+                self.executables.pop(key, None)
+            raise
+        with self.lock:
+            self.executables[key] = (module_id, code_id)
+        return key
+
+    def version_of(self, name, path):
+        """The probed version of a program of the allowlist, once per path
+        per trial; None for any other program, which is not run"""
+        flag = probe_flag(name)
+        if flag is None:
+            return None
+        cache_key = os.path.normcase(path)
+        if cache_key not in self.versions:
+            # The probe's own opens (os.devnull for its stdin) are not the
+            # script's: safe open makes the collector's wrappers step aside
+            with self.suspended(), content.use_safe_open():
+                self.versions[cache_key] = probe_version(path, flag)
+        return self.versions[cache_key]
+
+    def completed(self, popen):
+        """``wait`` or ``poll`` saw the process end"""
+        launch = self.by_popen.pop(popen, None)
+        if launch is not None and not launch.finished:
+            self.finalize(launch, popen.returncode)
+
+    def activation_closed(self, activation):
+        """Finalize the launches made by a call that just returned
+        (``os.system``, a waiting ``os.spawn``)"""
+        if id(activation) not in self.waiting_close:
+            return
+        with self.lock:
+            self.waiting_close.discard(id(activation))
+            launches = [
+                launch
+                for launch in self.pending
+                if launch.finalize_on_close and launch.call_activation is activation
+            ]
+        for launch in launches:
+            self.finalize(launch)
+
+    def finalize_pending(self, final):
+        """Finalize what is still pending: everything when the trial is
+        stored (``final``), on a partial save only the launches whose
+        process is known to have ended"""
+        with self.lock:
+            launches = [
+                launch
+                for launch in self.pending
+                if final
+                or (launch.popen is not None and launch.popen.returncode is not None)
+            ]
+        for launch in launches:
+            returncode = launch.popen.returncode if launch.popen is not None else None
+            self.finalize(launch, returncode)
+
+    def close_all(self):
+        """``os.exec``: the image is about to be replaced, nothing will be
+        stored (#377); the pending launches are closed in memory"""
+        with self.lock:
+            launches = list(self.pending)
+        for launch in launches:
+            self.finalize(launch)
+
+    def finalize(self, launch, returncode=None):
+        """The process ended (or the trial did): hash the files after it,
+        infer the modes, record the candidates and the new files"""
+        with self.lock:
+            if launch.finished:
+                return
+            launch.finished = True
+            launch.returncode = returncode
+            if launch in self.pending:
+                self.pending.remove(launch)
+            self.waiting_close.discard(id(launch.call_activation))
+        recorded = set()
+        for access, resolved, declared in launch.accesses:
+            after = hash_file(resolved)
+            access.content_hash_after = after
+            access.mode = infer_mode(access.content_hash_before, after, declared)
+            access.done = True
+            recorded.add(os.path.normcase(os.path.realpath(resolved)))
+        for name, resolved, declared in launch.candidates:
+            if not os.path.isfile(resolved):
+                continue
+            self.add_written(launch, name, resolved, declared or "w")
+            recorded.add(os.path.normcase(os.path.realpath(resolved)))
+        if launch.before is None:
+            return
+        after = self.snapshot(launch.cwd)
+        if after is None:
+            return
+        for path in sorted(after - launch.before):
+            key = os.path.normcase(os.path.realpath(path))
+            if key in recorded or key in self.recorded_since(launch.checkpoint):
+                continue
+            self.add_written(launch, relative_to_cwd(path), path, "w")
+
+    def add_written(self, launch, name, resolved, mode):
+        """An access to a file the process created: no content before"""
+        access = self.collector.add_file_access(
+            name, launch.activation, launch.checkpoint, path=None
+        )
+        access.content_hash_after = hash_file(resolved)
+        access.mode = mode
+        access.done = True
+        return access
+
+    def recorded_since(self, checkpoint):
+        """The real paths of the accesses recorded since ``checkpoint``,
+        by the script's own opens or by other launches: a file they
+        account for is not a file this launch created"""
+        found = set()
+        for access in self.collector.file_accesses.values():
+            if access.checkpoint >= checkpoint:
+                found.add(os.path.normcase(os.path.realpath(access.name)))
+        return found
+
+    # --- the snapshot ------------------------------------------------------
+
+    def snapshot(self, cwd):
+        """The files under the project, the current directory and ``cwd``,
+        or None when the snapshot is disabled"""
+        if self.snapshot_disabled:
+            return None
+        roots = [self.project_dir, os.getcwd(), cwd]
+        found = snapshot(roots, self.snapshot_cap)
+        if found is None:
+            self.snapshot_disabled = True
+            self.warn(SNAPSHOT_WARNING)
+        return found
+
+
+# --- the hook and the patch, once per process --------------------------------
+
+_installed = False
+_stack = []
+_current = None
+_originals = None
+_patch_depth = 0
+_lock = threading.Lock()
+
+
+def _audit(event, args):
+    """The audit hook: inert unless a tracer is current"""
+    tracer = _current
+    if tracer is None or event not in EVENTS:
+        return
+    tracer.event(event, args)
+
+
+@contextmanager
+def suspended():
+    """Launches made inside are noWorkflow's own and are not recorded by
+    the tracer that is tracing now, if any (the ``now_vis()`` and
+    ``now_notebook()`` builtins of the debugger start a process)"""
+    tracer = _current
+    if tracer is None:
+        yield
+        return
+    with tracer.suspended():
+        yield
+
+
+def install_hook():
+    """Install the audit hook, once per process (it cannot be removed)"""
+    global _installed  # pylint: disable=global-statement
+    with _lock:
+        if not _installed:
+            sys.addaudithook(_audit)
+            _installed = True
+
+
+def hook_installed():
+    """Whether the audit hook is installed in this process"""
+    return _installed
+
+
+def current():
+    """The tracer that is tracing now, or None"""
+    return _current
+
+
+def _push(tracer):
+    global _current  # pylint: disable=global-statement
+    with _lock:
+        _stack.append(tracer)
+        _current = tracer
+
+
+def _pop(tracer):
+    global _current  # pylint: disable=global-statement
+    with _lock:
+        if tracer in _stack:
+            _stack.remove(tracer)
+        _current = _stack[-1] if _stack else None
+
+
+def patch_popen():
+    """Patch ``Popen.__init__``, ``wait`` and ``poll`` to tell the current
+    tracer when a launch is bound and when its process ended; nested
+    collections patch once"""
+    global _originals, _patch_depth  # pylint: disable=global-statement
+    with _lock:
+        _patch_depth += 1
+        if _patch_depth > 1:
+            return
+        popen = subprocess.Popen
+        original_init, original_wait, original_poll = (
+            popen.__init__,
+            popen.wait,
+            popen.poll,
+        )
+        _originals = (original_init, original_wait, original_poll)
+
+        @wraps(original_init)
+        def __init__(self, *args, **kwargs):
+            tracer = _current
+            try:
+                original_init(self, *args, **kwargs)
+            except BaseException:
+                if tracer is not None:
+                    tracer.launch_failed()
+                raise
+            if tracer is not None:
+                tracer.bind(self)
+
+        @wraps(original_wait)
+        def wait(self, timeout=None):
+            result = original_wait(self, timeout)
+            tracer = _current
+            if tracer is not None and self.returncode is not None:
+                tracer.completed(self)
+            return result
+
+        @wraps(original_poll)
+        def poll(self):
+            result = original_poll(self)
+            tracer = _current
+            if tracer is not None and self.returncode is not None:
+                tracer.completed(self)
+            return result
+
+        popen.__init__ = __init__
+        popen.wait = wait
+        popen.poll = poll
+
+
+def unpatch_popen():
+    """Put the original functions back when the last collection stops"""
+    global _originals, _patch_depth  # pylint: disable=global-statement
+    with _lock:
+        if _patch_depth == 0:
+            return
+        _patch_depth -= 1
+        if _patch_depth > 0:
+            return
+        popen = subprocess.Popen
+        popen.__init__, popen.wait, popen.poll = _originals
+        _originals = None
+
+
+def popen_patched():
+    """Whether ``subprocess.Popen`` carries the tracer's patch now"""
+    return _patch_depth > 0
+
+
+# --- pure functions -----------------------------------------------------------
+
+
+def as_text(value):
+    """A command-line word as text: bytes and path-like objects decoded"""
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        return os.fsdecode(value)
+    if isinstance(value, str):
+        return value
+    try:
+        return os.fsdecode(os.fspath(value))
+    except TypeError:
+        return str(value)
+
+
+def program_name(program):
+    """The name of a program's module row: the last part of the word
+    that names it, as the command line gives it (``./metrics`` is
+    ``metrics``; a link keeps its own name, ``cc`` and not ``gcc``)"""
+    program = as_text(program)
+    return os.path.basename(program.rstrip("/" + os.sep)) or program
+
+
+def resolve_program(program, cwd=None, env=None):
+    """The real path of the program a launch runs, or None
+
+    A name with a separator is relative to the launch's ``cwd`` (the
+    current directory when None); a bare name is searched in the ``PATH``
+    of ``env`` (the environment given to the process, the script's when
+    None), as ``subprocess`` does; on Windows ``shutil.which`` adds the
+    ``PATHEXT`` extensions. Only a regular file is a program.
+    """
+    program = as_text(program)
+    if not program:
+        return None
+    if os.path.dirname(program):
+        found = shutil.which(os.path.join(cwd or os.getcwd(), program))
+    else:
+        found = shutil.which(program, path=os.pathsep.join(os.get_exec_path(env)))
+    if found is None:
+        return None
+    real = os.path.realpath(found)
+    return real if is_regular_file(real) else None
+
+
+def probe_flag(name, windows=None):
+    """The flag that makes a program of the allowlist print its version
+    (``-version`` for ``java``, ``--version`` otherwise), or None for a
+    program outside it, which is never run to probe it"""
+    if windows is None:
+        windows = os.name == "nt"
+    base = name
+    known = name in PROBED
+    if windows:
+        base = name.lower()
+        if base.endswith(".exe"):
+            base = base[: -len(".exe")]
+        known = base in {probed.lower() for probed in PROBED}
+    if not known and not PYTHON_NAME.match(base):
+        return None
+    return "-version" if base == "java" else "--version"
+
+
+def probe_version(path, flag, timeout=PROBE_TIMEOUT):
+    """The first non-empty line of what ``path flag`` prints, on stdout
+    or stderr, cut at ``VERSION_LENGTH``; None when it fails, times out
+    or exits with another status than 0"""
+    try:
+        # A program of the allowlist, by its real path, with one flag and
+        # no shell (probe_flag): the version probe of #203
+        completed = subprocess.run(  # nosec B603
+            [path, flag],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    return first_line(completed.stdout)
+
+
+def first_line(output):
+    """The first non-empty line of a program's output, cut at
+    ``VERSION_LENGTH``, or None"""
+    if isinstance(output, bytes):
+        output = output.decode("utf-8", errors="replace")
+    for line in (output or "").splitlines():
+        line = line.strip()
+        if line:
+            return line[:VERSION_LENGTH]
+    return None
+
+
+def executable_content(path, cap=EXECUTABLE_CAP):
+    """The bytes of an executable for its code block: the file up to
+    ``cap`` bytes; above it, or always when ``cap`` is 0, a placeholder
+    with the size and the SHA-1 of the file, read in chunks, so that the
+    code hash still follows the binary"""
+    size = os.path.getsize(path)
+    if 0 < cap and size <= cap:
+        with content.std_open(path, "rb") as handle:
+            return handle.read()
+    digest = hashlib.sha1(usedforsecurity=False)
+    with content.std_open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return PLACEHOLDER.format(digest.hexdigest(), size).encode("ascii")
+
+
+def is_placeholder(data):
+    """Whether stored content is the placeholder of an executable that was
+    too large to store, rather than its bytes"""
+    return isinstance(data, bytes) and data.startswith(PLACEHOLDER_PREFIX)
+
+
+def split_command_line(text, windows=None):
+    """The words of a shell command line, as the shell of the system
+    reads them: shlex on POSIX (a line it rejects, an unbalanced quote,
+    is split on spaces); on Windows, what cmd.exe runs for ``/c`` with
+    the line (``strip_cmd_quotes``), split as the C runtime builds argv
+    (``split_windows_command_line``). ``windows`` forces either system,
+    for the tests."""
+    if windows is None:
+        windows = os.name == "nt"
+    if windows:
+        return split_windows_command_line(strip_cmd_quotes(text))
+    try:
+        return shlex.split(text, posix=True)
+    except ValueError:
+        return text.split()
+
+
+def split_windows_command_line(text):
+    """The words of a Windows command line, as the C runtime builds argv
+    (the inverse of ``subprocess.list2cmdline``): whitespace separates
+    the words, a quote opens or closes a span where it does not, ``2n``
+    backslashes before a quote are ``n`` backslashes, ``2n+1`` are ``n``
+    and a literal quote, two quotes inside a span are a literal quote,
+    and backslashes elsewhere are literal"""
+    words, current, in_quotes, started = [], [], False, False
+    index, length = 0, len(text)
+    while index < length:
+        char = text[index]
+        if char == "\\":
+            end = index
+            while end < length and text[end] == "\\":
+                end += 1
+            count = end - index
+            started = True
+            if end < length and text[end] == '"':
+                current.append("\\" * (count // 2))
+                if count % 2:
+                    current.append('"')
+                    index = end + 1
+                else:
+                    index = end
+                continue
+            current.append("\\" * count)
+            index = end
+            continue
+        if char == '"':
+            started = True
+            if in_quotes and index + 1 < length and text[index + 1] == '"':
+                current.append('"')
+                index += 2
+                continue
+            in_quotes = not in_quotes
+            index += 1
+            continue
+        if char in " \t" and not in_quotes:
+            if started:
+                words.append("".join(current))
+                current, started = [], False
+            index += 1
+            continue
+        current.append(char)
+        started = True
+        index += 1
+    if started:
+        words.append("".join(current))
+    return words
+
+
+# The characters cmd.exe treats specially between the two quotes of a line.
+CMD_SPECIAL = frozenset("&<>()@^|")
+
+
+def strip_cmd_quotes(line):
+    """What cmd.exe runs for ``/c <line>`` (``os.system``, ``shell=True``):
+    the quotes stay when the line has exactly two, with whitespace and no
+    special character between them and the quoted text naming an
+    executable file; otherwise, when the line starts with a quote, the
+    first quote and the last one leave (the rule ``cmd /?`` states)"""
+    if not line.startswith('"'):
+        return line
+    last = line.rfind('"')
+    if last == 0:
+        return line
+    if line.count('"') == 2:
+        inner = line[1:last]
+        if (
+            any(char.isspace() for char in inner)
+            and not CMD_SPECIAL & set(inner)
+            and is_regular_file(inner)
+        ):
+            return line
+    return line[1:last] + line[last + 1 :]
+
+
+def windows_shell_command(line):
+    """The line a ``cmd.exe /c`` (or ``/k``) command line runs, or None
+    when the line is not one: what ``Popen(shell=True)`` builds on
+    Windows, ``COMSPEC /c "line"``"""
+    words = split_windows_command_line(line)
+    if len(words) < 3 or words[1].lower() not in ("/c", "/k"):
+        return None
+    marker = line.lower().find(words[1].lower() + " ")
+    if marker < 0:
+        return None
+    return line[marker + len(words[1]) + 1 :].lstrip()
+
+
+def parse_command(args, shell=False, windows=None):
+    """The commands of a launch, each as ``(words, redirections)``
+
+    ``args`` is an argument list (one command) or, with ``shell``, the
+    line a shell runs: split into words, cut at ``|``, ``||``, ``&&``,
+    ``;`` and ``&``, with the leading ``VAR=value`` words and ``env``
+    (with its own assignments) dropped. ``redirections`` are ``(name,
+    mode)`` pairs: ``w`` for ``>`` and ``&>``, ``a`` for ``>>``, ``r`` for
+    ``<``; the operator may be attached to its target (``>out.txt``,
+    ``2>err.txt``) or not. ``windows`` forces the system's rules for the
+    line (``split_command_line``).
+    """
+    if not shell:
+        words = [as_text(word) for word in args]
+        return [(words, [])] if words else []
+    commands = []
+    current = []
+    for word in split_command_line(as_text(args), windows):
+        if word in SEPARATORS:
+            commands.append(current)
+            current = []
+            continue
+        if word.endswith(";") and len(word) > 1:
+            current.append(word[:-1])
+            commands.append(current)
+            current = []
+            continue
+        current.append(word)
+    commands.append(current)
+    result = []
+    for words in commands:
+        parsed = parse_shell_words(words)
+        if parsed is not None:
+            result.append(parsed)
+    return result
+
+
+def parse_shell_words(words):
+    """One shell command: its words without the environment prefix, and
+    its redirections; None for an empty command"""
+    words = list(words)
+    while words and is_assignment(words[0]):
+        words.pop(0)
+    if words and words[0] == "env":
+        words.pop(0)
+        while words and is_assignment(words[0]):
+            words.pop(0)
+    kept = []
+    redirections = []
+    pending = None
+    for word in words:
+        if pending is not None:
+            redirections.append((word, pending))
+            pending = None
+            continue
+        operator, target, mode = redirection(word)
+        if operator is None:
+            kept.append(word)
+        elif target:
+            redirections.append((target, mode))
+        else:
+            pending = mode
+    if not kept and not redirections:
+        return None
+    return (kept, redirections)
+
+
+def is_assignment(word):
+    """Whether a shell word is ``NAME=value``"""
+    name, separator, _ = word.partition("=")
+    return bool(separator) and name.isidentifier()
+
+
+def redirection(word):
+    """``(operator, target, mode)`` of a redirection word, or ``(None,
+    None, None)``; the target is empty when it is the next word"""
+    text = word
+    descriptor = ""
+    while text and text[0].isdigit():
+        descriptor += text[0]
+        text = text[1:]
+    for operator, mode in REDIRECTIONS:
+        if text.startswith(operator):
+            target = text[len(operator) :]
+            if operator == "<" and descriptor:
+                return None, None, None
+            if target.startswith("&"):
+                # `2>&1`: a descriptor, not a file
+                return None, None, None
+            return descriptor + operator, target, mode
+    return None, None, None
+
+
+def looks_like_path(word):
+    """Whether a word that names no file yet may name one the process
+    creates: a separator, or an extension that is not a number"""
+    if not word or word.startswith("-") or word in (".", "..") or "\0" in word:
+        return False
+    if "/" in word or os.sep in word or (os.altsep and os.altsep in word):
+        return True
+    root, extension = os.path.splitext(word)
+    return bool(root) and len(extension) > 1 and not extension[1:].isdigit()
+
+
+def classify_tokens(command, base):
+    """The files a command names: ``[(name, declared mode or None)]``
+
+    ``command`` is ``(words, redirections)`` of ``parse_command``; the
+    program (``words[0]``) is never a file access (#203 records it as a
+    module). A word, or the part after ``=`` of a ``--opt=file`` word,
+    that names an existing regular file relative to ``base`` is a file,
+    with no declared mode (inferred at the end); one that only looks like
+    a path is an output candidate. A redirection target is a declared
+    output (``w``, ``a``) or input (``r``).
+    """
+    words, redirections = command
+    found = []
+    seen = set()
+
+    def add(name, mode):
+        if name and name not in seen:
+            seen.add(name)
+            found.append((name, mode))
+
+    for word in words[1:]:
+        names = word_candidates(word)
+        existing = [name for name in names if is_regular_file(os.path.join(base, name))]
+        if existing:
+            add(existing[0], None)
+            continue
+        # A candidate: what follows `=` before the whole word, so that
+        # `OUT=f.txt` names f.txt and not `OUT=f.txt`.
+        for name in reversed(names):
+            if looks_like_path(name):
+                add(name, None)
+                break
+    for name, mode in redirections:
+        add(name, mode)
+    return found
+
+
+def word_candidates(word):
+    """The names a word may carry: itself, and what follows ``=``"""
+    names = [word]
+    if "=" in word and not word.startswith("="):
+        names.append(word.split("=", 1)[1])
+    return [name for name in names if name and not name.startswith("-")]
+
+
+def is_regular_file(path):
+    """``os.path.isfile`` that never raises (a NUL in a word, a path too
+    long)"""
+    try:
+        return os.path.isfile(path)
+    except (OSError, ValueError):
+        return False
+
+
+def infer_mode(before, after, declared=None):
+    """The mode of an access from the hashes around the process
+
+    A declared mode (a redirection) wins. Otherwise: no content before, a
+    file now: ``w``; the same content: ``r``; another content: ``r+``
+    (the dataflow draws a read and a write edge for ``+``); gone: ``r``
+    with no content after.
+    """
+    if declared:
+        return declared
+    if before is None:
+        return "w"
+    if after is None or after == before:
+        return "r"
+    return "r+"
+
+
+def hash_file(path):
+    """The hash of a regular file's content, put in the content store, or
+    None when there is no such file"""
+    if not is_regular_file(path):
+        return None
+    with content.std_open(path, "rb") as handle:
+        return content.put(handle.read(), path)
+
+
+def relative_to_cwd(path):
+    """A path as the script's own directory sees it: relative to the
+    current directory when under it, absolute otherwise"""
+    cwd = os.getcwd()
+    real = os.path.realpath(path)
+    try:
+        relative = os.path.relpath(real, os.path.realpath(cwd))
+    except ValueError:
+        # Windows: another drive
+        return path
+    if relative.startswith(os.pardir):
+        return path if os.path.isabs(path) else real
+    return relative
+
+
+def snapshot(roots, cap=SNAPSHOT_CAP):
+    """The regular files under ``roots`` (real paths, each root once),
+    or None when they exceed ``cap`` entries
+
+    Symbolic links are not followed, and ``SKIPPED_DIRECTORIES`` are not
+    entered. A root that does not exist is skipped.
+    """
+    found = set()
+    seen_roots = set()
+    budget = cap
+    for root in roots:
+        if not root:
+            continue
+        real = os.path.realpath(root)
+        if real in seen_roots or not os.path.isdir(real):
+            continue
+        seen_roots.add(real)
+        stack = [real]
+        while stack:
+            directory = stack.pop()
+            try:
+                entries = list(os.scandir(directory))
+            except OSError:
+                continue
+            for entry in entries:
+                budget -= 1
+                if budget < 0:
+                    return None
+                try:
+                    if entry.is_dir(follow_symlinks=False):
+                        if entry.name not in SKIPPED_DIRECTORIES:
+                            stack.append(entry.path)
+                    elif entry.is_file(follow_symlinks=False):
+                        found.add(entry.path)
+                except OSError:
+                    continue
+    return found

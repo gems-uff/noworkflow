@@ -34,6 +34,7 @@ tag(2, '<UUID1>', 'AUTO', '1.1.2', nil).
 :- dynamic(argument/3).
 argument('<UUID1>', 'script', '<PROJECT>/simulation.py').
 argument('<UUID1>', 'bypass_modules', 'False').
+argument('<UUID1>', 'executable_cap', '16777216').
 argument('<UUID1>', 'depth', '1000').
 argument('<UUID1>', 'serializer', 'repr').
 argument('<UUID1>', 'collect_values', 'all').
@@ -41,6 +42,7 @@ argument('<UUID1>', 'context', 'main').
 argument('<UUID1>', 'save_frequency', '0').
 argument('<UUID1>', 'call_storage_frequency', '10000').
 argument('<UUID1>', 'coarse_granularity', 'False').
+argument('<UUID1>', 'external_tracer', 'argv').
 argument('<UUID1>', 'name', 'None').
 argument('<UUID1>', 'dir', 'None').
 argument('<UUID1>', 'verbose', 'False').

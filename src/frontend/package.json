@@ -1,10 +1,24 @@
 {
   "private": true,
   "devDependencies": {
-    "lerna": "^10.1.1"
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/eslint-plugin": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.0",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.0.0",
+    "lerna": "^10.1.1",
+    "prettier": "^3.0.0",
+    "stylelint": "^17.16.0",
+    "stylelint-config-recommended": "^18.0.0",
+    "stylelint-config-standard": "^40.0.0",
+    "stylelint-csstree-validator": "^4.0.0",
+    "stylelint-prettier": "^5.0.3"
   },
   "scripts": {
-    "build": "lerna run build"
+    "build": "lerna run build",
+    "lint": "npm run lint --workspaces",
+    "lint:check": "npm run lint:check --workspaces"
   },
   "browser": {
     "fs": false,

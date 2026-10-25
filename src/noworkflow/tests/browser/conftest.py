@@ -17,12 +17,12 @@ downloaded. Without either they skip, unless ``NOW_BROWSER=require``, which
 the ``vis-browser`` job of CI sets, makes that a failure. They bind a port,
 so inside the Claude Code sandbox they fail at the server; run them outside.
 
-- ``vis_url``: a ``now vis`` of its own for each test, started from inside
-  the project (the ``/commands/*`` routes run ``now`` without ``--dir``,
-  #356) with the harness's environment, whose ``PATH`` holds the ``now`` of
-  this installation. Each test has its own server and browser because the
-  leak detector blames a child process kept by a fixture of wider scope on
-  the first test that uses it.
+- ``vis_url``: a ``now vis`` of its own for each test (``NowProject.serve``
+  of the harness), started from inside the project with the harness's
+  environment, whose ``PATH`` holds the ``now`` of this installation. Each
+  test has its own server and browser because the leak detector blames a
+  child process kept by a fixture of wider scope on the first test that
+  uses it.
 - ``vis``: a page on that server, the history loaded, with
   ``page_helpers.js`` installed (``window.__vis``) and what the page
   reported (console errors, uncaught exceptions, dialogs, responses of 400
@@ -34,11 +34,6 @@ vis writes a cache into it, so it is not the read-only
 """
 
 import os
-import socket
-import subprocess
-import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -68,12 +63,6 @@ def skip_or_fail(reason):
     pytest.skip(reason)
 
 
-def free_port():
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
-
-
 @pytest.fixture(scope="session")
 def _browser_store(tmp_path_factory):
     return build_weather(NowProject(tmp_path_factory.mktemp("browser")), trials=2)
@@ -82,54 +71,8 @@ def _browser_store(tmp_path_factory):
 @pytest.fixture
 def vis_url(_browser_store):
     """The URL of a ``now vis`` serving the two-trial store, for this test"""
-    project = _browser_store
-    port = free_port()
-    url = "http://127.0.0.1:{}".format(port)
-    log_path = project.root / "vis-{}.log".format(port)
-    with open(log_path, "w", encoding="utf-8") as log:
-        server = subprocess.Popen(
-            project.command
-            + [
-                "vis",
-                "-p",
-                str(port),
-                "--host",
-                "127.0.0.1",
-                "--dir",
-                str(project.path),
-            ],
-            cwd=str(project.path),
-            env=project.env,
-            stdin=subprocess.DEVNULL,
-            stdout=log,
-            stderr=subprocess.STDOUT,
-        )
-        try:
-            deadline = time.monotonic() + 60
-            while True:
-                try:
-                    with urllib.request.urlopen(url + "/", timeout=5) as answer:
-                        if answer.status == 200:
-                            break
-                except (urllib.error.URLError, ConnectionError):
-                    pass
-                if server.poll() is not None or time.monotonic() > deadline:
-                    log.flush()
-                    pytest.fail(
-                        "now vis did not answer on {}:\n{}".format(
-                            url, log_path.read_text(encoding="utf-8")[-3000:]
-                        ),
-                        pytrace=False,
-                    )
-                time.sleep(0.2)
-            yield url
-        finally:
-            server.terminate()
-            try:
-                server.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                server.kill()
-                server.wait()
+    with _browser_store.serve() as server:
+        yield server.url
 
 
 class Vis:
@@ -196,6 +139,12 @@ class Vis:
         point = self.at(target, empty)
         self.page.mouse.move(point["x"], point["y"])
         self.page.mouse.wheel(0, delta_y)
+        self.settle()
+
+    def hover(self, target):
+        """Move the pointer onto ``target`` and wait for what it reveals"""
+        point = self.at(target)
+        self.page.mouse.move(point["x"], point["y"], steps=4)
         self.settle()
 
     def type(self, text):

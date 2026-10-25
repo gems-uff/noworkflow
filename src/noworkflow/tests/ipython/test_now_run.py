@@ -7,30 +7,34 @@ By default the magic runs ``now run --create_last`` through IPython's
 ``%%script``, on the script the line names or on a temporary file that
 holds the cell, and then reads the trial back from the ``.last_trial`` that
 run wrote. With ``--interactive`` it runs the collector in the shell's own
-process, on the shell's namespace.
+process, on the shell's namespace. Either way the shell stays connected to
+the store of the run: ``--dir``'s, or the current directory's.
 
 What the tests pin:
 
 - a script or a cell is recorded as a trial, its arguments arrive as the
   line writes them (``$name`` is expanded and, where IPython splits the
   line as a POSIX shell does, a quoted one stays whole), and the magic
-  returns no trial: it reads the id with ``int()`` (#313);
+  returns the trial (#313);
+- with ``--dir`` the trial is recorded in that store and the shell stays
+  connected to it; the next ``%now_run`` without ``--dir`` connects back
+  to the current directory, and a trial of the other store then says
+  where it belongs when it reads its relations;
+- when no new trial was written (``now`` not found, ``--bg``), the magic
+  returns no trial, never the previous run's (#387);
 - a line that names no script fails with an IndexError; a directory or an
   option value with a space is cut in two, and a quoted ``--dir`` keeps
   its quotes: the magic connects to it as a path relative to the current
   directory, where it creates a store; the ``now`` that runs is the
-  first one on PATH; when no new trial was written (``now`` not found,
-  ``--bg``), the magic reads the ``.last_trial`` of the previous run;
+  first one on PATH;
 - every ``%now_run``, one that fails included, leaves the process's
   content engine setting at the line's ``--content-engine``;
 - a cell that raises fails with ``CalledProcessError``, as under ``%%script
   python``, because ``now run`` exits with the script's status;
-- ``--interactive`` fails on a module IPython 9.17.1 no longer has (#313);
-  past that import (``support.py3compat_stand_in``, on the test side
-  only) the cell runs in the shell's namespace, sees its arguments and
-  ``__name__``, and the magic returns its trial. What such a cell leaves
-  in the process, when it succeeds and when it raises, exits or is
-  interrupted, is pinned once, in ``test_cells.py``.
+- with ``--interactive`` the cell runs in the shell's namespace, sees its
+  arguments and ``__name__``, and the magic returns its trial (#313). What
+  such a cell leaves in the process, when it succeeds and when it raises,
+  exits or is interrupted, is pinned once, in ``test_cells.py``.
 
 Each known defect has a characterization named after the scenario and a
 ``_desired`` twin through ``known_defects``. The ``now`` the magic starts
@@ -58,20 +62,12 @@ from noworkflow.tests.helpers import leaks
 from noworkflow.tests.helpers.defects import Defect, known_defects
 
 from .support import (
-    INTERACTIVE_IMPORT,
-    collection_leftovers,
     command_line,
     open_shell,
     ran,
     trial_count,
 )
 
-RETURNS_NO_TRIAL = Defect(
-    "#313: magics/now_run.py NowRun.execute reads the trial back with "
-    "Trial(int(...)) from <dir>/.last_trial, and trial ids are UUIDs: it "
-    "prints 'Failed invalid literal for int()' and returns None",
-    signature="Failed invalid literal for int()",
-)
 NO_SCRIPT = Defect(
     "#392: magics/now_run.py NowRun.execute takes "
     "params[0] as the script of the line magic without checking that the "
@@ -95,9 +91,9 @@ QUOTED_DIR = Defect(
     "its quotes; magics/now_run.py NowRun.execute connects to it "
     "(persistence_config.connect), a relative path that starts with the "
     "quote, which creates a store in a directory tree named after it under "
-    "the current directory, and reads .last_trial from there ('Failed "
-    "[Errno 2]'), while the 'now run ...' line it builds takes --dir from "
-    "the POSIX split, without the quotes",
+    "the current directory, and reads .last_trial from there (none: 'No "
+    "trial was stored'), while the 'now run ...' line it builds takes "
+    "--dir from the POSIX split, without the quotes",
     signature="the magic connected to the quoted --dir",
 )
 NOW_FROM_PATH = Defect(
@@ -108,24 +104,15 @@ NOW_FROM_PATH = Defect(
     "first, another installation's included",
     signature="another now on PATH",
 )
-STALE_LAST_TRIAL = Defect(
-    "#387: magics/now_run.py NowRun.execute reads "
-    "<dir>/.last_trial whatever ScriptMagics.shebang did: when `now` cannot "
-    'be started (shebang prints "Couldn\'t find program" and returns) or '
-    "runs in the background (--bg returns at once), the file still names "
-    "the previous run's trial",
-    signature="the magic read the .last_trial of the previous run",
-)
 CONTENT_ENGINE = Defect(
     "#392: magics/now_run.py NowRun.execute assigns "
     "persistence_config.content_engine = args.content_engine (None when "
     "the line gives no --content-engine) before it connects, and "
     "Metascript._read_args (collection/metadata.py, which "
-    "read_ipython_args calls) assigns it again; the finally of execute "
-    "connects back to the previous path but never puts the setting back, "
-    "so after every %now_run, one that fails included (the IndexError of "
-    "a line without a script, #313's import of --interactive), the "
-    "process's content engine setting is the line's",
+    "read_ipython_args calls) assigns it again, and nothing puts the "
+    "setting back, so after every %now_run, one that fails included (the "
+    "IndexError of a line without a script), the process's content engine "
+    "setting is the line's",
     signature="the content engine setting stayed at the line's",
 )
 
@@ -162,15 +149,9 @@ empty_path = pytest.mark.skipif(
     reason="on Windows CreateProcess searches directories outside PATH "
     "first, so an empty PATH may not hide `now`; not measured",
 )
-lacks_py3compat = pytest.mark.skipif(
-    not INTERACTIVE_IMPORT.condition,
-    reason="this IPython still has IPython.utils.py3compat",
-)
-
-
-def failed_int(trial_id):
-    """What #313 prints after a run, naming the trial it could not read"""
-    return "Failed invalid literal for int() with base 10: '{}'".format(trial_id)
+# What the magic prints when no new trial was written.
+NO_TRIAL = "No trial was stored"
+IN_BACKGROUND = "The trial is stored when the run in the background ends"
 
 
 def scripts_and_statuses(project):
@@ -220,11 +201,10 @@ def run_with_path(shell, code, path):
 
 def test_now_run_of_a_script(shell):
     """``%now_run script args`` records the trial with ``now run`` and
-    returns None
+    returns it (#313)
 
     The script gets the line's arguments, and ``.last_trial`` names the
-    trial. Characterization of #313: the magic prints why it could not
-    read the trial back.
+    trial the magic returns.
     """
     project = shell.project
     project.write("script.py", SCRIPT)
@@ -234,29 +214,53 @@ def test_now_run_of_a_script(shell):
     assert scripts_and_statuses(project) == [("script.py", "finished")]
     trial_id = trial_ids(project)[0]
     assert shell.last_trial_id() == trial_id
-    printed = failed_int(trial_id) in cell.stdout
-    assert printed, cell.describe()
-    returned = shell.user_ns["trial"] is None
+    returned = getattr(shell.user_ns.get("trial"), "id", None) == trial_id
     assert returned, cell.describe()
 
 
-@known_defects(RETURNS_NO_TRIAL)
-def test_now_run_of_a_script_desired(shell):
-    """``%now_run script args`` returns the trial it recorded"""
-    shell.project.write("script.py", SCRIPT)
-    cell = shell.run("trial = %now_run script.py a1 b2")
-    returned = getattr(shell.user_ns.get("trial"), "id", None)
-    expected = shell.last_trial_id()
-    assert expected is not None and returned == expected, cell.describe()
+def recorded_executable_cap(project, trial_id):
+    """The ``--executable-cap`` a trial recorded, in bytes"""
+    rows = project.query(
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'executable_cap'",
+        trial_id,
+    )
+    return [ast.literal_eval(row["value"]) for row in rows]
+
+
+def test_now_run_takes_the_executable_cap_of_now_run(shell):
+    """``%now_run --executable-cap 2K`` reaches ``now run``, which records
+    it with the trial (#463)"""
+    project = shell.project
+    project.write("script.py", SCRIPT)
+    cell = shell.run("%now_run --executable-cap 2K script.py a1")
+    assert cell.success and "script argv ['a1']" in cell.stdout, cell.describe()
+    (trial_id,) = trial_ids(project)
+    assert recorded_executable_cap(project, trial_id) == [2048]
+
+
+def test_interactive_cell_takes_the_executable_cap(shell):
+    """``%%now_run --interactive --executable-cap 3K``: the magic's own
+    parser, which it inherits from ``now run``, reads the option, and the
+    trial records it (#463)"""
+    project = shell.project
+    try:
+        cell = shell.run(
+            "%%now_run --interactive --executable-cap 3K --name cellX\nvalue = 1"
+        )
+    finally:
+        leaks.undo_collection()
+    assert cell.success, cell.describe()
+    (trial_id,) = trial_ids(project)
+    assert recorded_executable_cap(project, trial_id) == [3072]
 
 
 def test_now_run_of_a_cell(shell):
-    """``%%now_run`` records the cell as a trial and returns None
+    """``%%now_run`` records the cell as a trial and returns it (#313)
 
     The cell runs as a script: the line's arguments with ``$name``
     expanded from the namespace, the trial named after ``--name``, the
     cell written to a temporary file in ``tempfile``'s directory (the
-    project's tmp here). Characterization of #313.
+    project's tmp here).
     """
     project = shell.project
     shell.ok("count = 3")
@@ -275,19 +279,8 @@ def test_now_run_of_a_cell(shell):
         os.path.dirname(os.path.dirname(cell_file)), project.tmp
     )
     assert in_tmp, "the cell is not a now_run_ file in the project's tmp"
-    printed = failed_int(trial_id) in cell.stdout
-    assert printed, cell.describe()
-    returned = cell.result is None
+    returned = getattr(cell.result, "id", None) == trial_id
     assert returned, cell.describe()
-
-
-@known_defects(RETURNS_NO_TRIAL)
-def test_now_run_of_a_cell_desired(shell):
-    """``%%now_run`` returns the trial it recorded"""
-    cell = shell.run("%%now_run --name cellA\nprint('in the cell')")
-    returned = getattr(cell.result, "id", None)
-    expected = shell.last_trial_id()
-    assert expected is not None and returned == expected, cell.describe()
 
 
 @posix_split
@@ -308,23 +301,60 @@ def test_now_run_keeps_a_quoted_argument_whole(shell, code, printed):
     assert trial_count(shell.project) == 1
 
 
-def test_now_run_with_dir_records_the_trial_in_that_store(shell):
-    """``%now_run --dir OTHER script`` records the trial in OTHER's store,
-    writes OTHER's ``.last_trial`` and reads it back from there; the
-    script's path is relative to the current directory, not to OTHER"""
+def other_project_with_a_script(shell):
+    """A project OTHER beside the shell's, with a script; the script's path
+    relative to the shell's directory"""
     other = NowProject(shell.project.root / "other")
     other.write("script.py", "print('elsewhere')\n")
-    script = os.path.relpath(other.path / "script.py", shell.project.path)
-    cell = ran(shell, "%now_run --dir {} {}".format(other.path, script))
+    return other, os.path.relpath(other.path / "script.py", shell.project.path)
+
+
+def test_now_run_with_dir_records_the_trial_in_that_store(shell):
+    """``%now_run --dir OTHER script`` records the trial in OTHER's store,
+    writes OTHER's ``.last_trial``, returns the trial and stays connected
+    to OTHER's store, where the trial is displayed from; the script's path
+    is relative to the current directory, not to OTHER"""
+    other, script = other_project_with_a_script(shell)
+    cell = ran(shell, "trial = %now_run --dir {} {}".format(other.path, script))
     assert scripts_and_statuses(other) == [("script.py", "finished")]
     trial_id = trial_ids(other)[0]
     assert recorded_argv(other, trial_id) == [script]
     named = (other.path / ".last_trial").read_text(encoding="utf-8")
     assert named == trial_id
-    printed = "elsewhere" in cell.stdout and failed_int(trial_id) in cell.stdout
-    assert printed, cell.describe()
+    returned = "elsewhere" in cell.stdout and (
+        getattr(shell.user_ns.get("trial"), "id", None) == trial_id
+    )
+    assert returned, cell.describe()
+    connected = same_path(persistence_config.path, other.path)
+    assert connected, "the shell is not connected to OTHER's store"
+    shown = shell.run("trial")
+    displayed = shown.success and "Traceback" not in shown.stdout + shown.stderr
+    assert displayed, shown.describe()
     assert trial_count(shell.project) == 0
     assert shell.last_trial_id() is None
+
+
+def test_now_run_after_one_with_dir_connects_back(shell):
+    """A ``%now_run`` without ``--dir`` after one with it records the trial
+    in the current directory, returns it and connects the shell back to
+    the current directory's store; the trial of OTHER then says which
+    store it belongs to when it reads its relations, instead of failing on
+    a row it cannot find"""
+    other, script = other_project_with_a_script(shell)
+    project = shell.project
+    project.write("script.py", RAN)
+    ran(shell, "first = %now_run --dir {} {}".format(other.path, script))
+    cell = ran(shell, "second = %now_run script.py")
+    trial_id = trial_ids(project)[0]
+    returned = getattr(shell.user_ns.get("second"), "id", None) == trial_id
+    assert returned, cell.describe()
+    connected = same_path(persistence_config.path, project.path)
+    assert connected, "the shell is not connected back to the project's store"
+    foreign = shell.run("list(first.modules)")
+    said = foreign.error_type == "RuntimeError" and (
+        "belongs to the store in" in str(foreign.error)
+    )
+    assert said, foreign.describe()
 
 
 NO_SCRIPT_LINES = pytest.mark.parametrize(
@@ -337,7 +367,7 @@ NO_SCRIPT_LINES = pytest.mark.parametrize(
 @NO_SCRIPT_LINES
 def test_now_run_without_a_script(shell, line):
     """A line magic that names no script fails with an IndexError before
-    any process starts, ``--interactive`` before #313's import, and
+    any process starts, ``--interactive`` before the collector, and
     records no trial (characterization of #392)"""
     ran(shell, line, "IndexError: list index out of range")
     assert trial_count(shell.project) == 0
@@ -364,10 +394,9 @@ CONTENT_ENGINE_LINES = pytest.mark.parametrize(
             "%now_run --content-engine sequential_plain",
             "IndexError: list index out of range",
         ),
-        pytest.param(
+        (
             "%%now_run --interactive --content-engine sequential_plain\nx = 1",
-            "ModuleNotFoundError: No module named 'IPython.utils.py3compat'",
-            marks=lacks_py3compat,
+            "ok",
         ),
         ("%now_run --content-engine sequential_plain script.py", "ok"),
     ],
@@ -380,12 +409,19 @@ def test_content_engine_setting_after_now_run(project, code, ending):
     """After a ``%now_run``, one that fails before it runs anything
     included, the process's content engine setting is the line's
     ``--content-engine``; the shell puts it back when it closes
-    (characterization of #392)"""
+    (characterization of #392)
+
+    What an ``--interactive`` cell leaves in the process is undone
+    (``test_cells.py`` pins it).
+    """
     outside = persistence_config.content_engine
     project.write("script.py", RAN)
     with open_shell(project) as shell:
         before = persistence_config.content_engine
-        ran(shell, code, ending)
+        try:
+            ran(shell, code, ending)
+        finally:
+            leaks.undo_collection()
         after = persistence_config.content_engine
     assert (before, after) == ("plain", "sequential_plain")
     back = persistence_config.content_engine == outside
@@ -493,9 +529,7 @@ def check_quoted_dir_desired(shell, name):
         "the magic connected to the quoted --dir, a path relative to the "
         "current directory\n" + cell.describe()
     )
-    recorded = (
-        cell.success and "Failed [Errno 2]" not in cell.stdout and other.store.is_dir()
-    )
+    recorded = cell.success and NO_TRIAL not in cell.stdout and other.store.is_dir()
     assert recorded, cell.describe()
     assert scripts_and_statuses(other) == [("script.py", "finished")]
     assert added == []
@@ -506,17 +540,13 @@ def test_now_run_with_a_quoted_dir(shell):
     """``%now_run --dir 'OTHER' script``: ``now run`` records the trial in
     OTHER's store, but the magic keeps the quotes of ``--dir``: it connects
     to a path relative to the current directory, which creates a store
-    under a directory named ``'`` there, and reads ``.last_trial`` from it
-    (characterization of #385, its quoted --dir door)"""
+    under a directory named ``'`` there, and looks for ``.last_trial``
+    there, where there is none, so it returns no trial (characterization
+    of #385, its quoted --dir door)"""
     cell, other, connected, added = run_with_a_quoted_dir(shell, "other")
     assert connected, "no store where the quoted --dir leads"
     assert added == ["'"]
-    failed = (
-        cell.success
-        and "ran" in cell.stdout
-        and "Failed [Errno 2] No such file or directory" in cell.stdout
-        and "'/.last_trial" in cell.stdout
-    )
+    failed = cell.success and "ran" in cell.stdout and NO_TRIAL in cell.stdout
     assert failed, cell.describe()
     assert scripts_and_statuses(other) == [("script.py", "finished")]
     assert trial_count(shell.project) == 0
@@ -587,10 +617,9 @@ def test_now_run_with_another_now_first_on_path_desired(shell, form):
 @empty_path
 def test_now_run_when_now_cannot_start(shell):
     """When ``now`` is not on PATH, ``%now_run`` prints that it could not
-    find it, the cell still succeeds, and the magic reads the
-    ``.last_trial`` of the previous run (characterization of
-    #387; the id shows in #313's message)
-    """
+    find it and that no trial was stored, the cell still succeeds (as
+    ``%%script`` does when it cannot find its program), and the magic
+    returns no trial, never the previous run's (#387)"""
     project = shell.project
     project.write("script.py", RAN)
     shell.ok("%now_run script.py")
@@ -598,45 +627,21 @@ def test_now_run_when_now_cannot_start(shell):
     empty = project.root / "empty"
     empty.mkdir()
     cell = run_with_path(shell, "trial = %now_run script.py", empty)
-    missing = cell.success and "Couldn't find program: 'now'" in cell.stdout
-    assert missing, cell.describe()
-    stale = (
-        failed_int(previous) in cell.stdout
-        or getattr(shell.user_ns.get("trial"), "id", None) == previous
+    missing = (
+        cell.success
+        and "Couldn't find program: 'now'" in cell.stdout
+        and NO_TRIAL in cell.stdout
     )
-    assert stale, cell.describe()
+    assert missing, cell.describe()
+    stale = previous in cell.stdout or shell.user_ns.get("trial") is not None
+    assert not stale, cell.describe()
     assert trial_count(project) == 1
 
 
-@empty_path
-@known_defects(STALE_LAST_TRIAL)
-def test_now_run_when_now_cannot_start_desired(shell):
-    """When ``now`` cannot start, ``%now_run`` never hands the previous
-    run's trial back
-
-    Whether the cell should fail as well is not stated here: ``%%script``
-    itself succeeds when it cannot find its program.
-    """
-    project = shell.project
-    project.write("script.py", RAN)
-    shell.ok("%now_run script.py")
-    previous = shell.last_trial_id()
-    empty = project.root / "empty"
-    empty.mkdir()
-    cell = run_with_path(shell, "trial = %now_run script.py", empty)
-    stale = (
-        previous in cell.stdout
-        or getattr(shell.user_ns.get("trial"), "id", None) == previous
-    )
-    assert not stale, (
-        "the magic read the .last_trial of the previous run\n" + cell.describe()
-    )
-
-
 def test_now_run_in_the_background(shell):
-    """``%now_run --bg`` returns while ``now run`` goes on, and reads the
-    ``.last_trial`` of the previous run; the trial of the background run is
-    recorded once it ends (characterization of #387)
+    """``%now_run --bg`` returns while ``now run`` goes on, with no trial
+    and a line that says when it will be stored, never the previous run's
+    (#387); the trial of the background run is recorded once it ends
 
     The script waits for ``go``, which the test creates after the cell, so
     the background run cannot write ``.last_trial`` before the magic reads
@@ -650,38 +655,16 @@ def test_now_run_in_the_background(shell):
     cell = ran(shell, "trial = %now_run --bg gated.py")
     (project.path / "go").write_text("", encoding="utf-8")
     returncode = wait_last_child(shell)
-    stale = (
-        failed_int(previous) in cell.stdout
-        or getattr(shell.user_ns.get("trial"), "id", None) == previous
-    )
-    assert stale, cell.describe()
+    said = IN_BACKGROUND in cell.stdout
+    assert said, cell.describe()
+    stale = previous in cell.stdout or shell.user_ns.get("trial") is not None
+    assert not stale, cell.describe()
     assert returncode == 0
     assert scripts_and_statuses(project) == [
         ("script.py", "finished"),
         ("gated.py", "finished"),
     ]
     assert shell.last_trial_id() == trial_ids(project)[1]
-
-
-@known_defects(STALE_LAST_TRIAL)
-def test_now_run_in_the_background_desired(shell):
-    """``%now_run --bg`` hands back no trial before its run ends, and never
-    the previous run's"""
-    project = shell.project
-    project.write("script.py", RAN)
-    project.write("gated.py", GATED)
-    shell.ok("%now_run script.py")
-    previous = shell.last_trial_id()
-    cell = shell.run("trial = %now_run --bg gated.py")
-    (project.path / "go").write_text("", encoding="utf-8")
-    wait_last_child(shell)
-    stale = (
-        previous in cell.stdout
-        or getattr(shell.user_ns.get("trial"), "id", None) == previous
-    )
-    assert not stale, (
-        "the magic read the .last_trial of the previous run\n" + cell.describe()
-    )
 
 
 def test_now_run_with_out_keeps_the_output_in_a_variable(shell):
@@ -757,45 +740,11 @@ def run_interactive_cell(shell):
     return cell, [name for name, holds in checks.items() if not holds]
 
 
-@lacks_py3compat
 def test_interactive_cell(shell):
-    """``%%now_run --interactive`` fails on its import of
-    ``IPython.utils.py3compat`` before it runs the cell: no trial, no name
-    of the cell in the namespace, nothing of a collection left in the
-    process (characterization of #313)
-
-    ``test_cells.py`` pins that the next plain cell is untouched.
-    """
-    argv, path0 = list(sys.argv), sys.path[0]
-    shell.ok("arg = 4")
-    ran(
-        shell,
-        INTERACTIVE_CELL,
-        "ModuleNotFoundError: No module named 'IPython.utils.py3compat'",
-    )
-    assert "count" not in shell.user_ns
-    assert trial_count(shell.project) == 0
-    assert collection_leftovers() == []
-    untouched = sys.argv == argv and sys.path[0] == path0
-    assert untouched, "sys.argv or sys.path[0] changed"
-
-
-@known_defects(INTERACTIVE_IMPORT)
-def test_interactive_cell_desired(shell):
     """``%%now_run --interactive`` runs the cell in the shell's namespace,
-    as the script ``__main__`` with the line's arguments, and returns the
-    trial it recorded"""
-    cell, failed = run_interactive_cell(shell)
-    assert failed == [], "does not hold: {}\n{}".format(
-        "; ".join(failed), cell.describe()
-    )
-
-
-def test_interactive_cell_past_the_import(stand_in, shell):
-    """Past #313's import (the stand-in), an ``--interactive`` cell runs
-    in the shell's namespace as the script ``__main__``, with the cell's
-    file and the line's arguments in ``sys.argv``, and the magic returns
-    the trial it recorded, without writing ``.last_trial``"""
+    as the script ``__main__`` with the cell's file and the line's
+    arguments in ``sys.argv``, and returns the trial it recorded, without
+    writing ``.last_trial`` (#313)"""
     cell, failed = run_interactive_cell(shell)
     assert failed == [], "does not hold: {}\n{}".format(
         "; ".join(failed), cell.describe()

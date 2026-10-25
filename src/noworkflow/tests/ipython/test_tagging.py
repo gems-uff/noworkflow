@@ -579,8 +579,8 @@ def test_backward_deps_of_a_trial_without_values(connected_tags, fake_collector)
 
     Characterization of #392. No route of the
     product reaches it today: inside ``now run`` the running trial is not
-    in the store yet, and the kernel, which records every value, does not
-    start (#315); a fake ``__noworkflow__`` names the stored trial.
+    in the store yet, and the kernel always records every value; a fake
+    ``__noworkflow__`` names the stored trial.
     """
     fake_collector(trial_ids(connected_tags)[1])
     for helper in (var_tagging.backward_deps, var_tagging.global_backward_deps):

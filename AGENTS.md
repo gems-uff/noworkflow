@@ -14,7 +14,11 @@ Before writing a procedure, check what already exists:
 
 - `README.md`: installing noWorkflow as a **user** (`pip install`) and the
   usage of every command. It is not how to set up a development
-  environment.
+  environment. It is also the PyPI page, and
+  `src/noworkflow/tests/e2e/test_readme.py` holds it to the tool: a red
+  there means the tool regressed or the README must follow it, and the
+  maintainer decides which; the expectation is never edited only to make
+  the test pass.
 - `CONTRIBUTING.md`: the development environment (what to install on a new
   machine, and how to set up `.venv`), the commands to run locally, and the
   contribution cycle (issue, branch, commit, PR).
@@ -257,21 +261,24 @@ run `now` as a process on a real store in a temporary directory. What
 neither executes:
 
 - **Commands the e2e tests do not run:** `vis` (the server; its routes run
-  in process, see below), `push`, `pull`, `kernel`, `debug`, `evaluation`
+  in process, and the server as a process only under the browser tests
+  and as the server of push and pull, see below), `debug`, `evaluation`
   (its query options run through `clean`), and `demo` outside the reference
   leg (see below). For the commands they do run, only the flags their tests
   name are covered.
-- **`now vis`:** the write routes (experiments, groups, annotations,
-  remotes, the collaboration import and the files it receives) and push
-  and pull against them (#256), in the server and in the JavaScript; the
-  views the browser tests do not open (below). The read routes,
-  `/db/query` included, run in process through Flask's test client
-  (`src/noworkflow/tests/vis/`) on stores that `now run` builds in a
-  temporary directory; the rows only push and pull create are added through
-  the models or in SQL. There the `/commands/*` routes that start `now` run
-  with `subprocess.run` replaced, so only the argv they build and how they
-  answer are checked. The JavaScript and the server as a process run only
-  in the `vis-browser` job of `ci.yml` (`src/noworkflow/tests/browser/`,
+- **`now vis`:** the write routes (groups, annotations, remotes, the
+  experiment routes besides its creation; #256), in the server and in the
+  JavaScript; the views the browser tests do not open (below). The routes
+  push and pull go through (the creation of an experiment, the files, the
+  bundle and its import) run only under `e2e/test_collaboration.py`, on a
+  server started as a process. The read routes, `/db/query` included,
+  run in process through Flask's test client (`src/noworkflow/tests/vis/`)
+  on stores that `now run` builds in a temporary directory; there the rows
+  only push and pull create are added through the models or in SQL, and
+  the `/commands/*` routes that start `now` run with `subprocess.run`
+  replaced, so only the argv they build and how they answer are checked.
+  The JavaScript, and the server's pages, run only in the `vis-browser`
+  job of `ci.yml` (`src/noworkflow/tests/browser/`,
   marked `browser`, deselected on every other leg): `now vis` on a real
   port and the committed bundle in headless Chrome, through the history,
   a trial, the diff, the dataflow and the Prolog export (the only places
@@ -283,7 +290,8 @@ neither executes:
   `flow.pdf` is checked only where Graphviz's `dot` is on the PATH, which
   the Linux and macOS legs install and the Windows legs do not, and
   `prospective.dot` is drawn for a handful of scripts. The `frontend` job proves that the committed bundle matches the
-  sources, that the extension type-checks and that the count of `tsc`
+  sources, that the extension type-checks, that every frontend package
+  lints clean (stylelint, prettier, eslint) and that the count of `tsc`
   errors of the vis does not grow. By hand, `golden-run` (step 4) and the
   smoke of `rebuild-vis` fetch the routes `read_store.py` lists from a
   corpus store, and `compare_vis.mjs` of `rebuild-vis` shows everything a
@@ -312,13 +320,27 @@ neither executes:
   `os.posix_spawn` skip on Windows, and spawn and forkserver (#325, #334)
   run nowhere.
 - **External processes and compiled code:** `test_external_processes.py`
-  pins what the store records when a traced script starts a process, and
+  pins what the store records when a traced script starts a process (the
+  call, and since #202 the files the child's command line names and the
+  files it creates, as accesses of the call), and
   `test_compiled_modules.py` how an extension module of the standard
   library and a library loaded through `ctypes` are recorded (`_dbm` on
-  POSIX, `winsound` on Windows, which only `pre-release.yml` runs). #202 and
-  #203 change these characterizations on purpose. The leak detector sees
-  the children of the pytest process only, never what a `now` run as a
-  process leaves behind.
+  POSIX, `winsound` on Windows, which only `pre-release.yml` runs), and,
+  since #203, the program a launch runs (the interpreter, under the name
+  the command line gives it) as a module row. What the external
+  process tracer (`prov_execution/external.py`) does on Windows, where
+  `subprocess` hands the audit hook one command-line string,
+  `os.spawn*` is a launch and `shutil.which` resolves a program with the
+  extensions of `PATHEXT`, runs only in `pre-release.yml`; the version
+  probe runs on `python` in the suite and on `Rscript` and `cc` only in
+  `test_beyond_python.py`; a child of
+  `os.fork` or `multiprocessing` is not a launch and is tested as not
+  recorded; the `strace` backend has no test anywhere until #206
+  installs `strace` on a leg; and the kernel's own use of the tracer
+  (around each cell, `kernel/shell.py`) runs for one `subprocess.run`
+  and one `%%bash` cell only (`e2e/test_kernel.py`; the `%%bash` cell
+  skips on Windows). The leak detector sees the children of the pytest
+  process only, never what a `now` run as a process leaves behind.
 - **The exports off the reference leg:** goldens compare `prolog`, `prov`,
   `dataflow` and `prospective` on the reference leg only (Linux, the newest
   blocking Python); on every other leg nothing compares their output.
@@ -327,7 +349,14 @@ neither executes:
 - **The paper's running example off the reference platform:** the
   `paper-example` job replays it on Linux with the reference leg's Python
   only; the claims that depend on noWorkflow's numbering, and its goldens,
-  are skipped anywhere else, and no other leg runs it at all.
+  are skipped anywhere else, and no other leg runs it at all. The same
+  goes for the case study of the "Beyond Python" section
+  (`test_beyond_python.py`), the only tests that run R and a C compiler:
+  the job and the reference container install `r-base-core`, every other
+  leg deselects `paper`, and a maintainer's machine without `Rscript`
+  skips them. Its strace variant runs nowhere until #206 installs
+  `strace` on a leg, and its two claims under rdtLite run only where the
+  rdtLite package is installed in R, which no leg does.
 - **The optional content engines** (`dulwich`, `pygit`, `gitdb`): only the
   `engines` job of `ci.yml` installs them (the `engines` group) and runs
   the tests marked `engines`, the contract tests of
@@ -346,22 +375,33 @@ neither executes:
   install it, and so do the Linux and macOS legs of `pre-release.yml`; its
   Windows legs do not.
 - **Jupyter:** the magics run in an in-process IPython shell
-  (`src/noworkflow/tests/ipython/`), never under a kernel: the kernel in
-  `src/noworkflow/kernel/` is only imported (#315), so `now clean` never
-  meets a notebook trial, and the lab extension has no automated test:
-  only the type-check of the `frontend` job reaches it, so an update of
+  (`src/noworkflow/tests/ipython/`), never under a kernel. The kernel runs
+  as a process only in `e2e/test_kernel.py`: started through
+  `jupyter_client` from the kernelspec `now kernel` installs, from the
+  checkout on every leg and from the built wheel in the `checks` job of
+  `ci.yml`, for a handful of cells (their code, a function, the files
+  they open, a launch, a `%%bash` cell, `now clean` on the trial); no
+  other magic, no rich output, no error in a cell and no interrupt
+  runs under it. The lab extension has no automated test:
+  only the type-check and the lint of the `frontend` job reach it, so an update of
   its packages (codemirror, `@jupyterlab/*`) is measured by nothing else.
-  `%%now_run --interactive` gets past #313's import only through a stand-in
-  of the tests. `%%dot` and the diagrams of `%now_schema` skip where
+  `%%dot` and the diagrams of `%now_schema` skip where
   Graphviz's `dot` is missing (the Windows legs of `pre-release.yml`),
   `%%now_prolog` without `pyswip`, which no
   leg installs, and the tagging helpers that import pandas where the
   `paper` group is not synced (it is in the reference container only).
-- **`push`, `pull`, `demo`:** a remote server and the demo projects are
-  exercised by hand or not at all; the exception is `demo 1` (marked `slow`),
-  which the reference leg runs because it syncs the `demo` extra
-  (matplotlib), and which skips on every other leg and on `uv sync --locked`
-  alone.
+- **`push`, `pull`, `import`:** `e2e/test_collaboration.py` runs them
+  between plain stores, push and pull against a `now vis --force true` on
+  a free port of 127.0.0.1 (`NowProject.serve`), and compares what arrives
+  with the source, table by table; their failure paths (an unknown
+  experiment, a server that answers 400, their exit status) are #256's,
+  and stores of different content engines are compared nowhere. Binding
+  the port is refused inside the Claude Code sandbox, as for the browser
+  tests.
+- **`demo`:** the demo projects are exercised by hand or not at all; the
+  exception is `demo 1` (marked `slow`), which the reference leg runs
+  because it syncs the `demo` extra (matplotlib), and which skips on every
+  other leg and on `uv sync --locked` alone.
 - **Deployment provenance:** what gets recorded about the environment
   (`now show -e`) depends on the machine; the e2e tests assert only the
   names of a few attributes and the synthetic user, never the values.
@@ -393,7 +433,10 @@ and what came out, in the PR.
   through SQLAlchemy, subprocess through `utils/functions.py`), more or
   fewer by how it starts and by the interpreter's build (#380). A test of
   the module table imports a module measured absent at the top of a traced
-  script, such as `_dbm`.
+  script, such as `_dbm`. Besides them, the table holds the program each
+  launch runs and each library `ctypes` loads by a path (#203), named as
+  the script names them; a program of the project is then a local module,
+  which `now restore` puts back like an imported one.
 - **A child of `os.fork()` in a traced script runs `now`'s epilogue** when
   it leaves through `sys.exit` or by returning: it stores the trial again,
   prints `[now]` lines and exits 0 (#375). A corpus script ends its forked
@@ -453,9 +496,7 @@ and what came out, in the PR.
   records the whole `os.environ`, the start time, the pid. A diff that shows
   only those is "no change". `src/noworkflow/tests/e2e/normalize.py` masks
   what differs between two identical runs; anything it leaves is a real
-  difference, with one known exception: on Python 3.11 the order of the
-  blocks `now diff` prints can change from run to run (#248: it iterates
-  sets whose hash includes `None`, which is address-based before 3.12).
+  difference.
 - **`now demo` depends on `sys.argv[0]` being the console script:** it calls
   `now` through the shell with that path (`src/noworkflow/now/cmd/cmd_demo.py`).
   Through `python -m noworkflow` or from a test, `sys.argv[0]` is something
@@ -475,10 +516,31 @@ and therefore the first suspects when an upgrade breaks something:
   `now_tag_variable` into `builtins`, and inserts a finder at the front of
   `sys.meta_path` around the `exec` of the script, and removes it in a
   `finally`, whichever way the script leaves.
+- `src/noworkflow/now/collection/prov_execution/external.py`: installs an
+  audit hook (`sys.addaudithook`, which no process can remove: it stays
+  inert when no collection traces) that reads the `subprocess.Popen`,
+  `os.system`, `os.posix_spawn`, `os.spawn`, `os.exec` and `ctypes.dlopen`
+  events as CPython raises them, with the arguments each one carries
+  (the version probe of a program starts a process from inside the hook,
+  under `suspended()` and `use_safe_open()`, before the user's launch is
+  bound); and, around
+  the `exec` of the script (and around each cell in the kernel), replaces
+  `subprocess.Popen.__init__`, `wait` and `poll` with wrappers that bind a
+  launch to its `Popen` and see its end through `returncode`, which is
+  where `run`, `check_output`, `communicate` and `with Popen` meet. The
+  class is not replaced, and the originals come back in the same
+  `finally` as the finder.
 - `src/noworkflow/now/persistence/content/safeopen.py`: keeps the original
   `open`s and restores them in a context manager; also pokes at
   `__builtins__["open"]`, which is a dict or a module depending on who imports
   it.
+- `src/noworkflow/kernel/shell.py`: replaces the kernel shell's
+  `run_cell`, passing on whatever keyword arguments IPython's takes
+  (ipykernel picks them from the signature of `run_cell_async`), and
+  IPython's `CachingCompiler` class with one that parses through the
+  collector; and wraps, besides the builtins, the `open` IPython puts in
+  the user namespace, which shadows the builtin. All of it lasts the
+  whole kernel process.
 - `src/noworkflow/now/ipython/magics/now_run.py`: swaps `sys.argv`,
   `sys.path[0]` and `sys.modules["__main__"]` for the shell's user module
   while the cell runs, and swaps them back by hand.
@@ -520,7 +582,10 @@ purpose:
    on the copy in `src/noworkflow/tests/e2e/corpus/paper_example/` (its
    README names the tag) and checks what the paper shows, one test per
    figure or listing, in the `paper-example` job of `ci.yml`, so that a
-   change here cannot contradict the paper without a red build.
+   change here cannot contradict the paper without a red build. It also
+   mirrors each run of the sequence: plain Python against `now run` under
+   each configuration the paper uses (the default, `-cg` and the depth
+   limits of its evaluation), compared as the oracle compares.
 
 A change to the example, or to what the paper shows of it, in any of the
 three is carried to the other two. When the test of the example turns red,
@@ -528,6 +593,23 @@ the maintainer decides whether the change regressed or the paper and the
 package must follow it; the expectation is never edited just to make the
 test pass. When the package gets a new tag, the copy in the tests follows in
 the same commit.
+
+The case study of the paper's "Beyond Python" section is a second example
+in the same three places: a Python wrapper that launches an R script and a
+C program, in `beyond-python/` of the package and in
+`src/noworkflow/tests/e2e/corpus/beyond_python/` here, replayed by
+`src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job,
+mirrors included (with `--external-tracer none` among the configurations).
+`Examples/glue_pipeline/` ships the same files to users, byte for byte
+the corpus copy (`test_repository_examples.py` fails when they differ),
+so a change to the corpus is copied there in the same commit. The tests
+of the case study need `Rscript` and `cc` and skip without them (the job sets
+`NOW_RSCRIPT=require`). The claims that only #206 and #207 can
+satisfy are `_desired` twins, `xfail(strict=True)` through
+`known_defects` with the signature of today's failure; the issue that
+makes one pass removes the mark in its own commit, and the issue that
+changes how one fails rewrites its signature. The map is the module's
+docstring.
 
 ## Sensitive data
 

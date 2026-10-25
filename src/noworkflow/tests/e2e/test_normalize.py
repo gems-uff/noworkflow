@@ -11,14 +11,17 @@ blind. This module pins both sides.
   identically in two directories give normalized outputs that are equal,
   and raw outputs that differ wherever there is something to mask (the
   ``export prospective``, ``export dataflow`` and text ``export ast``
-  outputs are byte-identical between stores and only have to stay equal).
+  outputs are byte-identical between stores and only have to stay equal;
+  ``export prov`` differs only in memory addresses, which depend on the
+  system's address space randomization, so its raw output has to hold an
+  address and its normalized output the mask instead).
   The weather twins serve the read-only commands, a pair of their own the
   ``diff -a`` and ``-d`` that write the graph cache, and two stores of the
   dataflow corpus the dataflow exports, as in the goldens. ``export ast``
   is an expected failure in the forms that crash on this Python
-  (``harness.export_ast_failure``). Before Python 3.12, and under a
-  ``NOW_E2E_CMD`` of unknown version, the replaced blocks of ``now diff``
-  are compared in sorted order (#248).
+  (``harness.export_ast_failure``). Under a ``NOW_E2E_CMD`` of unknown
+  version, which may predate the fix of #248, the replaced blocks of ``now
+  diff`` are compared in sorted order.
   Rewriting every volatile token of a real output as another run would
   (``perturb``) does not change its normalized form either.
 - Negative controls: content hashes, sequence keys, tags and line numbers
@@ -73,6 +76,7 @@ from .harness import (
     sha1,
 )
 from .normalize import (
+    ADDRESS,
     Normalizer,
     host_rules,
     path_pattern,
@@ -96,14 +100,13 @@ DATAFLOW_MODES = (
     "fineGrain",
     "all",
 )
-# #248: `now diff` prints the replaced modules, file accesses
-# and environment attributes in the order of a set of pairs
-# (models/diff.py, diff_set). The pairs hash tuples that may hold None, and
-# before Python 3.12 hash(None) comes from the address of None, which ASLR
-# moves: two runs print the blocks in different orders. The version of
-# another installation (NOW_E2E_CMD) is unknown, so it is compared the same
-# way.
-DIFF_SET_ORDER_VARIES = sys.version_info < (3, 12) or not runs_this_interpreter()
+# Before #248 was fixed, `now diff` printed the replaced modules, file
+# accesses and environment attributes in the iteration order of a set of
+# pairs (models/diff.py, diff_set), which changed with the hash seed and,
+# before Python 3.12, with the address of None. This tree prints them in one
+# order; the version of another installation (NOW_E2E_CMD) is unknown, so
+# its blocks are compared sorted.
+DIFF_SET_ORDER_VARIES = not runs_this_interpreter()
 # A `now diff` header whose blocks come from diff_set.
 REPLACED_HEADER = re.compile(r"\[now\] \d+ [\w ]+ replaced:")
 
@@ -177,7 +180,7 @@ def output(project, args):
 
 def sorted_replaced_blocks(text):
     """``text`` with the blocks under each ``[now] N ... replaced:`` header
-    in sorted order (#248)
+    in sorted order, for a ``now`` that may predate the fix of #248
 
     A block starts at a line indented by two spaces (``  Name: ...``,
     ``  Environment attribute ...``) and takes the deeper lines after it.
@@ -250,18 +253,38 @@ def assert_same_output(first, second):
     )
 
 
+# The commands whose raw outputs differ between two stores only in memory
+# addresses. Whether two processes get different addresses depends on the
+# system's address space randomization: Linux under Rosetta on Apple
+# silicon gives both the same layout (measured in the reference container),
+# and the raw outputs come out identical there.
+ADDRESSES_ONLY = {("export", "prov")}
+
+
 def assert_equalized(first, second, args):
     """``now <args>`` prints different raw outputs and equal normalized
-    outputs on the two stores"""
+    outputs on the two stores; for ``ADDRESSES_ONLY``, a raw output with a
+    memory address and normalized outputs with the mask"""
     raw_first, raw_second = output(first, args), output(second, args)
-    differ = raw_first != raw_second
-    assert differ, (
-        "the two stores printed the same raw output: the "
-        "normalizer has nothing to equalize here"
-    )
-    assert_same_output(
-        comparable(first, args, raw_first), comparable(second, args, raw_second)
-    )
+    if tuple(args) in ADDRESSES_ONLY:
+        has_address = ADDRESS.search(raw_first) is not None
+        assert has_address, (
+            "the raw output holds no memory address: the "
+            "normalizer has nothing to equalize here"
+        )
+    else:
+        differ = raw_first != raw_second
+        assert differ, (
+            "the two stores printed the same raw output: the "
+            "normalizer has nothing to equalize here"
+        )
+    normalized_first = comparable(first, args, raw_first)
+    assert_same_output(normalized_first, comparable(second, args, raw_second))
+    if tuple(args) in ADDRESSES_ONLY:
+        masked = "<ADDRESS>" in normalized_first and not ADDRESS.search(
+            normalized_first
+        )
+        assert masked, "the normalized output still holds a memory address"
 
 
 def activation_id(project, name, sequence_key):
@@ -349,9 +372,11 @@ def test_normalizer_equalizes_volatile_fields(twins, args):
     normalized outputs that are equal
 
     The raw outputs differ in the trial UUIDs, the clock, the checkpoints,
-    the project directory or the memory addresses (``export prov`` only in
-    the addresses, which ASLR moves). ``export prolog`` is compared without
-    its environment facts.
+    the project directory or the memory addresses. ``export prov`` differs
+    only in the addresses, which not every system moves between two
+    processes (``ADDRESSES_ONLY``): there the raw output has to hold an
+    address, and the normalized one its mask. ``export prolog`` is compared
+    without its environment facts.
     """
     assert_equalized(*twins, args)
 

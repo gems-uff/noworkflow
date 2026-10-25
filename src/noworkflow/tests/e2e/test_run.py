@@ -26,12 +26,18 @@ outcome. Tracebacks are never compared whole: they hold noWorkflow's own
 line numbers and carets that change with the Python version.
 """
 
+import hashlib
 import os
 import re
 import subprocess
 import sys
 
 import pytest
+
+from noworkflow.now.collection.prov_execution.external import (
+    EXECUTABLE_CAP,
+    PLACEHOLDER,
+)
 
 from ..helpers.defects import Defect, known_defects
 from .harness import (
@@ -643,34 +649,36 @@ def test_run_script_that_keeps_a_cursor_on_its_store_desired(kept_cursor):
 DEPTH_ROWS = "[[0.0, 0.6], [1.0, 0.0]]\n"
 
 
-def test_run_with_a_limited_depth(project):
-    """``-d 1`` changes what the script computes: a list comprehension in a
-    function called below the depth limit comes back empty (characterization
-    of #243)"""
+@pytest.mark.parametrize("depth", ["0", "1", "2", "3"])
+def test_run_with_a_limited_depth_computes_what_python_computes(project, depth):
+    """A depth limit only reduces what is collected: the list comprehension
+    in a function called below the limit keeps its items, and the trial
+    is finished (#243)"""
     project.copy_corpus("depth")
-    result = project.run("run", "-d", "1", "nested.py")
-    assert result.stdout == "[[], []]\n", str(result)
+    result = project.run("run", "-d", depth, "nested.py")
+    assert result.stdout == DEPTH_ROWS, str(result)
     assert only_trial(project)["status"] == "finished"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#243: a depth limit should only reduce "
-    "what is collected, never change what the script computes",
-)
-def test_run_with_a_limited_depth_desired(project):
-    """With ``-d 1`` the script prints what it prints without noWorkflow"""
-    project.copy_corpus("depth")
-    result = project.run("run", "-d", "1", "nested.py")
-    assert result.stdout == DEPTH_ROWS, str(result)
-
-
 def test_run_with_the_default_depth_computes_what_python_computes(project):
-    """Control for the pair above: without ``-d`` the output is the one of
+    """Control for the test above: without ``-d`` the output is the one of
     plain Python"""
     project.copy_corpus("depth")
     assert project.run("run", "nested.py").stdout == DEPTH_ROWS
+
+
+@pytest.mark.parametrize("depth", ["0", "1", "2"])
+def test_run_with_a_limited_depth_writes_what_python_writes(project, depth):
+    """The weather example under a limit that leaves its functions
+    uncollected (``-d 0`` leaves even the script's activation inactive)
+    prints and writes what it does without one: ``csv_read``, three calls
+    deep, fills its rows, so ``extract_column`` finds them (#243)"""
+    build_weather(project)
+    expected = project.files()["output.csv"]
+    result = project.run("run", "-d", depth, *WEATHER_SCRIPT_ARGS)
+    assert result.stdout == "rows: 4\n", str(result)
+    assert project.files()["output.csv"] == expected
+    assert project.trials()[-1]["status"] == "finished"
 
 
 def test_run_bypass_modules_inherits_the_modules_of_the_previous_trial(project):
@@ -712,3 +720,149 @@ def test_run_tags_follow_the_script_code_and_the_command(project):
         [("AUTO", "1.2.1")],
         [("AUTO", "2.1.1")],
     ]
+
+
+# The processes the script starts (#202). What the store records of them is
+# pinned in test_external_processes.py; here the flag and its fallback.
+
+
+def test_run_external_tracer_none_records_nothing_of_the_child(project):
+    """``--external-tracer none``: the child runs and writes its file, and
+    the only access is the parent's own read"""
+    project.copy_corpus("processes")
+    result = project.run("run", "--external-tracer", "none", "run.py")
+    assert result.stdout == "0 child-done\n"
+    assert (project.path / "child_out.txt").read_bytes() == b"child:child input\n"
+    trial = only_trial(project)
+    rows = project.query(
+        "SELECT name, mode FROM file_access WHERE trial_id = ? ORDER BY id",
+        trial["id"],
+    )
+    assert [(row["name"], row["mode"]) for row in rows] == [("parent_in.txt", "r")]
+    arguments = project.query(
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'external_tracer'",
+        trial["id"],
+    )
+    assert [row["value"] for row in arguments] == ["'none'"]
+
+
+def test_run_external_tracer_strace_falls_back_to_argv_with_a_warning(project):
+    """Until #206 lands, ``--external-tracer strace`` records what ``argv``
+    records, warns once on stderr and exits with the script's status"""
+    project.copy_corpus("processes")
+    result = project.run(
+        "run", "--external-tracer", "strace", "run.py", allow_stderr=True
+    )
+    assert result.stdout == "0 child-done\n"
+    assert result.stderr.splitlines() == [
+        "[now] --external-tracer strace is not available yet (#206): "
+        "falling back to argv"
+    ]
+    trial = only_trial(project)
+    rows = project.query(
+        "SELECT name, mode FROM file_access WHERE trial_id = ? ORDER BY id",
+        trial["id"],
+    )
+    assert [(row["name"], row["mode"]) for row in rows] == [
+        ("parent_in.txt", "r"),
+        ("child.py", "r"),
+        ("child_in.txt", "r"),
+        ("child_out.txt", "w"),
+    ]
+
+
+def test_run_external_tracer_rejects_another_value(project):
+    """A value outside none, argv and strace is a usage error (2), and no
+    store is created"""
+    project.copy_corpus("processes")
+    result = project.run(
+        "run", "--external-tracer", "ptrace", "run.py", expect=2, allow_stderr=True
+    )
+    assert "invalid choice: 'ptrace'" in result.stderr
+    assert not project.store.exists()
+
+
+def test_run_help_lists_the_external_tracer(project):
+    """``now run -h`` documents the option and its three values"""
+    result = project.run("run", "-h")
+    assert "--external-tracer {none,argv,strace}" in result.stdout
+
+
+# The size above which the program a process runs is stored as a
+# placeholder with its hash (#463). What restore does with the placeholder
+# is pinned in test_restore.py.
+
+
+@pytest.mark.parametrize(
+    ("value", "cap"),
+    [
+        ("1000", 1000),
+        ("512K", 512 * 1024),
+        ("64M", 64 * 1024 * 1024),
+        ("64m", 64 * 1024 * 1024),
+        ("1G", 1024 * 1024 * 1024),
+        ("0", 0),
+    ],
+)
+def test_run_executable_cap_is_recorded_with_the_trial(project, value, cap):
+    """``--executable-cap`` takes bytes or a K, M or G suffix (powers of
+    1024), and the trial records it in bytes with its other arguments"""
+    project.copy_corpus("processes")
+    result = project.run("run", "--executable-cap", value, "run.py")
+    assert result.stdout == "0 child-done\n"
+    arguments = project.query(
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'executable_cap'",
+        only_trial(project)["id"],
+    )
+    assert [row["value"] for row in arguments] == [repr(cap)]
+
+
+def test_run_without_executable_cap_records_the_default(project):
+    project.copy_corpus("processes")
+    project.run("run", "run.py")
+    arguments = project.query(
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'executable_cap'",
+        only_trial(project)["id"],
+    )
+    assert [row["value"] for row in arguments] == [repr(EXECUTABLE_CAP)]
+
+
+@pytest.mark.parametrize("value", ["16MB", "-1", "1.5M", "M", "", "big"])
+def test_run_executable_cap_rejects_another_value(project, value):
+    """A value that is not a size is a usage error (2), and no store is
+    created"""
+    project.copy_corpus("processes")
+    result = project.run(
+        "run", "--executable-cap", value, "run.py", expect=2, allow_stderr=True
+    )
+    message = "argument --executable-cap: {!r} is not a size".format(value)
+    assert message in result.stderr, result.stderr
+    assert not project.store.exists()
+
+
+def test_run_executable_cap_zero_stores_the_interpreter_as_a_placeholder(project):
+    """``--executable-cap 0``: the interpreter the script launches is a
+    module whose code is the placeholder with the SHA-1 and the size of
+    the file, not its bytes"""
+    project.copy_corpus("processes")
+    project.run("run", "--executable-cap", "0", "run.py")
+    rows = project.query(
+        "SELECT m.path, b.code_hash FROM module m JOIN code_block b "
+        "ON b.trial_id = m.trial_id AND b.id = m.code_block_id "
+        "WHERE m.version LIKE 'Python %'"
+    )
+    assert len(rows) == 1, rows
+    (row,) = rows
+    with open(row["path"], "rb") as handle:
+        data = handle.read()
+    expected = PLACEHOLDER.format(hashlib.sha1(data).hexdigest(), len(data))
+    assert project.content(row["code_hash"]) == expected.encode("ascii")
+
+
+def test_run_help_lists_the_executable_cap(project):
+    """``now run -h`` documents the option among the deployment arguments"""
+    result = project.run("run", "-h")
+    deployment = result.stdout.split("optional deployment arguments")[1]
+    deployment = deployment.split("optional execution arguments")[0]
+    assert "--executable-cap SIZE" in deployment
+    assert "(default: 16M)" in " ".join(deployment.split())

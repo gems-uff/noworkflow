@@ -23,7 +23,16 @@
   },
   "scripts": {
     "build": "tsc",
-    "clean": "rimraf lib"
+    "clean": "rimraf lib",
+    "eslint": "npm run eslint:check -- --fix",
+    "eslint:check": "eslint . --cache",
+    "lint": "npm run stylelint && npm run prettier && npm run eslint",
+    "lint:check": "npm run stylelint:check && npm run prettier:check && npm run eslint:check",
+    "prettier": "npm run prettier:base -- --write --list-different",
+    "prettier:base": "prettier \"**/*{.ts,.tsx,.js,.jsx,.css,.json,.md}\"",
+    "prettier:check": "npm run prettier:base -- --check",
+    "stylelint": "npm run stylelint:check -- --fix",
+    "stylelint:check": "stylelint --cache \"style/**/*.css\""
   },
   "repository": {
     "type": "git",
@@ -35,5 +44,7 @@
     "url": "https://github.com/gems-uff/noworkflow/issues"
   },
   "homepage": "http://gems-uff.github.io/noworkflow",
-  "outputs": ["lib"]
+  "outputs": [
+    "lib"
+  ]
 }

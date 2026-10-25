@@ -25,19 +25,20 @@ nonzero, and that a tag, a sequence key and a trial id name the same trial.
 ``now diff -e`` prints the environment of the machine, so it is never a
 golden: its test checks only which attribute names changed, and never prints
 a value. ``now diff -fa`` compares two function activations; it has no
-golden, and its tests check the sections it prints.
+golden, and its tests check the sections it prints. ``--content`` prints,
+under each replaced file access, the unified diff of its two contents,
+which the tests rebuild from the content store; ``-m`` prints the code hash
+of a replaced module, here a local module edited between two trials
+(#204).
 
-Before Python 3.12 two runs of ``now diff -f`` on the same store may print
-the replaced file accesses in different orders (#248), so a
-test that compares two runs sorts them first.
-
-Known defects are characterized here, each with a ``_desired`` twin marked
-``xfail(strict=True)``: the debug tuples ``-fa`` prints, and the return
-code 0 of ``-fa`` with ids that are not integers or name no function.
+``now diff`` prints the blocks of each section in one order, by name and
+then in the order of the trial, whatever the hash seed of the process
+(#248). A ``NOW_E2E_CMD`` installation may predate that, so a test that
+compares two of its runs sorts the replaced file accesses first.
 """
 
+import difflib
 import re
-import sys
 
 import pytest
 
@@ -145,14 +146,12 @@ def set_order_may_vary(project):
     """Whether two runs of ``now diff -f`` may print the replaced accesses
     in different orders
 
-    ``now diff -f`` prints them in the iteration order of a set of pairs of
-    accesses, and a pair hashes ``content_hash_before``, which is None for a
-    file that did not exist yet. Before Python 3.12 ``hash(None)`` is the
-    address of None, so the order can change from one process to the next
-    even with PYTHONHASHSEED=0 (#248). Under a
+    Before #248 was fixed ``now diff`` printed them in the iteration order
+    of a set, which changes with the hash seed and, before Python 3.12,
+    with the address of None. This tree prints them in one order; under a
     ``NOW_E2E_CMD`` the version of the child is unknown, so it may vary.
     """
-    return not runs_this_interpreter(project.command) or sys.version_info < (3, 12)
+    return not runs_this_interpreter(project.command)
 
 
 def sort_replaced_accesses(stdout):
@@ -417,12 +416,12 @@ def test_diff_files_shows_the_replaced_accesses_with_their_content_hashes(
     ), str(result)
 
 
-def test_diff_hide_timestamps_drops_the_clock_but_keeps_checkpoints(two_trial_project):
+def test_diff_hide_timestamps_drops_the_clock(two_trial_project):
     """``-t`` removes start, finish, duration and access timestamps
 
-    Characterization: the checkpoint of each access (seconds since the
-    trial started) is a column, not the timestamp, so ``-t`` still prints
-    ``Checkpoint changed`` for every replaced access.
+    With or without it, no replaced access prints its checkpoint or its
+    activation id: they differ between any two trials, so the diff leaves
+    them out, as it leaves out the id (#204).
     """
     project = two_trial_project
     shown = project.run("diff", "1", "2", "-f")
@@ -444,9 +443,11 @@ def test_diff_hide_timestamps_drops_the_clock_but_keeps_checkpoints(two_trial_pr
         assert not any(
             line.startswith("Timestamp changed") for line in hidden_blocks[name]
         ), str(hidden)
-        assert any(
-            line.startswith("Checkpoint changed") for line in hidden_blocks[name]
-        ), str(hidden)
+        for lines in (block, hidden_blocks[name]):
+            assert not any(
+                line.startswith(("Checkpoint changed", "Activation id changed"))
+                for line in lines
+            ), "{}: {}".format(name, lines)
 
 
 def test_diff_brief_alone_prints_the_plain_trial_diff(two_trial_project):
@@ -623,35 +624,12 @@ def test_diff_fa_compares_two_activations_with_durations_in_microseconds(
     )
 
 
-def test_diff_fa_debug_output(two_trial_project):
-    """Characterization: ``-fa`` prints ``(access(...)., access(...).)``
+def test_diff_fa_prints_no_debug_tuple(two_trial_project):
+    """``-fa`` prints no ``(access(...)., access(...).)`` line
 
-    One line per file access replaced between the trials (the pair of
-    accesses as Prolog facts), printed while the accesses are filtered by
-    activation, whatever function is compared; the desired twin expects
-    none.
+    Until #204 it printed one per file access replaced between the
+    trials, while it filtered the accesses by activation (#248).
     """
-    project = two_trial_project
-    replaced = replaced_accesses(project.run("diff", "1", "2", "-f", "-t").stdout)
-    assert set(replaced) == {"data2.dat", "output.csv"}
-    tuples = debug_tuples(run_function_diff(project).stdout)
-    assert len(tuples) == len(replaced), "\n".join(tuples)
-    for name in replaced:
-        matching = [line for line in tuples if "'{}'".format(name) in line]
-        assert len(matching) == 1, "{}:\n{}".format(name, "\n".join(tuples))
-    for line in tuples:
-        assert line.count("access(") == 2, line
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "#248: now diff -fa prints a debug tuple per replaced file access to stdout"
-    ),
-)
-def test_diff_fa_debug_output_desired(two_trial_project):
-    """``-fa`` prints no debug tuple"""
     result = run_function_diff(two_trial_project)
     assert "[now] Function output" in lines_of(result.stdout), str(result)
     assert debug_tuples(result.stdout) == [], str(result)
@@ -691,3 +669,225 @@ def test_diff_fa_with_an_id_that_names_no_function(two_trial_project):
         "diff: error: argument -fa/--function-activations: Wrong input. "
         "There isn't a function with the id: {}".format(missing)
     ), str(result)
+
+
+# --- --content and -m (#204) -------------------------------------------------
+
+
+def access_block(stdout, name, mode=None):
+    """The lines of the replaced block of ``name`` (the first one, or the
+    one whose access of the second trial is ``mode``), unstripped"""
+    lines = lines_of(stdout)
+    start = lines.index(ACCESS_NAME + name)
+    end = start + 1
+    while end < len(lines) and not lines[end].startswith((ACCESS_NAME, "[now] ")):
+        end += 1
+    return lines[start:end]
+
+
+def contains_run(lines, run):
+    """Whether ``run`` occurs in ``lines`` as consecutive lines"""
+    return any(lines[i : i + len(run)] == run for i in range(len(lines)))
+
+
+def content_diff(project, name, label1, hash1, label2, hash2):
+    """The unified diff ``--content`` prints between two stored versions"""
+    texts = [project.content(h).decode("utf-8").splitlines() for h in (hash1, hash2)]
+    return list(
+        difflib.unified_diff(
+            texts[0],
+            texts[1],
+            "{} ({})".format(name, label1),
+            "{} ({})".format(name, label2),
+            lineterm="",
+        )
+    )
+
+
+def test_diff_content_prints_the_unified_diff_of_each_replaced_access(
+    two_trial_project,
+):
+    """``-f --content``: under the replaced read of ``data2.dat``, the diff
+    of the two versions it read; under the replaced write of
+    ``output.csv``, which trial 1 created and trial 2 overwrote, a line
+    for the file trial 1 did not have before its write and the diff of the
+    two versions written. Each diff comes from the content store"""
+    project = two_trial_project
+    result = project.run("diff", "1", "2", "-f", "-t", "--content")
+    plain = project.run("diff", "1", "2", "-f", "-t")
+    assert set(replaced_accesses(result.stdout)) == {"data2.dat", "output.csv"}
+
+    read1, read2 = (
+        access_hashes(project, 1, "data2.dat"),
+        access_hashes(project, 2, "data2.dat"),
+    )
+    assert read1[0] == read1[1] and read2[0] == read2[1]
+    block = access_block(result.stdout, "data2.dat")
+    expected = content_diff(
+        project, "data2.dat", "trial 1", read1[0], "trial 2", read2[0]
+    )
+    assert expected[-2:] == ["-4.0:1.0", "+4.0:2.0"], expected
+    assert contains_run(block, expected), "\n".join(block)
+    assert block[: -len(expected) - 1] == access_block(plain.stdout, "data2.dat")[:-1]
+
+    write1, write2 = (
+        access_hashes(project, 1, "output.csv"),
+        access_hashes(project, 2, "output.csv"),
+    )
+    assert write1[0] is None and write2[0] == write1[1]
+    block = access_block(result.stdout, "output.csv")
+    assert "No file before the access in trial 1" in block, "\n".join(block)
+    expected = content_diff(
+        project,
+        "output.csv",
+        "trial 1, after",
+        write1[1],
+        "trial 2, after",
+        write2[1],
+    )
+    assert contains_run(block, expected), "\n".join(block)
+    assert not any(
+        line.startswith("--- output.csv (trial 1, before)") for line in block
+    )
+
+
+def test_diff_content_applies_to_the_accesses_fa_lists(two_trial_project):
+    """``-fa --content`` on the two ``open`` calls that wrote ``output.csv``
+    prints the diff of the versions they wrote under the access the
+    function diff lists"""
+    project = two_trial_project
+    ids = [
+        project.query(
+            "SELECT file_access.activation_id AS id FROM file_access "
+            "JOIN trial ON trial.id = file_access.trial_id "
+            "WHERE trial.sequence_key = ? AND file_access.name = 'output.csv'",
+            key,
+        )[0]["id"]
+        for key in (1, 2)
+    ]
+    result = project.run("diff", "1", "2", "-t", "-fa", *ids, "--content")
+    lines = lines_of(result.stdout)
+    assert "[now] 1 file accesses replaced:" in lines, str(result)
+    block = access_block(result.stdout, "output.csv")
+    expected = content_diff(
+        project,
+        "output.csv",
+        "trial 1, after",
+        access_hashes(project, 1, "output.csv")[1],
+        "trial 2, after",
+        access_hashes(project, 2, "output.csv")[1],
+    )
+    assert contains_run(block, expected), "\n".join(block)
+
+
+@pytest.mark.parametrize(
+    "flags, message",
+    [
+        pytest.param(
+            ("--content",),
+            "argument --content: requires -f/--file-accesses or "
+            "-fa/--function-activations",
+            id="alone",
+        ),
+        pytest.param(
+            ("-m", "--content"),
+            "argument --content: requires -f/--file-accesses or "
+            "-fa/--function-activations",
+            id="with-m",
+        ),
+        pytest.param(
+            ("-f", "--brief", "--content"),
+            "argument --content: not allowed with argument --brief",
+            id="with-brief",
+        ),
+    ],
+)
+def test_diff_content_usage_errors(two_trial_project, flags, message):
+    """``--content`` without ``-f`` or ``-fa``, or with ``--brief``, is a
+    usage error: rc 2, argparse's error on stderr, nothing on stdout"""
+    result = two_trial_project.run(
+        "diff", "1", "2", *flags, expect=2, allow_stderr=True
+    )
+    assert result.stdout == "", str(result)
+    assert last_line(result.stderr).endswith("diff: error: " + message), str(result)
+
+
+MODULE_HEADER = re.compile(r"^\[now\] (\d+) modules (added|removed|replaced):$")
+
+
+def module_sections(stdout):
+    """``{section: {name: [lines]}}`` of the module sections of ``-m``"""
+    sections, section, current = {}, None, None
+    for line in lines_of(stdout):
+        match = MODULE_HEADER.match(line)
+        if match:
+            section = match.group(2)
+            sections[section] = {}
+            continue
+        if line.startswith("[now] "):
+            section = None
+        if section is None:
+            continue
+        if line.startswith(ACCESS_NAME):
+            current = line[len(ACCESS_NAME) :]
+            sections[section][current] = []
+        elif line.strip() and current is not None:
+            sections[section][current].append(line.strip())
+    return sections
+
+
+def test_diff_modules_prints_the_code_hash_of_an_edited_local_module(project):
+    """``-m`` between two trials in which only ``simulator.py``, the local
+    module of the weather corpus, changed: one module replaced, with its
+    code hash changed from the one of trial 1 to the one of trial 2, the
+    SHA-1 of the edited file; the trial id, the code block and the
+    ``transformed`` flag, which differ or say nothing, are not printed"""
+    build_weather(project)
+    append(project, "simulator.py", "\n\nVERSION = 2\n")
+    project.run(*WEATHER_ARGS)
+    rows = project.query(
+        "SELECT trial.sequence_key AS trial, code_block.code_hash AS hash "
+        "FROM module JOIN trial ON trial.id = module.trial_id "
+        "JOIN code_block ON code_block.trial_id = module.trial_id "
+        "AND code_block.id = module.code_block_id "
+        "WHERE module.name = 'simulator' ORDER BY trial.sequence_key"
+    )
+    hashes = [row["hash"] for row in rows]
+    assert len(hashes) == 2 and hashes[0] != hashes[1], hashes
+    assert hashes[1] == project.files()["simulator.py"]
+
+    result = project.run("diff", "1", "2", "-m")
+    sections = module_sections(result.stdout)
+    assert sections["added"] == {} and sections["removed"] == {}, str(result)
+    assert sections["replaced"] == {
+        "simulator": ["Code hash changed from {} to {}".format(*hashes)]
+    }, str(result)
+
+
+@pytest.mark.parametrize("flags", [("-f", "-m", "-t"), ("-f", "-t", "--content")])
+def test_diff_prints_the_blocks_in_one_order_whatever_the_hash_seed(
+    two_trial_project, flags
+):
+    """Runs of the same ``now diff`` under five hash seeds print the same
+    output, with the replaced accesses in the order of their names: the
+    blocks no longer follow the iteration order of a set (#248)"""
+    project = two_trial_project
+    seed = project.env.get("PYTHONHASHSEED")
+    outputs = set()
+    try:
+        for value in ("1", "2", "3", "4", "5"):
+            project.env["PYTHONHASHSEED"] = value
+            outputs.add(project.run("diff", "1", "2", *flags).stdout)
+    finally:
+        if seed is None:
+            project.env.pop("PYTHONHASHSEED", None)
+        else:
+            project.env["PYTHONHASHSEED"] = seed
+    assert len(outputs) == 1, "{} outputs".format(len(outputs))
+    (stdout,) = outputs
+    names = [
+        line[len(ACCESS_NAME) :]
+        for line in lines_of(stdout)
+        if line.startswith(ACCESS_NAME)
+    ]
+    assert names == sorted(names) == ["data2.dat", "output.csv"], names

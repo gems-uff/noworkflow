@@ -20,6 +20,7 @@ import math
 import subprocess
 import sys
 import time
+import warnings
 
 import pytest
 
@@ -189,11 +190,12 @@ def test_the_time_limit_ends_a_goal_that_never_answers(facts):
     )
 
 
-def test_a_process_that_wrote_its_last_line_and_hangs_is_killed_soon(tmp_path):
-    """Ubuntu's SWI-Prolog 9 sometimes blocks in ``halt`` after the goal;
-    its output is complete, so the wait kills it ``EXIT_GRACE`` seconds
-    after ``{"done":true}`` instead of at the process timeout, and warns.
-    A Python child stands in for that swipl."""
+def test_a_process_that_wrote_its_last_line_is_not_waited_for(tmp_path):
+    """The ``halt`` of Ubuntu's SWI-Prolog 9 can block after the goal (the
+    race of library(time) in ``_wait``); the output is complete by then,
+    so the wait kills the process as soon as it sees ``{"done":true}``,
+    without a warning. A Python child stands in for that swipl, and the
+    clock starts once its last line is there."""
     output = tmp_path / "output.jsonl"
     process = subprocess.Popen(
         [sys.executable, "-c", HANGS_AFTER_DONE, str(output)],
@@ -202,12 +204,32 @@ def test_a_process_that_wrote_its_last_line_and_hangs_is_killed_soon(tmp_path):
         stderr=subprocess.PIPE,
         encoding="utf-8",
     )
-    started = time.monotonic()
-    with pytest.warns(RuntimeWarning, match="did not exit"):
-        _, status = swipl._wait(process, str(output), timeout=60)
-    assert time.monotonic() - started < swipl.EXIT_GRACE + 10
-    assert status is None
-    assert process.poll() is not None
+    try:
+        deadline = time.monotonic() + 60
+        while not swipl._finished(str(output)):
+            assert time.monotonic() < deadline, "the stand-in wrote nothing"
+            time.sleep(0.05)
+        started = time.monotonic()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            _, status = swipl._wait(process, str(output), timeout=60)
+        assert time.monotonic() - started < 1
+        assert status is None
+        assert process.poll() is not None
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.communicate()
+
+
+def test_a_goal_that_leaves_an_alarm_installed_is_not_waited_for(facts):
+    """An alarm still installed at ``halt`` wakes library(time)'s scheduler
+    just as ``halt`` stops it, the race that blocks Ubuntu's SWI-Prolog 9
+    (``_wait``); the answer comes from the output, without a warning"""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result = solutions(facts, "alarm(1000, true, _, []), edge(a, X)", ["X"])
+    assert (result.rows, result.error) == ([("b",)], None)
 
 
 def test_a_process_killed_before_its_last_line_is_an_error(tmp_path, monkeypatch):

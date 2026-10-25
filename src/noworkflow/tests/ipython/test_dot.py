@@ -41,7 +41,7 @@ from noworkflow.tests.e2e.harness import NowProject, tail
 from noworkflow.tests.e2e.normalize import Normalizer
 from noworkflow.tests.helpers.defects import Defect, known_defects
 
-from .support import FOUND, MAGIC_REGISTRY, needs_dot, open_shell, ran, run_python
+from .support import FOUND, needs_dot, open_shell, ran, run_python
 
 INKSCAPE = FOUND["inkscape"]
 
@@ -509,10 +509,6 @@ def test_dot_in_two_shells_of_a_plain_process(two_shells):
     """In a plain process, the second shell that loads the extension gets
     the noWorkflow magics but no ``%%dot`` (characterization of
     #392)
-
-    There LOADED also hides #384: the second load defines
-    ``%%dot``'s class anew while the first load's names are pending, and
-    only LOADED keeps it from being created.
     """
     assert two_shells == [
         {"load_ext": "ok", "dot": True, "now_run": True},
@@ -520,7 +516,7 @@ def test_dot_in_two_shells_of_a_plain_process(two_shells):
     ]
 
 
-@known_defects(ONCE_PER_PROCESS, MAGIC_REGISTRY)
+@known_defects(ONCE_PER_PROCESS)
 def test_dot_in_two_shells_of_a_plain_process_desired(two_shells):
     """In a plain process, every shell that loads the extension gets
     ``%%dot`` and the noWorkflow magics"""

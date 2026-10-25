@@ -30,6 +30,34 @@ from ...utils.prolog import (
 from .. import relational
 from .base import AlchemyProxy, proxy, proxy_class
 
+# The callables of subprocess and os whose call starts a process. The
+# external process tracer (#202) gives the files a process exchanges to
+# the opaque activation of that call, so their stack ends there, not in an
+# open.
+PROCESS_LAUNCHERS = frozenset(
+    (
+        "Popen",
+        "run",
+        "call",
+        "check_call",
+        "check_output",
+        "getoutput",
+        "getstatusoutput",
+        "system",
+        "popen",
+        "posix_spawn",
+        "posix_spawnp",
+        "spawnl",
+        "spawnle",
+        "spawnlp",
+        "spawnlpe",
+        "spawnv",
+        "spawnve",
+        "spawnvp",
+        "spawnvpe",
+    )
+)
+
 
 @proxy_class
 class FileAccess(AlchemyProxy):
@@ -147,15 +175,23 @@ class FileAccess(AlchemyProxy):
         Return activation stack:
         >>> access.stack == 'f -> ... -> open'
         True
+
+        The stack of a file a process exchanged ends at the opaque call that
+        started the process (``e2e/test_external_processes.py``).
         """
         stack = []
         activation = self.activation
+        launcher = (
+            activation is not None
+            and activation.code_block_id is None
+            and activation.name in PROCESS_LAUNCHERS
+        )
         while activation:
             name = activation.name
             activation = activation.caller
             if activation:
                 stack.insert(0, name)
-        if not stack or stack[-1] != "open":
+        if not launcher and (not stack or stack[-1] != "open"):
             stack.append("... -> open")
         return " -> ".join(stack)
 

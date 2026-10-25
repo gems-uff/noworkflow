@@ -1,0 +1,59 @@
+cff-version: 1.2.0
+message: >-
+  If you use noWorkflow in your research, please cite it as below.
+  Each release is a tag of this repository; cite the one you used.
+title: noWorkflow
+type: software
+abstract: >-
+  noWorkflow traces the provenance of Python scripts without changes to
+  the script: what the script defined, executed, read and wrote, the
+  processes it launched and the programs they ran, stored in a local
+  database that can be queried, compared between trials, restored and
+  exported.
+authors:
+  - family-names: Pimentel
+    given-names: João Felipe
+    affiliation: Universidade Federal Fluminense
+  - family-names: Freire
+    given-names: Juliana
+    affiliation: New York University
+  - family-names: Murta
+    given-names: Leonardo
+    affiliation: Universidade Federal Fluminense
+  - family-names: Braganholo
+    given-names: Vanessa
+    affiliation: Universidade Federal Fluminense
+  - family-names: Paiva
+    given-names: Arthur
+    affiliation: Universidade Federal Fluminense
+  - family-names: Coutinho
+    given-names: Felipe
+    affiliation: Universidade Federal Fluminense
+repository-code: "https://github.com/gems-uff/noworkflow"
+license: MIT
+keywords:
+  - provenance
+  - python
+  - reproducibility
+  - scientific scripts
+preferred-citation:
+  type: article
+  title: >-
+    noWorkflow: a tool for collecting, analyzing, and managing provenance
+    from Python scripts
+  authors:
+    - family-names: Pimentel
+      given-names: João Felipe
+    - family-names: Murta
+      given-names: Leonardo
+    - family-names: Braganholo
+      given-names: Vanessa
+    - family-names: Freire
+      given-names: Juliana
+  journal: Proceedings of the VLDB Endowment
+  volume: 10
+  issue: 12
+  start: 1841
+  end: 1844
+  year: 2017
+  doi: 10.14778/3137765.3137789

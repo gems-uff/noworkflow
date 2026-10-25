@@ -19,6 +19,11 @@ mode before it touches the file system. The files are read from the
 checkout (``request.config.rootpath``); outside one the tests skip.
 
 The root ``tests/`` is not compiled: ``tests/t1.py`` is Python 2.
+
+``Examples/glue_pipeline`` is the case study of the paper's "Beyond
+Python" section for users; its files are, byte for byte, the copy that
+``test_beyond_python.py`` replays from the e2e corpus, so that the example
+a user runs is the one the tests check.
 """
 
 import ast
@@ -28,8 +33,6 @@ import tomllib
 import warnings
 
 import pytest
-
-from noworkflow.tests.helpers.defects import Defect, known_defects
 
 EXAMPLES = "Examples"
 # The directories whose open modes are scanned.
@@ -41,14 +44,22 @@ KNOWN_EXAMPLES = {
     "Examples/demo_1/simulation.py",
     "Examples/demo_1/simulation_complete.py",
     "Examples/demo_1/simulator.py",
+    "Examples/glue_pipeline/fraud_pipeline.py",
 }
-# The constant modes that open() rejects today (#208).
-RU_REJECTED = {
-    ("Examples/demo_1/simulation.py", "rU"),
-    ("Examples/demo_1/simulation_complete.py", "rU"),
-    ("tests/weather/simulation.py", "rU"),
-    ("tests/weather/simulation_complete.py", "rU"),
-}
+# The constant modes the scan finds at least, so that a moved directory
+# cannot leave the mode check with nothing to check.
+MIN_CONSTANT_MODES = 100
+# The case study shipped in Examples/ and the e2e corpus it copies.
+GLUE_PIPELINE = "Examples/glue_pipeline"
+CASE_STUDY_CORPUS = "src/noworkflow/tests/e2e/corpus/beyond_python"
+CASE_STUDY_FILES = (
+    "fraud_pipeline.py",
+    "model.R",
+    "metrics.c",
+    "patch_2_threshold.patch",
+    "patch_3_accuracy.patch",
+    "run.sh",
+)
 # A statement that each Python version introduced. The control of the
 # compile check takes the one of the version right after the floor.
 NEWER_SYNTAX = {
@@ -56,12 +67,6 @@ NEWER_SYNTAX = {
     (3, 13): b"def f[T = int](): pass\n",  # PEP 696
     (3, 14): b"try:\n    pass\nexcept A, B:\n    pass\n",  # PEP 758
 }
-RU_MODE = Defect(
-    reason="#208: Examples/demo_1/simulation*.py and "
-    "tests/weather/simulation*.py open their input with mode 'rU', "
-    "which Python 3.11 removed (ValueError: invalid mode: 'rU')",
-    signature="invalid mode: 'rU'",
-)
 
 
 def scripts(root, directory):
@@ -226,23 +231,27 @@ def test_the_open_mode_check_tells_valid_from_invalid_modes(tmp_path):
 
 
 def test_example_scripts_open_modes(root, tmp_path):
-    """The only constant ``open`` modes that Python rejects in the example
-    scripts are the four ``'rU'`` of ``Examples/demo_1`` and the root
-    ``tests/weather``
-
-    Characterization of #208.
-    """
-    found, rejected = rejected_modes(root, tmp_path)
-    # Not vacuous: the scripts open files with constant modes.
-    assert found > len(RU_REJECTED)
-    assert set(rejected) == RU_REJECTED, rejected
-
-
-@known_defects(RU_MODE)
-def test_example_scripts_open_modes_desired(root, tmp_path):
     """Every constant ``open`` mode of the example scripts is one that
     Python accepts
     """
-    _, rejected = rejected_modes(root, tmp_path)
+    found, rejected = rejected_modes(root, tmp_path)
+    # Not vacuous: the scripts open files with constant modes.
+    assert found >= MIN_CONSTANT_MODES
     messages = [message for found in rejected.values() for message in found]
     assert messages == [], "\n".join(messages)
+
+
+def test_glue_pipeline_is_the_case_study_of_the_tests(root):
+    """``Examples/glue_pipeline`` holds the files of the case study byte for
+    byte as the e2e corpus has them, and ``run.sh`` stays executable
+    """
+    example = root / GLUE_PIPELINE
+    corpus = root / CASE_STUDY_CORPUS
+    differ = [
+        name
+        for name in CASE_STUDY_FILES
+        if (example / name).read_bytes() != (corpus / name).read_bytes()
+    ]
+    assert differ == []
+    if sys.platform != "win32":
+        assert (example / "run.sh").stat().st_mode & 0o111

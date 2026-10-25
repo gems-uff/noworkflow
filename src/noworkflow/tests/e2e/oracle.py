@@ -148,17 +148,22 @@ def skip_unless_same_python(project):
         )
 
 
-def fresh_copy(project, corpus):
-    """Empty the project directory and copy ``corpus/<corpus>`` into it"""
+def empty_project(project):
+    """Remove everything in the project directory, the store included"""
     for path in project.path.iterdir():
         if path.is_dir() and not path.is_symlink():
             shutil.rmtree(path)
         else:
             path.unlink()
+
+
+def fresh_copy(project, corpus):
+    """Empty the project directory and copy ``corpus/<corpus>`` into it"""
+    empty_project(project)
     project.copy_corpus(corpus)
 
 
-def run_plain(project, script, *args):
+def run_plain(project, script, *args, timeout=120):
     """Run ``python <script> <args>`` in the project, as ``now`` would"""
     python = plain_python(project.command)
     if python is None:
@@ -176,7 +181,7 @@ def run_plain(project, script, *args):
         capture_output=True,
         encoding="utf-8",
         errors="replace",
-        timeout=120,
+        timeout=timeout,
     )
     return Outcome(
         "python",
@@ -187,9 +192,11 @@ def run_plain(project, script, *args):
     )
 
 
-def run_traced(project, script, *args, flags=()):
+def run_traced(project, script, *args, flags=(), timeout=120):
     """Run ``now run <flags> <script> <args>`` in the project"""
-    result = project.run("run", *flags, script, *args, expect=None, allow_stderr=True)
+    result = project.run(
+        "run", *flags, script, *args, expect=None, allow_stderr=True, timeout=timeout
+    )
     label = " ".join(("now run",) + tuple(flags))
     return Outcome(
         label, result.returncode, result.stdout, result.stderr, project.files()
@@ -266,17 +273,27 @@ def assert_same_outcome(plain, traced, defects=()):
     raise AssertionError(message)
 
 
-def assert_traced(project):
+def assert_traced(project, command=None):
     """Fail outright unless the store holds one trial with evaluations
 
     A script that pyposast rejects with a ``SyntaxError`` runs without the
     transformer (``Skipping transformer.``, printed only under ``-v``) and
     records no evaluation, while its outcome still equals plain Python's.
+    With ``command``, the trial must also have recorded that command line
+    (``run <flags> <script> <args>``), so that a configuration the caller
+    asked for cannot be lost on the way.
     """
     trials = project.trials()
     if len(trials) != 1:
         pytest.fail(
             "expected one trial in the store, found {}".format(len(trials)),
+            pytrace=False,
+        )
+    if command is not None and trials[0]["command"] != command:
+        pytest.fail(
+            "the trial recorded the command {!r}, not {!r}".format(
+                trials[0]["command"], command
+            ),
             pytrace=False,
         )
     evaluations = project.count("evaluation", trials[0]["id"])

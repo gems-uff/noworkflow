@@ -28,8 +28,8 @@ added and a removed access.
 Known defects, each with a characterization and a ``_desired`` twin:
 ``EXPERIMENT_PREFIX`` (``/experiments/<code>/getFunctionActivations``),
 ``FUNCTION_ACCESSES`` (the diff of a function never lists the files it
-read or wrote) and #248 (a debug ``print`` on the server's stdout). A
-non-integer activation id and an activation the trial does not have raise
+read or wrote). The route prints nothing on the server's stdout: until
+#204 it printed a debug line per replaced access (#248). A non-integer activation id and an activation the trial does not have raise
 (characterized only: the frontend builds both from the store). Measured on
 macOS with Python 3.11 to 3.15: none of it depends on the version.
 """
@@ -53,14 +53,6 @@ FUNCTION_ACCESSES = Defect(
     "wrote",
     signature="file_accesses_replaced is empty",
 )
-DEBUG_PRINT = Defect(
-    reason="#248: filter_file_accesses_diff_function (cmd/cmd_diff.py) "
-    "keeps a debug print(file) for each replaced file access of the "
-    "two trials, so the function diff route writes access(...) "
-    "tuples on the terminal of now vis",
-    signature="debug access( lines",
-)
-
 DIFF_KEYS = {
     "output_function_trial1",
     "output_function_trial2",
@@ -645,29 +637,12 @@ def replaced_in_trials(project):
 
 
 @pytest.mark.parametrize("function", ["run_simulation", "open"])
-def test_function_diff_prints_the_replaced_accesses(vis, capsys, function):
-    """Today the function diff prints one line per replaced file access of
-    the two trials, the pair of ``access(...)`` facts, on the server's
-    stdout, whatever the compared activation: a function whose diff lists
-    no access, or the ``open()`` call whose diff lists one
+def test_function_diff_prints_nothing(vis, capsys, function):
+    """The function diff writes nothing on the server's stdout, for a
+    function whose diff lists no access and for the ``open()`` call whose
+    diff lists one, although accesses changed between the trials (until
+    #204 it printed one ``access(...)`` pair per replaced access, #248)
     """
+    assert replaced_in_trials(vis.project), "no access changed between the trials"
     function_diff(vis, pair_of(vis, function))
-    lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
-    replaced = replaced_in_trials(vis.project)
-    assert replaced, "no access changed between the trials"
-    assert len(lines) == len(replaced)
-    assert all(line.count("access(") == 2 for line in lines)
-    assert all(any(repr(name) in line for line in lines) for name in replaced), (
-        "a replaced access was not printed"
-    )
-
-
-@known_defects(DEBUG_PRINT)
-def test_function_diff_prints_nothing_desired(vis, capsys):
-    """The function diff writes nothing on the server's stdout"""
-    function_diff(vis, pair_of(vis, "run_simulation"))
-    out = capsys.readouterr().out
-    assert "access(" not in out, "the route printed {} debug access( lines".format(
-        sum("access(" in line for line in out.splitlines())
-    )
-    assert out == ""
+    assert capsys.readouterr().out == ""

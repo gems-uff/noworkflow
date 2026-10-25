@@ -7,3 +7,6 @@
 
 # Issue #222: format with ruff and normalize line endings
 9abeb18e2ca8ebfc7ed6b19f3f71380875cb40ad
+
+# Issue #454: apply the stylelint, prettier and eslint fixes to the vis
+e63fb0ff5499c0ba1c3331ed0cb84e0d8ed0fdfb

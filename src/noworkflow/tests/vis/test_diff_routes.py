@@ -10,7 +10,8 @@ panel that the history opens when two trials are compared
 ``models.diff.Diff``: ``info.json`` serves both trials and the attributes
 that differ (``diff_dict``), the other three the added, removed and
 replaced modules, environment attributes and file accesses (``diff_set``,
-which pairs a removed element with an added one of the same name).
+which pairs a removed element with an added one of the same name, one to
+one, the same mode first, in the order of the trial, #360).
 
 Expected values come from the store (SQL on the trial, module,
 code_block, environment_attr and file_access tables) and from the weather
@@ -22,14 +23,11 @@ runs, and a script that writes a file and reads it back. Environment
 values are compared with the store, and the trials' ``user_id`` (the
 hostname) checked by type, through a name (``same = a == b; assert same,
 ...``), so pytest never prints them; messages name the attribute, never
-its value. ``diff_set`` builds sets, so lists are compared without their
-order (#248).
+its value. ``diff_set`` builds sets, which the routes serve in their
+iteration order, so lists are compared without their order.
 
 Known defects, each with a characterization and a ``_desired`` twin:
 
-- ``#360``: two changed accesses to one file
-  (a write and a read) are paired by name only, crossing the modes
-  (``now diff -f`` prints the same pairs: it reads the same ``diff_set``).
 - ``#363``: ``trial1`` and ``trial2`` carry no
   ``code_hash``, which the panel shows when both trials ran the same code.
 - ``#363``: the accesses carry neither ``stack`` nor
@@ -83,15 +81,6 @@ RW_SCRIPT = (
 )
 
 
-PAIRS_BY_NAME = Defect(
-    reason="#360: diff_set (models/diff.py) "
-    "keeps one removed element per name and pairs every added "
-    "element of that name with it, so two changed accesses to one "
-    "file (a write and a read) give two pairs that share one access "
-    "of the first trial and cross the modes, and the other access is "
-    "listed as removed",
-    signature="replaced pairs by name only: two pairs share one access",
-)
 INFO_CODE_HASH = Defect(
     reason="#363: the info.json view serializes trial1 "
     "and trial2 with extra=('duration_text',) only, so they carry no "
@@ -585,32 +574,12 @@ def rw_accesses(project, trial_id):
     return by_mode
 
 
-def test_accesses_to_one_file_in_two_modes_pair_by_name(changed):
-    """Characterization (#360): when a write
-    and a read of one file both change, both accesses of the second trial
-    are paired with the same access of the first, so one pair crosses the
-    modes, and the first trial's other access is listed as removed
-    """
-    id3, id4 = changed.trial_ids[2:]
-    first = {ident(row) for row in rw_accesses(changed.project, id3).values()}
-    second = {ident(row) for row in rw_accesses(changed.project, id4).values()}
-    data = changed.json(diff_route("file_accesses", id3, id4))
-    pairs = data["fa_replaced"]
-    assert data["fa_added"] == []
-    assert len(pairs) == 2
-    shared = {ident(pair[0]) for pair in pairs}
-    assert len(shared) == 1, "both pairs start at the same access"
-    assert shared < first
-    assert {ident(pair[1]) for pair in pairs} == second
-    assert idents(data["fa_removed"]) == sorted(first - shared)
-    crossed = [pair for pair in pairs if pair[0]["mode"] != pair[1]["mode"]]
-    assert len(crossed) == 1
-
-
-@known_defects(PAIRS_BY_NAME)
-def test_accesses_to_one_file_in_two_modes_pair_by_name_desired(changed):
-    """The write of the first trial is paired with the write of the
-    second, the read with the read; nothing is added or removed
+def test_accesses_to_one_file_in_two_modes_pair_by_mode(changed):
+    """When a write and a read of one file both change, the write of the
+    first trial is paired with the write of the second and the read with
+    the read; nothing is added or removed. Until #204 both accesses of the
+    second trial were paired with one access of the first, by name alone,
+    and the other was listed as removed (#360)
     """
     id3, id4 = changed.trial_ids[2:]
     rows3 = rw_accesses(changed.project, id3)
@@ -622,15 +591,7 @@ def test_accesses_to_one_file_in_two_modes_pair_by_name_desired(changed):
         "removed": idents(data["fa_removed"]),
         "replaced": pair_idents(data["fa_replaced"]),
     }
-    firsts = [first for first, _ in served["replaced"]]
-    # Today's failure: two pairs that start at one access of trial 3.
-    shared = len(set(firsts)) < len(firsts)
-    ok = served == {"added": [], "removed": [], "replaced": expected}
-    assert ok, "{}{}, expected {}".format(
-        "replaced pairs by name only: two pairs share one access: " if shared else "",
-        served,
-        expected,
-    )
+    assert served == {"added": [], "removed": [], "replaced": expected}
 
 
 # --- every route --------------------------------------------------------------

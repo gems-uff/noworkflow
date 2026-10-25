@@ -50781,7 +50781,7 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_2__["default"])(_this.node);
     _this.expId = expId;
     _this.addClass('content');
-    _this.title.label = "Annotation";
+    _this.title.label = 'Annotation';
     _this.title.closable = false;
     _this.title.caption = "Annontation";
     _this.setNode();
@@ -50797,19 +50797,19 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "setAnnotationLevelToExperiment",
     value: function setAnnotationLevelToExperiment() {
-      this.trialId = "";
-      this.fetchUrl = "/experiments/" + this.expId + "/extendedAnnotation";
-      this.annotationLevel = "Experiment";
-      this.anntTitle.text("Annotations for Experiment: " + this.expId);
+      this.trialId = '';
+      this.fetchUrl = '/experiments/' + this.expId + '/extendedAnnotation';
+      this.annotationLevel = 'Experiment';
+      this.anntTitle.text('Annotations for Experiment: ' + this.expId);
       this.setAnnotations();
     }
   }, {
     key: "setAnnotationLevelToTrial",
     value: function setAnnotationLevelToTrial(trialId) {
       this.trialId = trialId;
-      this.anntTitle.text("Annotations for Trial: " + this.trialId);
-      this.fetchUrl = "/trials/" + this.trialId + "/extendedAnnotation";
-      this.annotationLevel = "Trial";
+      this.anntTitle.text('Annotations for Trial: ' + this.trialId);
+      this.fetchUrl = '/trials/' + this.trialId + '/extendedAnnotation';
+      this.annotationLevel = 'Trial';
       this.setAnnotations();
     }
   }, {
@@ -50823,12 +50823,12 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
     key: "fillAnnotations",
     value: function () {
       var _fillAnnotations = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var _thiss, response, obj;
+        var _this2 = this;
+        var response, obj;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
             case 0:
               this.annotations = new Array();
-              _thiss = this;
               _context.n = 1;
               return fetch(this.fetchUrl, {
                 method: 'GET',
@@ -50839,11 +50839,11 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
               });
             case 1:
               response = _context.v;
-              if (!(response.status == 200)) {
+              if (!(response.status === 200)) {
                 _context.n = 3;
                 break;
               }
-              _thiss.annotations = new Array();
+              this.annotations = new Array();
               _context.n = 2;
               return response.json();
             case 2:
@@ -50858,13 +50858,13 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
                   relatedTrial: item.relatedTrial,
                   relatedExperiment: item.relatedExperiment
                 };
-                _thiss.annotations.push(annt);
+                _this2.annotations.push(annt);
               });
               _context.n = 4;
               break;
             case 3:
-              if (response.status != 404) {
-                this.showNode(_thiss.errorFeedback);
+              if (response.status !== 404) {
+                this.showNode(this.errorFeedback);
               }
             case 4:
               return _context.a(2);
@@ -50879,39 +50879,39 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "addAnntRow",
     value: function addAnntRow(annt, tBody) {
-      var item = tBody.append("tr");
-      item.append("th").attr("scope", "row").text(annt.id);
-      item.append("td").text(annt.description);
-      item.append("td").text(annt.annotationFormat);
-      item.append("td").text(annt.provenanceType);
-      var actions = item.append("td");
-      var addMemberButton = actions.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Download Content");
-      addMemberButton.on("click", function () {
-        window.open("/extendedAnnotation/" + annt.id + "/annotation");
+      var item = tBody.append('tr');
+      item.append('th').attr('scope', 'row').text(annt.id);
+      item.append('td').text(annt.description);
+      item.append('td').text(annt.annotationFormat);
+      item.append('td').text(annt.provenanceType);
+      var actions = item.append('td');
+      var addMemberButton = actions.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Download Content');
+      addMemberButton.on('click', function () {
+        window.open('/extendedAnnotation/' + annt.id + '/annotation');
       });
     }
   }, {
     key: "setAnnotations",
     value: function () {
       var _setAnnotations = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-        var _thiss, header, tBody;
+        var _this3 = this;
+        var header, tBody;
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.n) {
             case 0:
-              _thiss = this;
-              this.table.html("");
-              header = this.table.append("thead").append("tr");
-              header.append("th").attr("scope", "col").text("id");
-              header.append("th").attr("scope", "col").text("description");
-              header.append("th").attr("scope", "col").text("annotation Format");
-              header.append("th").attr("scope", "col").text("provenance Type");
-              header.append("th").attr("scope", "col").text("Actions");
-              tBody = this.table.append("tbody");
+              this.table.html('');
+              header = this.table.append('thead').append('tr');
+              header.append('th').attr('scope', 'col').text('id');
+              header.append('th').attr('scope', 'col').text('description');
+              header.append('th').attr('scope', 'col').text('annotation Format');
+              header.append('th').attr('scope', 'col').text('provenance Type');
+              header.append('th').attr('scope', 'col').text('Actions');
+              tBody = this.table.append('tbody');
               _context2.n = 1;
               return this.fillAnnotations();
             case 1:
               this.annotations.forEach(function (obj) {
-                _thiss.addAnntRow(obj, tBody);
+                _this3.addAnntRow(obj, tBody);
               });
             case 2:
               return _context2.a(2);
@@ -50926,33 +50926,33 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "addFormInput",
     value: function addFormInput(form, fieldId, fieldLabel, fieldType) {
-      var grp = form.append("div").classed("form-group row", true);
-      grp.append("label").classed("col-sm-2 col-form-label", true).attr("for", fieldId).text(fieldLabel + ": ");
-      var divIn = grp.append("div").classed("col-sm-10", true);
+      var grp = form.append('div').classed('form-group row', true);
+      grp.append('label').classed('col-sm-2 col-form-label', true).attr('for', fieldId).text(fieldLabel + ': ');
+      var divIn = grp.append('div').classed('col-sm-10', true);
       var inp = divIn.append(fieldType);
-      inp.classed("form-control", true).attr("id", fieldId);
+      inp.classed('form-control', true).attr('id', fieldId);
       return inp;
     }
   }, {
     key: "addFeedBackinfo",
     value: function addFeedBackinfo(baseNode, cls, txt, desc) {
-      var _thiss = this;
-      var feedbackNode = baseNode.append("div").classed("alert", true).classed(cls, true).classed("alert-dismissible", true).classed("fade", true).classed("show", true);
-      feedbackNode.append("strong").text(txt);
-      feedbackNode.append("span").text(" " + desc).append("button").attr("type", "button").classed("close", true).attr("data-dismiss", "alert").text("x").on("click", function () {
-        _thiss.hideNode(feedbackNode);
+      var _this4 = this;
+      var feedbackNode = baseNode.append('div').classed('alert', true).classed(cls, true).classed('alert-dismissible', true).classed('fade', true).classed('show', true);
+      feedbackNode.append('strong').text(txt);
+      feedbackNode.append('span').text(' ' + desc).append('button').attr('type', 'button').classed('close', true).attr('data-dismiss', 'alert').text('x').on('click', function () {
+        _this4.hideNode(feedbackNode);
       });
       return feedbackNode;
     }
   }, {
     key: "hideNode",
     value: function hideNode(node) {
-      node.classed("d-none", true);
+      node.classed('d-none', true);
     }
   }, {
     key: "showNode",
     value: function showNode(node) {
-      node.classed("d-none", false);
+      node.classed('d-none', false);
     }
   }, {
     key: "getValueFromSelect",
@@ -50963,44 +50963,42 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
         option = select.options[select.selectedIndex].value;
       }
       return option;
-      // removed by dead control flow
-
     }
   }, {
     key: "createAddGroupForm",
     value: function createAddGroupForm(projectsDiv) {
-      var _thiss = this;
-      var inputsDiv = projectsDiv.append("div");
-      var descIn = this.addFormInput(inputsDiv, "descriptionAnntInput", "Description", "textarea");
-      var annotationIn = this.addFormInput(inputsDiv, "annotationNameInput", "Annotation", "textarea");
-      var annotationFormatIn = this.addFormInput(inputsDiv, "annotationFormatInput", "Annotation Format", "select");
-      var provenanceTypeIn = this.addFormInput(inputsDiv, "provenanceTypeInput", "Provenance Type", "select");
-      provenanceTypeIn.append("option").attr("value", "Data").text("Data");
-      provenanceTypeIn.append("option").attr("value", "Interaction").text("Interaction");
-      provenanceTypeIn.append("option").attr("value", "Insight").text("Insight");
-      provenanceTypeIn.append("option").attr("value", "Other").text("Other");
-      provenanceTypeIn.append("option").attr("value", "Rationale").text("Rationale");
-      provenanceTypeIn.append("option").attr("value", "Visualization").text("Visualization");
-      annotationFormatIn.append("option").attr("value", "plainText").text("plain text");
-      annotationFormatIn.append("option").attr("value", "base64").text("base64");
-      annotationFormatIn.append("option").attr("value", "JSON").text("JSON");
-      annotationFormatIn.append("option").attr("value", "XML").text("XML");
-      var confimButton = inputsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Confirm");
-      var addAnntButton = projectsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Add Annotation");
-      inputsDiv.classed("d-none", true);
-      confimButton.on("click", function () {
-        var annotationFormat = _thiss.getValueFromSelect(annotationFormatIn, "plainText");
-        var provenanceType = _thiss.getValueFromSelect(provenanceTypeIn, "Other");
-        _thiss.hideNode(_thiss.errorFeedback);
-        _thiss.hideNode(_thiss.successFeedback);
+      var _this5 = this;
+      var inputsDiv = projectsDiv.append('div');
+      var descIn = this.addFormInput(inputsDiv, 'descriptionAnntInput', 'Description', 'textarea');
+      var annotationIn = this.addFormInput(inputsDiv, 'annotationNameInput', 'Annotation', 'textarea');
+      var annotationFormatIn = this.addFormInput(inputsDiv, 'annotationFormatInput', 'Annotation Format', 'select');
+      var provenanceTypeIn = this.addFormInput(inputsDiv, 'provenanceTypeInput', 'Provenance Type', 'select');
+      provenanceTypeIn.append('option').attr('value', 'Data').text('Data');
+      provenanceTypeIn.append('option').attr('value', 'Interaction').text('Interaction');
+      provenanceTypeIn.append('option').attr('value', 'Insight').text('Insight');
+      provenanceTypeIn.append('option').attr('value', 'Other').text('Other');
+      provenanceTypeIn.append('option').attr('value', 'Rationale').text('Rationale');
+      provenanceTypeIn.append('option').attr('value', 'Visualization').text('Visualization');
+      annotationFormatIn.append('option').attr('value', 'plainText').text('plain text');
+      annotationFormatIn.append('option').attr('value', 'base64').text('base64');
+      annotationFormatIn.append('option').attr('value', 'JSON').text('JSON');
+      annotationFormatIn.append('option').attr('value', 'XML').text('XML');
+      var confimButton = inputsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Confirm');
+      var addAnntButton = projectsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Add Annotation');
+      inputsDiv.classed('d-none', true);
+      confimButton.on('click', function () {
+        var annotationFormat = _this5.getValueFromSelect(annotationFormatIn, 'plainText');
+        var provenanceType = _this5.getValueFromSelect(provenanceTypeIn, 'Other');
+        _this5.hideNode(_this5.errorFeedback);
+        _this5.hideNode(_this5.successFeedback);
         var newAnnotation = {
-          annotation: annotationIn.property("value"),
-          description: descIn.property("value"),
+          annotation: annotationIn.property('value'),
+          description: descIn.property('value'),
           annotationFormat: annotationFormat,
-          annotationLevel: _thiss.annotationLevel,
+          annotationLevel: _this5.annotationLevel,
           provenanceType: provenanceType
         };
-        fetch(_thiss.fetchUrl, {
+        fetch(_this5.fetchUrl, {
           method: 'POST',
           // *GET, POST, PUT, DELETE, etc.
           headers: {
@@ -51008,35 +51006,35 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
           },
           body: JSON.stringify(newAnnotation) // body data type must match "Content-Type" header
         }).then(function (response) {
-          if (response.status == 201) {
+          if (response.status === 201) {
             response.json().then(function (obj) {
-              _thiss.showNode(_thiss.successFeedback);
-              _thiss.hideNode(inputsDiv);
-              _thiss.showNode(addAnntButton);
-              _thiss.setAnnotations();
+              _this5.showNode(_this5.successFeedback);
+              _this5.hideNode(inputsDiv);
+              _this5.showNode(addAnntButton);
+              _this5.setAnnotations();
             });
           } else {
-            _thiss.showNode(_thiss.errorFeedback);
+            _this5.showNode(_this5.errorFeedback);
           }
         });
       });
-      addAnntButton.on("click", function () {
-        _thiss.showNode(inputsDiv);
-        _thiss.hideNode(addAnntButton);
+      addAnntButton.on('click', function () {
+        _this5.showNode(inputsDiv);
+        _this5.hideNode(addAnntButton);
       });
     }
   }, {
     key: "setNode",
     value: function setNode() {
       var content = this.d3node.append('div').classed('config-content', true);
-      var projectsDiv = content.append("div");
-      this.anntTitle = projectsDiv.append("h2");
-      this.errorFeedback = this.addFeedBackinfo(projectsDiv, "alert-danger", "Error!", "A problem has been occurred while submitting your data.");
-      this.successFeedback = this.addFeedBackinfo(projectsDiv, "alert-success", "Success!", "");
+      var projectsDiv = content.append('div');
+      this.anntTitle = projectsDiv.append('h2');
+      this.errorFeedback = this.addFeedBackinfo(projectsDiv, 'alert-danger', 'Error!', 'A problem has been occurred while submitting your data.');
+      this.successFeedback = this.addFeedBackinfo(projectsDiv, 'alert-success', 'Success!', '');
       this.hideNode(this.errorFeedback);
       this.hideNode(this.successFeedback);
       this.createAddGroupForm(projectsDiv);
-      this.table = projectsDiv.append("table").classed("table", true);
+      this.table = projectsDiv.append('table').classed('table', true);
     }
   }], [{
     key: "createNode",
@@ -51089,7 +51087,7 @@ var ConfigWidget = /*#__PURE__*/function (_Widget) {
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(_this.node);
     //this.setFlag(Widget.Flag.DisallowLayout);
     _this.addClass('content');
-    _this.title.label = "Config";
+    _this.title.label = 'Config';
     _this.title.closable = false;
     _this.title.caption = "Configuration";
     return _this;
@@ -51098,22 +51096,22 @@ var ConfigWidget = /*#__PURE__*/function (_Widget) {
   return _createClass(ConfigWidget, [{
     key: "showTrial",
     value: function showTrial() {
-      return this.d3node.select(".show-graph").property("checked");
+      return this.d3node.select('.show-graph').property('checked');
     }
   }, {
     key: "showInfo",
     value: function showInfo() {
-      return this.d3node.select(".show-info").property("checked");
+      return this.d3node.select('.show-info').property('checked');
     }
   }, {
     key: "graphType",
     value: function graphType() {
-      return this.d3node.select(".graph-type").property("value");
+      return this.d3node.select('.graph-type').property('value');
     }
   }, {
     key: "useCache",
     value: function useCache() {
-      return this.d3node.select(".use-cache").property("checked");
+      return this.d3node.select('.use-cache').property('checked');
     }
   }], [{
     key: "createNode",
@@ -51121,18 +51119,18 @@ var ConfigWidget = /*#__PURE__*/function (_Widget) {
       var node = document.createElement('div');
       var d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(node);
       var content = d3node.append('div').classed('config-content', true);
-      var historydiv = content.append("div");
-      historydiv.append("h2").text("History Graph");
-      var showGraph = historydiv.append("div").classed("graph-attr", true);
-      showGraph.append("input").attr("type", "checkbox").attr("name", "show_graph").attr("value", "on").attr("checked", true).classed("show-graph", true).attr("id", "config-show-graph");
-      showGraph.append("label").attr("for", "config-show-graph").attr("title", "Open trial graph").text("Show trial graph on selection");
-      var showInfo = historydiv.append("div").classed("graph-attr", true);
-      showInfo.append("input").attr("type", "checkbox").attr("name", "show_info").attr("value", "on").attr("checked", true).classed("show-info", true).attr("id", "config-show-info");
-      showInfo.append("label").attr("for", "config-show-info").attr("title", "Open trial info").text("Show trial information on selection");
-      var trialdiv = content.append("div");
-      trialdiv.append("h2").text("Trial Graph");
-      _graph_base_activation_graph__WEBPACK_IMPORTED_MODULE_2__.BaseActivationGraphWidget.graphTypeForm("config", trialdiv);
-      _graph_base_activation_graph__WEBPACK_IMPORTED_MODULE_2__.BaseActivationGraphWidget.useCacheForm("config", trialdiv);
+      var historydiv = content.append('div');
+      historydiv.append('h2').text('History Graph');
+      var showGraph = historydiv.append('div').classed('graph-attr', true);
+      showGraph.append('input').attr('type', 'checkbox').attr('name', 'show_graph').attr('value', 'on').attr('checked', true).classed('show-graph', true).attr('id', 'config-show-graph');
+      showGraph.append('label').attr('for', 'config-show-graph').attr('title', 'Open trial graph').text('Show trial graph on selection');
+      var showInfo = historydiv.append('div').classed('graph-attr', true);
+      showInfo.append('input').attr('type', 'checkbox').attr('name', 'show_info').attr('value', 'on').attr('checked', true).classed('show-info', true).attr('id', 'config-show-info');
+      showInfo.append('label').attr('for', 'config-show-info').attr('title', 'Open trial info').text('Show trial information on selection');
+      var trialdiv = content.append('div');
+      trialdiv.append('h2').text('Trial Graph');
+      _graph_base_activation_graph__WEBPACK_IMPORTED_MODULE_2__.BaseActivationGraphWidget.graphTypeForm('config', trialdiv);
+      _graph_base_activation_graph__WEBPACK_IMPORTED_MODULE_2__.BaseActivationGraphWidget.useCacheForm('config', trialdiv);
       return node;
     }
   }]);
@@ -51239,7 +51237,6 @@ var TableInfoWidget = /*#__PURE__*/function (_DatabaseTabWidget) {
           var h = _arr[_i];
           columnsThead.append('th').text(h).style('font-size', '0.875rem');
         }
-        ;
         var columnsTbody = columnsTable.append('tbody');
         details.columns.forEach(function (col) {
           var row = columnsTbody.append('tr');
@@ -51257,7 +51254,6 @@ var TableInfoWidget = /*#__PURE__*/function (_DatabaseTabWidget) {
             var _h = _arr2[_i2];
             fkThead.append('th').text(_h).style('font-size', '0.875rem');
           }
-          ;
           var fkTbody = fkTable.append('tbody');
           var _iterator = _createForOfIteratorHelper(details.foreign_keys),
             _step;
@@ -51274,7 +51270,6 @@ var TableInfoWidget = /*#__PURE__*/function (_DatabaseTabWidget) {
           } finally {
             _iterator.f();
           }
-          ;
         }
         if (details.referenced_by && details.referenced_by.length > 0) {
           contentContainer.append('h5').text('Referenced By').style('margin-top', '0').style('margin-bottom', '1rem').style('color', '#495057');
@@ -51291,7 +51286,6 @@ var TableInfoWidget = /*#__PURE__*/function (_DatabaseTabWidget) {
             var _h2 = _arr3[_i3];
             refThead.append('th').text(_h2).style('font-size', '0.875rem');
           }
-          ;
           var refTbody = refTable.append('tbody');
           var _iterator2 = _createForOfIteratorHelper(details.referenced_by),
             _step2;
@@ -51308,7 +51302,6 @@ var TableInfoWidget = /*#__PURE__*/function (_DatabaseTabWidget) {
           } finally {
             _iterator2.f();
           }
-          ;
         }
       }
       return node;
@@ -51374,8 +51367,10 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
     key: "showLoadingMessage",
     value: function showLoadingMessage() {
       var container = this.node.querySelector('#graph-container');
-      if (!container) return;
-      (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).selectAll('*').remove();
+      if (!container) {
+        return;
+      }
+      ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).selectAll('*').remove();
       (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).append('div').style('display', 'flex').style('justify-content', 'center').style('align-items', 'center').style('height', '100%').style('flex-direction', 'column').style('color', '#666').style('font-size', '16px').html("\n        <i class=\"fa fa-spinner fa-spin\" style=\"font-size: 24px; margin-bottom: 10px;\"></i>\n        <div>Click on the Database tab to load database structure</div>\n      ");
     }
   }, {
@@ -51437,16 +51432,20 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
     key: "showLoadingState",
     value: function showLoadingState() {
       var container = this.node.querySelector('#graph-container');
-      if (!container) return;
-      (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).selectAll('*').remove();
+      if (!container) {
+        return;
+      }
+      ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).selectAll('*').remove();
       (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).append('div').style('display', 'flex').style('justify-content', 'center').style('align-items', 'center').style('height', '100%').style('flex-direction', 'column').style('color', '#666').style('font-size', '16px').html("\n        <i class=\"fa fa-spinner fa-spin\" style=\"font-size: 24px; margin-bottom: 10px;\"></i>\n        <div>Loading database structure...</div>\n      ");
     }
   }, {
     key: "showErrorMessage",
     value: function showErrorMessage(message) {
       var container = this.node.querySelector('#graph-container');
-      if (!container) return;
-      (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).selectAll('*').remove();
+      if (!container) {
+        return;
+      }
+      ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).selectAll('*').remove();
       (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).append('div').style('display', 'flex').style('justify-content', 'center').style('align-items', 'center').style('height', '100%').style('flex-direction', 'column').style('color', '#dc3545').style('font-size', '16px').html("\n        <i class=\"fa fa-exclamation-triangle\" style=\"font-size: 24px; margin-bottom: 10px;\"></i>\n        <div>".concat(message, "</div>\n      "));
     }
   }, {
@@ -51508,8 +51507,10 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
     key: "initializeGraph",
     value: function initializeGraph() {
       var container = this.node.querySelector('#graph-container');
-      if (!container) return;
-      (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).selectAll('*').remove();
+      if (!container) {
+        return;
+      }
+      ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(container).selectAll('*').remove();
       var rect = container.getBoundingClientRect();
       var width = Math.max(400, rect.width || 800);
       var height = Math.max(300, rect.height || 600);
@@ -51523,7 +51524,9 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
     key: "renderGraph",
     value: function renderGraph() {
       var _this4 = this;
-      if (!this.svg) return;
+      if (!this.svg) {
+        return;
+      }
       this.svg.selectAll('*').remove();
       this.createArrowMarker();
       if (this.graphData.nodes.length === 0) {
@@ -51597,10 +51600,9 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
         });
       });
       node.call(function (selection) {
-        var widget = _this4;
         selection.on('mouseover', function (event, d) {
-          var isSelected = widget.selectedNodes.has(d.id);
-          (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(this).select('circle').attr('stroke-width', isSelected ? 6 : 4).attr('stroke', isSelected ? '#ff8c00' : '#333');
+          var isSelected = _this4.selectedNodes.has(d.id);
+          (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(event.currentTarget).select('circle').attr('stroke-width', isSelected ? 6 : 4).attr('stroke', isSelected ? '#ff8c00' : '#333');
           link.attr('stroke-opacity', function (linkData) {
             var sourceId = _typeof(linkData.source) === 'object' ? linkData.source.id : linkData.source;
             var targetId = _typeof(linkData.target) === 'object' ? linkData.target.id : linkData.target;
@@ -51620,7 +51622,7 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
               var targetId = _typeof(linkData.target) === 'object' ? linkData.target.id : linkData.target;
               return sourceId === d.id && targetId === nodeData.id || targetId === d.id && sourceId === nodeData.id;
             });
-            var isNodeSelected = widget.selectedNodes.has(nodeData.id);
+            var isNodeSelected = _this4.selectedNodes.has(nodeData.id);
             return isNodeSelected ? 6 : isConnected ? 4 : 3;
           }).attr('stroke', function (nodeData) {
             var isConnected = link.data().some(function (linkData) {
@@ -51628,16 +51630,18 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
               var targetId = _typeof(linkData.target) === 'object' ? linkData.target.id : linkData.target;
               return sourceId === d.id && targetId === nodeData.id || targetId === d.id && sourceId === nodeData.id;
             });
-            var isNodeSelected = widget.selectedNodes.has(nodeData.id);
+            var isNodeSelected = _this4.selectedNodes.has(nodeData.id);
             return isConnected ? '#87CEEB' : isNodeSelected ? '#ff8c00' : '#fff';
           });
         }).on('mouseout', function () {
-          widget.updateSelection();
+          _this4.updateSelection();
           link.attr('stroke-opacity', 0.6).attr('stroke-width', 2).attr('stroke', '#999');
         });
       });
       node.call((0,d3_drag__WEBPACK_IMPORTED_MODULE_9__["default"])().on('start', function (event, d) {
-        if (!event.active) _this4.simulation.alphaTarget(0.3).restart();
+        if (!event.active) {
+          _this4.simulation.alphaTarget(0.3).restart();
+        }
         d.fx = _this4.isValidNumber(d.x) ? d.x : width / 2;
         d.fy = _this4.isValidNumber(d.y) ? d.y : height / 2;
       }).on('drag', function (event, d) {
@@ -51646,7 +51650,9 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
         d.fx = boundedX;
         d.fy = boundedY;
       }).on('end', function (event, d) {
-        if (!event.active) _this4.simulation.alphaTarget(0);
+        if (!event.active) {
+          _this4.simulation.alphaTarget(0);
+        }
         d.fx = null;
         d.fy = null;
       }));
@@ -51675,16 +51681,20 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "updateSelection",
     value: function updateSelection() {
-      if (!this.svg) return;
-      var widget = this;
-      this.svg.selectAll('.node').each(function (d) {
-        var nodeElement = (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(this);
-        var isSelected = widget.selectedNodes.has(d.id);
+      var _this5 = this;
+      if (!this.svg) {
+        return;
+      }
+      this.svg.selectAll('.node').each(function (d, i, nodes) {
+        var nodeElement = (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(nodes[i]);
+        var isSelected = _this5.selectedNodes.has(d.id);
         nodeElement.select('circle').attr('stroke', isSelected ? '#ff8c00' : '#fff').attr('stroke-width', isSelected ? 6 : 3).attr('stroke-dasharray', 'none');
       });
       var newQueryBtn = this.node.querySelector('#new-query-btn');
       var clearBtn = this.node.querySelector('#clear-selection-btn');
-      if (!newQueryBtn || !clearBtn) return;
+      if (!newQueryBtn || !clearBtn) {
+        return;
+      }
       if (this.selectedNodes.size > 0) {
         newQueryBtn.innerHTML = "<i class=\"fa fa-plus\" style=\"margin-right:4px;\"></i> New Query <span style=\"background:#ff8c00;color:white;padding:2px 6px;border-radius:10px;font-size:11px;margin-left:4px;\">".concat(this.selectedNodes.size, "</span>");
         clearBtn.style.display = 'inline-block';
@@ -51712,16 +51722,16 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "selectTables",
     value: function selectTables(tableNames) {
-      var _this5 = this;
+      var _this6 = this;
       tableNames.forEach(function (name) {
-        _this5.selectedNodes.add(name);
+        _this6.selectedNodes.add(name);
       });
       this.updateSelection();
     }
   }, {
     key: "renderTableList",
     value: function renderTableList(tables) {
-      var _this6 = this;
+      var _this7 = this;
       var dropdownMenu = this.node.querySelector('#tables-dropdown');
       if (!dropdownMenu) {
         console.error('Tables dropdown element not found in renderTableList');
@@ -51740,9 +51750,9 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
         }).on('mouseout', function () {
           ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(this).style('background-color', 'transparent');
         }).on('click', function () {
-          _this6.openTableInfoTab(tableName);
+          _this7.openTableInfoTab(tableName);
           dropdownMenu.style.display = 'none';
-          var dropdownButton = _this6.node.querySelector('[data-toggle="dropdown"]');
+          var dropdownButton = _this7.node.querySelector('[data-toggle="dropdown"]');
           if (dropdownButton) {
             dropdownButton.setAttribute('aria-expanded', 'false');
           }
@@ -51759,32 +51769,31 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.p = _context2.n) {
             case 0:
-              widget = null;
-              _context2.p = 1;
-              _context2.n = 2;
+              _context2.p = 0;
+              _context2.n = 1;
               return fetch("/db/table/".concat(encodeURIComponent(tableName)));
-            case 2:
+            case 1:
               response = _context2.v;
               if (response.ok) {
-                _context2.n = 3;
+                _context2.n = 2;
                 break;
               }
               throw new Error('Failed to fetch table details');
-            case 3:
-              _context2.n = 4;
+            case 2:
+              _context2.n = 3;
               return response.json();
-            case 4:
+            case 3:
               details = _context2.v;
               widget = new TableInfoWidget(tableName, details);
-              _context2.n = 6;
+              _context2.n = 5;
               break;
-            case 5:
-              _context2.p = 5;
+            case 4:
+              _context2.p = 4;
               _t2 = _context2.v;
               widget = new DatabaseTabWidget();
               widget.title.label = tableName;
               widget.node.innerHTML = "<div style=\"color: red; padding: 10px;\">Error loading table info: ".concat(_t2.message, "</div>");
-            case 6:
+            case 5:
               refWidget = null;
               if (this.panel.widgets) {
                 _iterator3 = _createForOfIteratorHelper(this.panel.widgets());
@@ -51813,10 +51822,10 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
                 });
               }
               this.panel.activateWidget(widget);
-            case 7:
+            case 6:
               return _context2.a(2);
           }
-        }, _callee2, this, [[1, 5]]);
+        }, _callee2, this, [[0, 4]]);
       }));
       function openTableInfoTab(_x) {
         return _openTableInfoTab.apply(this, arguments);
@@ -51834,7 +51843,9 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "getInitialQuery",
     value: function getInitialQuery(selectedTables) {
-      if (selectedTables.length === 0) return '';
+      if (selectedTables.length === 0) {
+        return '';
+      }
       if (selectedTables.length === 1) {
         return "SELECT * FROM \"".concat(selectedTables[0], "\" LIMIT 100;");
       }
@@ -52006,8 +52017,8 @@ var BaseActivationGraphWidget = /*#__PURE__*/function (_Widget) {
       var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var showDiffFunction = arguments.length > 2 ? arguments[2] : undefined;
       var nowVisPanel = arguments.length > 3 ? arguments[3] : undefined;
-      var sub = this.node.getElementsByClassName("sub-content")[0];
-      sub.innerHTML = "";
+      var sub = this.node.getElementsByClassName('sub-content')[0];
+      sub.innerHTML = '';
       this.graph = new _noworkflow_trial__WEBPACK_IMPORTED_MODULE_2__.TrialGraph(this.cls, sub, config, showDiffFunction, nowVisPanel);
       this.graph.load(data, this.t1, this.t2);
     }
@@ -52015,7 +52026,7 @@ var BaseActivationGraphWidget = /*#__PURE__*/function (_Widget) {
     key: "graphDefinition",
     value: function graphDefinition() {
       var _this = this;
-      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "namespace_match";
+      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'namespace_match';
       var useCache = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
       var genDataflow = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
       var data = arguments.length > 3 ? arguments[3] : undefined;
@@ -52024,23 +52035,23 @@ var BaseActivationGraphWidget = /*#__PURE__*/function (_Widget) {
         height: this.node.getBoundingClientRect().height - 24,
         customForm: function customForm(graph, form) {
           // Toggle Tooltips
-          var selectorDiv = _this.d3node.select(".trial-content .graphselector");
-          var typeOptions = selectorDiv.select(".graph-type");
-          typeOptions.property("value", selectedGraph);
-          var useCacheDiv = selectorDiv.select(".use-cache");
-          useCacheDiv.property("checked", useCache);
-          var selectorToggle = form.append("input").attr("id", "trial-" + graph.graphId + "-toolbar-selector-check").attr("type", "checkbox").attr("name", "trial-toolbar-selector-check").attr("value", "show").property("checked", selectorDiv.classed('visible')).on("change", function () {
-            var visible = selectorToggle.property("checked");
+          var selectorDiv = _this.d3node.select('.trial-content .graphselector');
+          var typeOptions = selectorDiv.select('.graph-type');
+          typeOptions.property('value', selectedGraph);
+          var useCacheDiv = selectorDiv.select('.use-cache');
+          useCacheDiv.property('checked', useCache);
+          var selectorToggle = form.append('input').attr('id', 'trial-' + graph.graphId + '-toolbar-selector-check').attr('type', 'checkbox').attr('name', 'trial-toolbar-selector-check').attr('value', 'show').property('checked', selectorDiv.classed('visible')).on('change', function () {
+            var visible = selectorToggle.property('checked');
             selectorToggleI.classed('fa-circle-o', visible).classed('fa-circle', !visible);
             selectorDiv.classed('visible', visible).classed('show-toolbar', visible).classed('hide-toolbar', !visible);
           });
-          var selectorLabel = form.append("label").attr("for", "trial-" + graph.graphId + "-toolbar-selector-check");
+          var selectorLabel = form.append('label').attr('for', 'trial-' + graph.graphId + '-toolbar-selector-check');
           var optionsNode = typeOptions.node();
-          selectorLabel.append("span").classed("toggle-label", true).text(optionsNode.options[optionsNode.selectedIndex].text);
-          var selectorToggleI = selectorLabel.append("i").classed('fa', true).classed("fa-circle", !selectorDiv.classed('visible')).classed("fa-circle-o", selectorDiv.classed('visible'));
+          selectorLabel.append('span').classed('toggle-label', true).text(optionsNode.options[optionsNode.selectedIndex].text);
+          var selectorToggleI = selectorLabel.append('i').classed('fa', true).classed('fa-circle', !selectorDiv.classed('visible')).classed('fa-circle-o', selectorDiv.classed('visible'));
         },
         customLoadTooltip: function customLoadTooltip(g, div, text, trialid, aid) {
-          var url = "/trials/" + trialid + "/activations/" + aid + ".json";
+          var url = '/trials/' + trialid + '/activations/' + aid + '.json';
           function createResponse(activationId, div2) {
             return function (data) {
               g.activationStorage[activationId] = data;
@@ -52056,7 +52067,7 @@ var BaseActivationGraphWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "configureGraph",
     value: function configureGraph() {
-      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "namespace_match";
+      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'namespace_match';
       var useCache = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
       var genDataflow = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
       var data = arguments.length > 3 ? arguments[3] : undefined;
@@ -52076,22 +52087,22 @@ var BaseActivationGraphWidget = /*#__PURE__*/function (_Widget) {
   }], [{
     key: "graphTypeForm",
     value: function graphTypeForm(name, selectorDiv) {
-      var graphType = selectorDiv.append("div").classed("graph-attr", true);
-      graphType.append("label").attr("for", name + "-graphtype").attr("title", "Select the graph type").text("Graph Type:");
-      var typeOptions = graphType.append("select").attr("id", name + "-graphtype").classed("graph-type", true).classed("select-style", true);
-      typeOptions.append("option").attr("value", "tree").attr("data-description", "Activation tree. Edges represent order of execution").text("Activation Tree");
-      typeOptions.append("option").attr("value", "no_match").attr("data-description", "Activation tree presented as a Graph").text("Activation No Match");
-      typeOptions.append("option").attr("value", "exact_match").attr("data-description", "Calls have counting independent from caller activations").text("Activation Exact Match");
-      typeOptions.append("option").attr("value", "namespace_match").attr("data-description", "Calls are combined and a function may have more than one call workflow").text("Activation Namespace Match");
-      typeOptions.append("option").attr("value", "definition_tree").attr("data-description", "Definition tree. Edges represent order of script definition").text("Definition Tree");
-      typeOptions.property("value", "namespace_match");
+      var graphType = selectorDiv.append('div').classed('graph-attr', true);
+      graphType.append('label').attr('for', name + '-graphtype').attr('title', 'Select the graph type').text('Graph Type:');
+      var typeOptions = graphType.append('select').attr('id', name + '-graphtype').classed('graph-type', true).classed('select-style', true);
+      typeOptions.append('option').attr('value', 'tree').attr('data-description', 'Activation tree. Edges represent order of execution').text('Activation Tree');
+      typeOptions.append('option').attr('value', 'no_match').attr('data-description', 'Activation tree presented as a Graph').text('Activation No Match');
+      typeOptions.append('option').attr('value', 'exact_match').attr('data-description', 'Calls have counting independent from caller activations').text('Activation Exact Match');
+      typeOptions.append('option').attr('value', 'namespace_match').attr('data-description', 'Calls are combined and a function may have more than one call workflow').text('Activation Namespace Match');
+      typeOptions.append('option').attr('value', 'definition_tree').attr('data-description', 'Definition tree. Edges represent order of script definition').text('Definition Tree');
+      typeOptions.property('value', 'namespace_match');
     }
   }, {
     key: "useCacheForm",
     value: function useCacheForm(name, selectorDiv) {
-      var useCache = selectorDiv.append("div").classed("graph-attr", true);
-      useCache.append("input").attr("type", "checkbox").attr("name", "use_cache").attr("value", "on").attr("checked", true).classed("use-cache", true).attr("id", name + "-use-cache");
-      useCache.append("label").attr("for", name + "-use-cache").attr("title", "Select the graph type").text("Use Cache");
+      var useCache = selectorDiv.append('div').classed('graph-attr', true);
+      useCache.append('input').attr('type', 'checkbox').attr('name', 'use_cache').attr('value', 'on').attr('checked', true).classed('use-cache', true).attr('id', name + '-use-cache');
+      useCache.append('label').attr('for', name + '-use-cache').attr('title', 'Select the graph type').text('Use Cache');
     }
   }, {
     key: "createNode",
@@ -52102,12 +52113,12 @@ var BaseActivationGraphWidget = /*#__PURE__*/function (_Widget) {
       var node = document.createElement('div');
       var d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(node);
       var content = d3node.append('div').classed('trial-content', true);
-      var selectorDiv = content.append("div").classed("graphselector", true).classed("hide-toolbar", true);
+      var selectorDiv = content.append('div').classed('graphselector', true).classed('hide-toolbar', true);
       BaseActivationGraphWidget.graphTypeForm(name, selectorDiv);
       fn(name, selectorDiv);
       BaseActivationGraphWidget.useCacheForm(name, selectorDiv);
-      var selectorReload = selectorDiv.append("a").attr("href", "#").classed("link-button reload-button", true);
-      selectorReload.append('i').classed("fa fa-refresh", true);
+      var selectorReload = selectorDiv.append('a').attr('href', '#').classed('link-button reload-button', true);
+      selectorReload.append('i').classed('fa fa-refresh', true);
       selectorReload.append('span').text('Reload');
       content.append('div').classed('sub-content', true);
       return node;
@@ -52156,8 +52167,8 @@ var DiffGraphWidget = /*#__PURE__*/function (_BaseActivationGraphW) {
       node: _base_activation_graph__WEBPACK_IMPORTED_MODULE_2__.BaseActivationGraphWidget.createNode(cls, DiffGraphWidget.createForm)
     }]);
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
-    _this.d3node.select('.reload-button').on("click", function () {
-      _this.load(_this.d3node.select(".graph-type").property("value"), _this.d3node.select(".use-cache").property("checked"));
+    _this.d3node.select('.reload-button').on('click', function () {
+      _this.load(_this.d3node.select('.graph-type').property('value'), _this.d3node.select('.use-cache').property('checked'));
     });
     _this.addClass('content');
     _this.addClass('diff-widget');
@@ -52177,21 +52188,21 @@ var DiffGraphWidget = /*#__PURE__*/function (_BaseActivationGraphW) {
     key: "load",
     value: function load() {
       var _this2 = this;
-      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "namespace_match";
+      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'namespace_match';
       var useCache = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-      var sub = this.node.getElementsByClassName("sub-content")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_1__.json)("Diff", sub, DiffGraphWidget.url(this.t1, this.t2, selectedGraph, useCache), function (data) {
-        var selectorDiv = _this2.d3node.select(".trial-content .graphselector");
-        var useCacheDiv = selectorDiv.select(".use-cache");
-        useCacheDiv.property("checked", useCache);
+      var sub = this.node.getElementsByClassName('sub-content')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_1__.json)('Diff', sub, DiffGraphWidget.url(this.t1, this.t2, selectedGraph, useCache), function (data) {
+        var selectorDiv = _this2.d3node.select('.trial-content .graphselector');
+        var useCacheDiv = selectorDiv.select('.use-cache');
+        useCacheDiv.property('checked', useCache);
         _this2.configureGraph(selectedGraph, useCache, false, data, _this2.showDiffFunction, _this2.nowVisPanel);
       });
     }
   }], [{
     key: "url",
     value: function url(trial1, trial2, selectedGraph, useCache) {
-      var cache = useCache ? "1" : "0";
-      return "diff/" + trial1 + "/" + trial2 + "/" + selectedGraph + "-" + cache + ".json";
+      var cache = useCache ? '1' : '0';
+      return 'diff/' + trial1 + '/' + trial2 + '/' + selectedGraph + '-' + cache + '.json';
     }
   }, {
     key: "createForm",
@@ -52220,7 +52231,7 @@ function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.fre
 
 function functionDiffWindow(functionDiffJson, windowIdAndTitle, parentDock) {
   if (document.getElementById(windowIdAndTitle)) {
-    alert("This function diff is already open!");
+    alert('This function diff is already open!');
     return;
   }
   var functionDiffWidget = new _lumino_widgets__WEBPACK_IMPORTED_MODULE_1__.Widget();
@@ -52230,48 +52241,52 @@ function functionDiffWindow(functionDiffJson, windowIdAndTitle, parentDock) {
   parentDock.addGraphWidget(functionDiffWidget);
   parentDock.activateWidget(functionDiffWidget);
   var functionDiffWindow = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(windowIdAndTitle));
-  functionDiffWindow.style("overflow-y", "auto").style("padding", "2em 2em 2em 1em");
+  functionDiffWindow.style('overflow-y', 'auto').style('padding', '2em 2em 2em 1em');
   function addHideShowButton(elementToAppendTo, buttonId, spanId) {
-    buttonId += "-" + crypto.randomUUID();
-    return elementToAppendTo.append("span").append("i").attr("id", buttonId).classed("fa fa-compress", true).on("click", function () {
+    buttonId += '-' + crypto.randomUUID();
+    return elementToAppendTo.append('span').append('i').attr('id', buttonId).classed('fa fa-compress', true).on('click', function () {
       var spanToHideOrShow = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(spanId));
       var thisButton = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(buttonId));
-      if (spanToHideOrShow.classed("d-none")) {
-        spanToHideOrShow.classed("d-none", false);
-        thisButton.classed("fa fa-expand", false);
-        thisButton.classed("fa fa-compress", true);
+      if (spanToHideOrShow.classed('d-none')) {
+        spanToHideOrShow.classed('d-none', false);
+        thisButton.classed('fa fa-expand', false);
+        thisButton.classed('fa fa-compress', true);
       } else {
-        spanToHideOrShow.classed("d-none", true);
-        thisButton.classed("fa fa-compress", false);
-        thisButton.classed("fa fa-expand", true);
+        spanToHideOrShow.classed('d-none', true);
+        thisButton.classed('fa fa-compress', false);
+        thisButton.classed('fa fa-expand', true);
       }
     });
   }
   function filterVariablesArray(array, opVariables) {
-    var defaultVariables = ["name", "attribute", "access"];
-    if (opVariables) defaultVariables = defaultVariables.concat(["add", "sub", "mult", "div", "mod", "pow", "floordiv",
-    // arithmetic operators
-    "add_assign", "sub_assign", "mult_assign", "div_assign",
-    // assignment operators 1
-    "mod_assign", "pow_assign", "floordiv_assign",
-    // assignment operators 2
-    "bitand_assign", "bitor_assign", "bitxor_assign",
-    // assignment operators 3
-    "rshift_assign", "lshift_assign",
-    // assignment operators 4
-    "eq", "noteq", "gt", "lt", "gte", "lte",
-    // comparison operators
-    "and", "or", "not",
-    // logical operators
-    "is", "isnot",
-    // identity operators
-    "in", "notin",
-    // membership operators
-    "bitand", "bitor", "bitxor", "invert", "rshift", "lshift"]); // bitwise operators]
+    var defaultVariables = ['name', 'attribute', 'access'];
+    if (opVariables) {
+      defaultVariables = defaultVariables.concat(['add', 'sub', 'mult', 'div', 'mod', 'pow', 'floordiv',
+      // arithmetic operators
+      'add_assign', 'sub_assign', 'mult_assign', 'div_assign',
+      // assignment operators 1
+      'mod_assign', 'pow_assign', 'floordiv_assign',
+      // assignment operators 2
+      'bitand_assign', 'bitor_assign', 'bitxor_assign',
+      // assignment operators 3
+      'rshift_assign', 'lshift_assign',
+      // assignment operators 4
+      'eq', 'noteq', 'gt', 'lt', 'gte', 'lte',
+      // comparison operators
+      'and', 'or', 'not',
+      // logical operators
+      'is', 'isnot',
+      // identity operators
+      'in', 'notin',
+      // membership operators
+      'bitand', 'bitor', 'bitxor', 'invert', 'rshift', 'lshift']);
+    } // bitwise operators]
 
     var filteredArray = array.filter(function (arrayElement) {
       for (var i = 0; i < defaultVariables.length; i++) {
-        if (arrayElement.includes("'type': '" + defaultVariables[i] + "',")) return true;
+        if (arrayElement.includes("'type': '" + defaultVariables[i] + "',")) {
+          return true;
+        }
       }
       return false;
     });
@@ -52279,44 +52294,46 @@ function functionDiffWindow(functionDiffJson, windowIdAndTitle, parentDock) {
   }
   function writeHTMLDiffVariables(spanVariables, trial1VariablesThatChanged, trial2VariablesAdded, trial1VariablesRemoved) {
     if (trial1VariablesThatChanged.length > 0) {
-      var variablesChangedTitle = spanVariables.append("p").attr("style", "font-weight:bold;").text("The variables changed:");
-      var spanVariablesChanged = spanVariables.append("spand").attr("id", "diff-function-variables-changed-span-" + crypto.randomUUID());
-      addHideShowButton(variablesChangedTitle, "hide-and-show-button-variables-changed", spanVariablesChanged.attr("id"));
+      var variablesChangedTitle = spanVariables.append('p').attr('style', 'font-weight:bold;').text('The variables changed:');
+      var spanVariablesChanged = spanVariables.append('spand').attr('id', 'diff-function-variables-changed-span-' + crypto.randomUUID());
+      addHideShowButton(variablesChangedTitle, 'hide-and-show-button-variables-changed', spanVariablesChanged.attr('id'));
       trial1VariablesThatChanged.forEach(function (diffVar) {
         var variablesLines = diffVar.match(/\{[^}]*\}/g);
         var differentAttributes = findDifferenceBetweenVariables(variablesLines[0], variablesLines[1]);
-        spanVariablesChanged.append("span").html(colorJsonAttributesHTML(variablesLines[0], differentAttributes, "red"));
-        spanVariablesChanged.append("br");
-        spanVariablesChanged.append("span").html(colorJsonAttributesHTML(variablesLines[1], differentAttributes, "green"));
-        spanVariablesChanged.append("br");
-        spanVariablesChanged.append("br");
+        spanVariablesChanged.append('span').html(colorJsonAttributesHTML(variablesLines[0], differentAttributes, 'red'));
+        spanVariablesChanged.append('br');
+        spanVariablesChanged.append('span').html(colorJsonAttributesHTML(variablesLines[1], differentAttributes, 'green'));
+        spanVariablesChanged.append('br');
+        spanVariablesChanged.append('br');
       });
     }
     if (trial2VariablesAdded.length > 0) {
-      var variablesAddedTitle = spanVariables.append("p").attr("style", "font-weight:bold;").text("The variables added:");
-      var spanVariablesAdded = spanVariables.append("spand").attr("id", "diff-function-variables-added-span-" + crypto.randomUUID());
-      addHideShowButton(variablesAddedTitle, "hide-and-show-button-variables-added", spanVariablesAdded.attr("id"));
+      var variablesAddedTitle = spanVariables.append('p').attr('style', 'font-weight:bold;').text('The variables added:');
+      var spanVariablesAdded = spanVariables.append('spand').attr('id', 'diff-function-variables-added-span-' + crypto.randomUUID());
+      addHideShowButton(variablesAddedTitle, 'hide-and-show-button-variables-added', spanVariablesAdded.attr('id'));
       trial2VariablesAdded.forEach(function (varAdded) {
-        spanVariablesAdded.append("span").style("color", "green").text(varAdded);
-        spanVariablesAdded.append("br");
+        spanVariablesAdded.append('span').style('color', 'green').text(varAdded);
+        spanVariablesAdded.append('br');
       });
     }
     if (trial1VariablesRemoved.length > 0) {
-      var variablesRemovedTitle = spanVariables.append("p").attr("style", "font-weight:bold;").text("The variables removed:");
-      var spanVariablesRemoved = spanVariables.append("spand").attr("id", "diff-function-variables-removed-span" + crypto.randomUUID());
-      addHideShowButton(variablesRemovedTitle, "hide-and-show-button-removed-added", spanVariablesRemoved.attr("id"));
+      var variablesRemovedTitle = spanVariables.append('p').attr('style', 'font-weight:bold;').text('The variables removed:');
+      var spanVariablesRemoved = spanVariables.append('spand').attr('id', 'diff-function-variables-removed-span' + crypto.randomUUID());
+      addHideShowButton(variablesRemovedTitle, 'hide-and-show-button-removed-added', spanVariablesRemoved.attr('id'));
       trial1VariablesRemoved.forEach(function (varRemoved) {
-        spanVariablesRemoved.append("span").style("color", "red").text(varRemoved);
-        spanVariablesRemoved.append("br");
+        spanVariablesRemoved.append('span').style('color', 'red').text(varRemoved);
+        spanVariablesRemoved.append('br');
       });
     }
   }
   function findDifferenceBetweenVariables(variable1, variable2) {
-    var jsonVariable1 = JSON.parse(variable1.replace(/"'/g, "\"").replace(/'"/g, "\"").replace(/'/g, "\""));
-    var jsonVariable2 = JSON.parse(variable2.replace(/"'/g, "\"").replace(/'"/g, "\"").replace(/'/g, "\""));
+    var jsonVariable1 = JSON.parse(variable1.replace(/"'/g, '"').replace(/'"/g, '"').replace(/'/g, '"'));
+    var jsonVariable2 = JSON.parse(variable2.replace(/"'/g, '"').replace(/'"/g, '"').replace(/'/g, '"'));
     var differentAttributes = [];
     for (var attr in jsonVariable1) {
-      if (jsonVariable1[attr] != jsonVariable2[attr]) differentAttributes.push(attr.toString());
+      if (jsonVariable1[attr] !== jsonVariable2[attr]) {
+        differentAttributes.push(attr.toString());
+      }
     }
     return differentAttributes;
   }
@@ -52326,137 +52343,142 @@ function functionDiffWindow(functionDiffJson, windowIdAndTitle, parentDock) {
       // Annotated code = color only the attribute
       //attr = "'"+attr+"':";
       //coloredJsonAsString = coloredJsonAsString.replace(attr, "<span style=\"color: "+color+";\">" + attr + "</span>");
-      var regex = "'" + attr + "':" + "(.*?),";
+      var regex = "'" + attr + "':" + '(.*?),';
       var regexMatches = coloredJsonAsString.match(new RegExp(String.raw(_templateObject || (_templateObject = _taggedTemplateLiteral(["s", "s"], ["\\s", "\\s"])), regex)));
-      coloredJsonAsString = coloredJsonAsString.replace(regexMatches[1], "<span style=\"color: " + color + ";\">" + regexMatches[1] + "</span>");
+      coloredJsonAsString = coloredJsonAsString.replace(regexMatches[1], '<span style="color: ' + color + ';">' + regexMatches[1] + '</span>');
     });
     return coloredJsonAsString;
   }
   function colorArrayElementsHTML(array, symDifference, color) {
     var coloredArray = array;
     symDifference.forEach(function (argument) {
-      if (coloredArray.includes(argument)) coloredArray[coloredArray.indexOf(argument)] = "<span style=\"color: " + color + "\">" + argument.toString() + "</span>";
+      if (coloredArray.includes(argument)) {
+        coloredArray[coloredArray.indexOf(argument)] = '<span style="color: ' + color + '">' + argument.toString() + '</span>';
+      }
     });
     return coloredArray.toString();
   }
   function writeFileAccess(fileAccessArray, window, color) {
     fileAccessArray.forEach(function (file) {
-      window.append("span").style("color", color).text("Name: " + file.name);
-      window.append("br");
-      window.append("span").style("color", color).text("Mode: " + file.mode);
-      window.append("br");
-      window.append("span").style("color", color).text(" Buffering: " + file.buffering);
-      window.append("br");
-      window.append("span").style("color", color).text("Content hash before: " + file.content_hash_before).on("click", function () {
+      window.append('span').style('color', color).text('Name: ' + file.name);
+      window.append('br');
+      window.append('span').style('color', color).text('Mode: ' + file.mode);
+      window.append('br');
+      window.append('span').style('color', color).text(' Buffering: ' + file.buffering);
+      window.append('br');
+      window.append('span').style('color', color).text('Content hash before: ' + file.content_hash_before).on('click', function () {
         downloadFileContent(file.content_hash_before, file.name);
       });
-      window.append("br");
-      window.append("span").style("color", color).text("Content hash after: " + file.content_hash_after).on("click", function () {
+      window.append('br');
+      window.append('span').style('color', color).text('Content hash after: ' + file.content_hash_after).on('click', function () {
         downloadFileContent(file.content_hash_after, file.name);
       });
-      window.append("br");
-      window.append("span").style("color", color).text("Timestamp: " + file.timestamp);
-      window.append("br");
-      window.append("span").style("color", color).text("Function: " + file.stack);
-      window.append("br");
-      window.append("br");
+      window.append('br');
+      window.append('span').style('color', color).text('Timestamp: ' + file.timestamp);
+      window.append('br');
+      window.append('span').style('color', color).text('Function: ' + file.stack);
+      window.append('br');
+      window.append('br');
     });
   }
-  ["output", "arguments", "duration", "variables"].forEach(function (property) {
-    var didntChange = JSON.stringify(functionDiffJson[property + "_function_trial1"]) == JSON.stringify(functionDiffJson[property + "_function_trial2"]);
-    var changeText = didntChange ? "The " + property + " didn't change" : "The " + property + " changed:";
+  ['output', 'arguments', 'duration', 'variables'].forEach(function (property) {
+    var didntChange = JSON.stringify(functionDiffJson[property + '_function_trial1']) === JSON.stringify(functionDiffJson[property + '_function_trial2']);
+    var changeText = didntChange ? 'The ' + property + " didn't change" : 'The ' + property + ' changed:';
     var textChangeTitle;
-    if (property != "variables") textChangeTitle = functionDiffWindow.append("p").attr("style", "font-weight:bold;").text(changeText);
-    if (changeText.includes("changed")) {
-      if (property == "duration") {
-        functionDiffJson[property + "_function_trial1"] = Number(functionDiffJson[property + "_function_trial1"]).toFixed(2) + " microseconds";
-        functionDiffJson[property + "_function_trial2"] = Number(functionDiffJson[property + "_function_trial2"]).toFixed(2) + " microseconds";
+    if (property !== 'variables') {
+      textChangeTitle = functionDiffWindow.append('p').attr('style', 'font-weight:bold;').text(changeText);
+    }
+    if (changeText.includes('changed')) {
+      if (property === 'duration') {
+        functionDiffJson[property + '_function_trial1'] = Number(functionDiffJson[property + '_function_trial1']).toFixed(2) + ' microseconds';
+        functionDiffJson[property + '_function_trial2'] = Number(functionDiffJson[property + '_function_trial2']).toFixed(2) + ' microseconds';
       }
-      var spanProperty = functionDiffWindow.append("span").attr("id", "diff-function-" + property + "-span-" + crypto.randomUUID());
-      if (property != "variables") addHideShowButton(textChangeTitle, "hide-and-show-button-" + property, spanProperty.attr("id"));
-      if (property == "variables") {
-        var buttonDiv = functionDiffWindow.append("div").attr("id", "div-diff-function-variables-filter").lower();
-        buttonDiv.append("span").classed("toollink", true).attr("id", "filter-" + windowIdAndTitle + "-variables-default").attr("href", "#").attr("title", "Show only name, attribute, and access variables").on("click", function () {
-          var trial1ChangedVariablesFiltered = filterVariablesArray(functionDiffJson["trial1_variables_that_changed"], false);
-          var trial2AddedVariablesFiltered = filterVariablesArray(functionDiffJson["trial2_variables_added"], false);
-          var trial1RemovedVariablesFiltered = filterVariablesArray(functionDiffJson["trial1_variables_removed"], false);
-          spanProperty.html("");
+      var spanProperty = functionDiffWindow.append('span').attr('id', 'diff-function-' + property + '-span-' + crypto.randomUUID());
+      if (property !== 'variables') {
+        addHideShowButton(textChangeTitle, 'hide-and-show-button-' + property, spanProperty.attr('id'));
+      }
+      if (property === 'variables') {
+        var buttonDiv = functionDiffWindow.append('div').attr('id', 'div-diff-function-variables-filter').lower();
+        buttonDiv.append('span').classed('toollink', true).attr('id', 'filter-' + windowIdAndTitle + '-variables-default').attr('href', '#').attr('title', 'Show only name, attribute, and access variables').on('click', function () {
+          var trial1ChangedVariablesFiltered = filterVariablesArray(functionDiffJson['trial1_variables_that_changed'], false);
+          var trial2AddedVariablesFiltered = filterVariablesArray(functionDiffJson['trial2_variables_added'], false);
+          var trial1RemovedVariablesFiltered = filterVariablesArray(functionDiffJson['trial1_variables_removed'], false);
+          spanProperty.html('');
           writeHTMLDiffVariables(spanProperty, trial1ChangedVariablesFiltered, trial2AddedVariablesFiltered, trial1RemovedVariablesFiltered);
-        }).append("i").classed("fa fa-asterisk", true).append("span").style("margin-right", "10px").text("Show only name, attribute, and access variables");
-        buttonDiv.append("span").classed("toollink", true).attr("id", "filter-" + windowIdAndTitle + "-variables-operation").attr("href", "#").attr("title", "Show all operation variables").on("click", function () {
-          var trial1ChangedVariablesFiltered = filterVariablesArray(functionDiffJson["trial1_variables_that_changed"], true);
-          var trial2AddedVariablesFiltered = filterVariablesArray(functionDiffJson["trial2_variables_added"], true);
-          var trial1RemovedVariablesFiltered = filterVariablesArray(functionDiffJson["trial1_variables_removed"], true);
-          spanProperty.html("");
+        }).append('i').classed('fa fa-asterisk', true).append('span').style('margin-right', '10px').text('Show only name, attribute, and access variables');
+        buttonDiv.append('span').classed('toollink', true).attr('id', 'filter-' + windowIdAndTitle + '-variables-operation').attr('href', '#').attr('title', 'Show all operation variables').on('click', function () {
+          var trial1ChangedVariablesFiltered = filterVariablesArray(functionDiffJson['trial1_variables_that_changed'], true);
+          var trial2AddedVariablesFiltered = filterVariablesArray(functionDiffJson['trial2_variables_added'], true);
+          var trial1RemovedVariablesFiltered = filterVariablesArray(functionDiffJson['trial1_variables_removed'], true);
+          spanProperty.html('');
           writeHTMLDiffVariables(spanProperty, trial1ChangedVariablesFiltered, trial2AddedVariablesFiltered, trial1RemovedVariablesFiltered);
-        }).append("i").classed("fa fa-plus-square", true).append("span").style("margin-right", "10px").text("Show all operation variables");
-        ;
-        buttonDiv.append("span").classed("toollink", true).attr("id", "filter-" + windowIdAndTitle + "-variables-all").attr("href", "#").attr("title", "Show all variables").on("click", function () {
-          spanProperty.html("");
-          writeHTMLDiffVariables(spanProperty, functionDiffJson["trial1_variables_that_changed"], functionDiffJson["trial2_variables_added"], functionDiffJson["trial1_variables_removed"]);
-        }).append("i").classed("fa fa-code", true).append("span").style("margin-right", "10px").text("Show all variables");
-        writeHTMLDiffVariables(spanProperty, functionDiffJson["trial1_variables_that_changed"], functionDiffJson["trial2_variables_added"], functionDiffJson["trial1_variables_removed"]);
-      } else if (property == "arguments") {
-        var symDifference = functionDiffJson[property + "_function_trial1"].filter(function (x) {
-          return !functionDiffJson[property + "_function_trial2"].includes(x);
-        }).concat(functionDiffJson[property + "_function_trial2"].filter(function (x) {
-          return !functionDiffJson[property + "_function_trial1"].includes(x);
+        }).append('i').classed('fa fa-plus-square', true).append('span').style('margin-right', '10px').text('Show all operation variables');
+        buttonDiv.append('span').classed('toollink', true).attr('id', 'filter-' + windowIdAndTitle + '-variables-all').attr('href', '#').attr('title', 'Show all variables').on('click', function () {
+          spanProperty.html('');
+          writeHTMLDiffVariables(spanProperty, functionDiffJson['trial1_variables_that_changed'], functionDiffJson['trial2_variables_added'], functionDiffJson['trial1_variables_removed']);
+        }).append('i').classed('fa fa-code', true).append('span').style('margin-right', '10px').text('Show all variables');
+        writeHTMLDiffVariables(spanProperty, functionDiffJson['trial1_variables_that_changed'], functionDiffJson['trial2_variables_added'], functionDiffJson['trial1_variables_removed']);
+      } else if (property === 'arguments') {
+        var symDifference = functionDiffJson[property + '_function_trial1'].filter(function (x) {
+          return !functionDiffJson[property + '_function_trial2'].includes(x);
+        }).concat(functionDiffJson[property + '_function_trial2'].filter(function (x) {
+          return !functionDiffJson[property + '_function_trial1'].includes(x);
         }));
-        spanProperty.append("span").html(colorArrayElementsHTML(functionDiffJson[property + "_function_trial1"], symDifference, "red"));
-        spanProperty.append("br");
-        spanProperty.append("span").html(colorArrayElementsHTML(functionDiffJson[property + "_function_trial2"], symDifference, "green"));
+        spanProperty.append('span').html(colorArrayElementsHTML(functionDiffJson[property + '_function_trial1'], symDifference, 'red'));
+        spanProperty.append('br');
+        spanProperty.append('span').html(colorArrayElementsHTML(functionDiffJson[property + '_function_trial2'], symDifference, 'green'));
       } else {
-        spanProperty.append("span").style("color", "red").text(functionDiffJson[property + "_function_trial1"].toString());
-        spanProperty.append("br");
-        spanProperty.append("span").style("color", "green").text(functionDiffJson[property + "_function_trial2"].toString());
+        spanProperty.append('span').style('color', 'red').text(functionDiffJson[property + '_function_trial1'].toString());
+        spanProperty.append('br');
+        spanProperty.append('span').style('color', 'green').text(functionDiffJson[property + '_function_trial2'].toString());
       }
     }
   });
-  var fileAccessAddedTitle = functionDiffWindow.append("p").style("font-weight", "bold").text(functionDiffJson["file_accesses_added"].length + " file accesses added:");
-  var spanFileAccessAdded = functionDiffWindow.append("span").attr("id", "diff-function-file-access-added-span-" + crypto.randomUUID());
-  addHideShowButton(fileAccessAddedTitle, "hide-and-show-button-file-access-added", spanFileAccessAdded.attr("id"));
-  writeFileAccess(functionDiffJson["file_accesses_added"], spanFileAccessAdded, "green");
-  var fileAccessRemovedTitle = functionDiffWindow.append("p").style("font-weight", "bold").text(functionDiffJson["file_accesses_removed"].length + " file accesses removed:");
-  var spanFileAccessRemoved = functionDiffWindow.append("span").attr("id", "diff-function-file-access-removed-span-" + crypto.randomUUID());
-  addHideShowButton(fileAccessRemovedTitle, "hide-and-show-button-file-access-removed", spanFileAccessRemoved.attr("id"));
-  writeFileAccess(functionDiffJson["file_accesses_removed"], spanFileAccessRemoved, "red");
-  var fileAccessReplacedTitle = functionDiffWindow.append("p").style("font-weight", "bold").text(functionDiffJson["file_accesses_replaced"].length + " file accesses replaced:");
-  var spanFileAccessReplaced = functionDiffWindow.append("span").attr("id", "diff-function-file-access-replaced-span-" + crypto.randomUUID());
-  addHideShowButton(fileAccessReplacedTitle, "hide-and-show-button-file-access-replaced", spanFileAccessReplaced.attr("id"));
-  functionDiffJson["file_accesses_replaced"].forEach(function (file) {
-    spanFileAccessReplaced.append("span").text("Name: " + file.name);
-    spanFileAccessReplaced.append("br");
+  var fileAccessAddedTitle = functionDiffWindow.append('p').style('font-weight', 'bold').text(functionDiffJson['file_accesses_added'].length + ' file accesses added:');
+  var spanFileAccessAdded = functionDiffWindow.append('span').attr('id', 'diff-function-file-access-added-span-' + crypto.randomUUID());
+  addHideShowButton(fileAccessAddedTitle, 'hide-and-show-button-file-access-added', spanFileAccessAdded.attr('id'));
+  writeFileAccess(functionDiffJson['file_accesses_added'], spanFileAccessAdded, 'green');
+  var fileAccessRemovedTitle = functionDiffWindow.append('p').style('font-weight', 'bold').text(functionDiffJson['file_accesses_removed'].length + ' file accesses removed:');
+  var spanFileAccessRemoved = functionDiffWindow.append('span').attr('id', 'diff-function-file-access-removed-span-' + crypto.randomUUID());
+  addHideShowButton(fileAccessRemovedTitle, 'hide-and-show-button-file-access-removed', spanFileAccessRemoved.attr('id'));
+  writeFileAccess(functionDiffJson['file_accesses_removed'], spanFileAccessRemoved, 'red');
+  var fileAccessReplacedTitle = functionDiffWindow.append('p').style('font-weight', 'bold').text(functionDiffJson['file_accesses_replaced'].length + ' file accesses replaced:');
+  var spanFileAccessReplaced = functionDiffWindow.append('span').attr('id', 'diff-function-file-access-replaced-span-' + crypto.randomUUID());
+  addHideShowButton(fileAccessReplacedTitle, 'hide-and-show-button-file-access-replaced', spanFileAccessReplaced.attr('id'));
+  functionDiffJson['file_accesses_replaced'].forEach(function (file) {
+    spanFileAccessReplaced.append('span').text('Name: ' + file.name);
+    spanFileAccessReplaced.append('br');
     //spanFileAccessReplaced.append("span").style("color", color).text("Mode: " + file.mode);
     //spanFileAccessReplaced.append("br");
     //spanFileAccessReplaced.append("span").style("color", color).text(" Buffering: " + file.buffering);
     //spanFileAccessReplaced.append("br");
-    spanFileAccessReplaced.append("span").text("Content hash before changed from ").append("span").style("color", "red").text(file.content_hash_before_first_trial).on("click", function () {
+    spanFileAccessReplaced.append('span').text('Content hash before changed from ').append('span').style('color', 'red').text(file.content_hash_before_first_trial).on('click', function () {
       downloadFileContent(file.content_hash_before_first_trial, file.name);
     });
-    spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.content_hash_before_second_trial).on("click", function () {
+    spanFileAccessReplaced.append('span').text(' to ').append('span').style('color', 'green').text(file.content_hash_before_second_trial).on('click', function () {
       downloadFileContent(file.content_hash_before_second_trial, file.name);
     });
-    spanFileAccessReplaced.append("br");
-    spanFileAccessReplaced.append("span").text("Content hash after changed from ").append("span").style("color", "red").text(file.content_hash_after_first_trial).on("click", function () {
+    spanFileAccessReplaced.append('br');
+    spanFileAccessReplaced.append('span').text('Content hash after changed from ').append('span').style('color', 'red').text(file.content_hash_after_first_trial).on('click', function () {
       downloadFileContent(file.content_hash_after_first_trial, file.name);
     });
-    spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.content_hash_after_second_trial).on("click", function () {
+    spanFileAccessReplaced.append('span').text(' to ').append('span').style('color', 'green').text(file.content_hash_after_second_trial).on('click', function () {
       downloadFileContent(file.content_hash_after_second_trial, file.name);
     });
-    spanFileAccessReplaced.append("br");
-    spanFileAccessReplaced.append("span").text("Timestamp changed from ").append("span").style("color", "red").text(file.timestamp_first_trial);
-    spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.timestamp_second_trial);
-    spanFileAccessReplaced.append("br");
-    spanFileAccessReplaced.append("span").text("Checkpoint changed from ").append("span").style("color", "red").text(file.checkpoint_first_trial);
-    spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.checkpoint_second_trial);
+    spanFileAccessReplaced.append('br');
+    spanFileAccessReplaced.append('span').text('Timestamp changed from ').append('span').style('color', 'red').text(file.timestamp_first_trial);
+    spanFileAccessReplaced.append('span').text(' to ').append('span').style('color', 'green').text(file.timestamp_second_trial);
+    spanFileAccessReplaced.append('br');
+    spanFileAccessReplaced.append('span').text('Checkpoint changed from ').append('span').style('color', 'red').text(file.checkpoint_first_trial);
+    spanFileAccessReplaced.append('span').text(' to ').append('span').style('color', 'green').text(file.checkpoint_second_trial);
     //spanFileAccessReplaced.append("span").style("color", color).text("Function: " + file.stack);
-    spanFileAccessReplaced.append("br");
-    spanFileAccessReplaced.append("br");
+    spanFileAccessReplaced.append('br');
+    spanFileAccessReplaced.append('br');
   });
   function downloadFileContent(fileHash, fileName) {
-    var link = document.createElement("a");
+    var link = document.createElement('a');
     link.download = fileName;
-    link.href = window.location.origin + "/downloadFile/" + fileHash;
+    link.href = window.location.origin + '/downloadFile/' + fileHash;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -52559,7 +52581,6 @@ function _toPrimitive(t, e) { if ("object" != _typeof(t) || !t) return t; var r;
 
 var pl = __webpack_require__(/*! tau-prolog */ "../../node_modules/tau-prolog/modules/core.js");
 var svgPanZoom = __webpack_require__(/*! svg-pan-zoom */ "../../node_modules/svg-pan-zoom/src/browserify.js");
-"svg-pan-zoom";
 var HistoryWidget = /*#__PURE__*/function (_Widget) {
   function HistoryWidget(config, name, cls, expId, annontationWidget) {
     var _this;
@@ -52572,10 +52593,10 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
     _this.config = config;
     _this.annontationWidget = annontationWidget;
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
-    _this.d3node.select('.reload-button').on("click", function () {
-      _this.load(_this.d3node.select(".script-options").property("value"), _this.d3node.select(".exec-selection").property("value"), _this.d3node.select(".summarize").property("checked"));
+    _this.d3node.select('.reload-button').on('click', function () {
+      _this.load(_this.d3node.select('.script-options').property('value'), _this.d3node.select('.exec-selection').property('value'), _this.d3node.select('.summarize').property('checked'));
     });
-    _this.rightClickMenu = _this.d3node.append("div").classed("dropdown-menu dropdown-menu-sm", true).attr("id", "context-menu").attr("selected-trial", "").style("display", "block");
+    _this.rightClickMenu = _this.d3node.append('div').classed('dropdown-menu dropdown-menu-sm', true).attr('id', 'context-menu').attr('selected-trial', '').style('display', 'block');
     _this.buildModal(_this.node);
     _this.buildRightClickMenu();
 
@@ -52594,8 +52615,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
     key: "setGraph",
     value: function setGraph(data) {
       var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      var sub = this.node.getElementsByClassName("sub-content")[0];
-      sub.innerHTML = "";
+      var sub = this.node.getElementsByClassName('sub-content')[0];
+      sub.innerHTML = '';
       this.graph = new _noworkflow_history__WEBPACK_IMPORTED_MODULE_2__.HistoryGraph(this.cls, sub, config);
       this.graph.load(data);
     }
@@ -52603,11 +52624,11 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
     key: "load",
     value: function load() {
       var _this2 = this;
-      var script = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "*";
-      var execution = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "*";
+      var script = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
+      var execution = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '*';
       var summarize = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-      var sub = this.node.getElementsByClassName("sub-content")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.json)("History", sub, HistoryWidget.url(script, execution, summarize), function (data) {
+      var sub = this.node.getElementsByClassName('sub-content')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.json)('History', sub, HistoryWidget.url(script, execution, summarize), function (data) {
         _this2.setGraph(data, {
           width: _this2.node.getBoundingClientRect().width - 24,
           height: _this2.node.getBoundingClientRect().height - 24,
@@ -52617,8 +52638,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
               return true;
             }
             var greenTrial = d;
-            var diffGraphWidget = new _diff_graph__WEBPACK_IMPORTED_MODULE_5__.DiffGraphWidget("Diff " + redTrial.display + "-" + greenTrial.display, "diff-" + redTrial.title + "-" + greenTrial.title + (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.makeid)(), redTrial.title, greenTrial.title, _this2.functionDiffWindow, _this2.parent);
-            diffGraphWidget.d3node.append("span").text("Ctrl+(left click) on a function overlap to see the functions' diff").style('font-family', 'sans-serif').style('font-size', '12px').style('pointer-events', 'none').lower();
+            var diffGraphWidget = new _diff_graph__WEBPACK_IMPORTED_MODULE_5__.DiffGraphWidget('Diff ' + redTrial.display + '-' + greenTrial.display, 'diff-' + redTrial.title + '-' + greenTrial.title + (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.makeid)(), redTrial.title, greenTrial.title, _this2.functionDiffWindow, _this2.parent);
+            diffGraphWidget.d3node.append('span').text("Ctrl+(left click) on a function overlap to see the functions' diff").style('font-family', 'sans-serif').style('font-size', '12px').style('pointer-events', 'none').lower();
             var parentDock = _this2.parent;
             if (_this2.config.showInfo()) {
               var diffInfoWidget = new _info_diff_info__WEBPACK_IMPORTED_MODULE_7__.DiffInfoWidget(redTrial.display, greenTrial.display, redTrial.title, greenTrial.title);
@@ -52634,7 +52655,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
           },
           customWindowTabCommand: function customWindowTabCommand(trialIdSimplified, windowId, command) {
             var trialExportWidget = new _lumino_widgets__WEBPACK_IMPORTED_MODULE_1__.Widget();
-            trialExportWidget.title.label = command + " trial " + trialIdSimplified;
+            trialExportWidget.title.label = command + ' trial ' + trialIdSimplified;
             trialExportWidget.title.closable = true;
             trialExportWidget.id = windowId;
             var parentDock = _this2.parent;
@@ -52643,7 +52664,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return true;
           },
           customSelectNode: function customSelectNode(g, d) {
-            var trialGraphWidget = new _trial_graph__WEBPACK_IMPORTED_MODULE_4__.TrialGraphWidget("Trial " + d.display, "trial-" + d.title + (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.makeid)(), d.title, d.title);
+            var trialGraphWidget = new _trial_graph__WEBPACK_IMPORTED_MODULE_4__.TrialGraphWidget('Trial ' + d.display, 'trial-' + d.title + (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.makeid)(), d.title, d.title);
             var parentDock = _this2.parent;
             if (_this2.config.showInfo()) {
               var trialInfoWidget = new _info_trial_info__WEBPACK_IMPORTED_MODULE_6__.TrialInfoWidget(d, _this2.annontationWidget);
@@ -52659,56 +52680,56 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
           },
           customForm: function customForm(graph, form) {
             // Toggle Tooltips
-            var filterDiv = _this2.d3node.select(".history-content .filter");
-            var scriptOptions = filterDiv.select(".script-options");
-            var currentScript = scriptOptions.property("value");
-            scriptOptions.html("");
-            scriptOptions.append("option").attr("value", "*").text("All Scripts");
+            var filterDiv = _this2.d3node.select('.history-content .filter');
+            var scriptOptions = filterDiv.select('.script-options');
+            var currentScript = scriptOptions.property('value');
+            scriptOptions.html('');
+            scriptOptions.append('option').attr('value', '*').text('All Scripts');
             var _iterator = _createForOfIteratorHelper(data.scripts),
               _step;
             try {
               for (_iterator.s(); !(_step = _iterator.n()).done;) {
                 var _script = _step.value;
-                scriptOptions.append("option").attr("value", _script).text(_script);
+                scriptOptions.append('option').attr('value', _script).text(_script);
               }
             } catch (err) {
               _iterator.e(err);
             } finally {
               _iterator.f();
             }
-            scriptOptions.property("value", currentScript);
-            var filterToggle = form.append("input").attr("id", "history-" + graph.graphId + "-toolbar-filter-check").attr("type", "checkbox").attr("name", "history-toolbar-filter-check").attr("value", "show").property("checked", filterDiv.classed('visible')).on("change", function () {
-              var visible = filterToggle.property("checked");
+            scriptOptions.property('value', currentScript);
+            var filterToggle = form.append('input').attr('id', 'history-' + graph.graphId + '-toolbar-filter-check').attr('type', 'checkbox').attr('name', 'history-toolbar-filter-check').attr('value', 'show').property('checked', filterDiv.classed('visible')).on('change', function () {
+              var visible = filterToggle.property('checked');
               filterToggleI.classed('fa-circle-o', visible).classed('fa-circle', !visible);
               filterDiv.classed('visible', visible).classed('show-toolbar', visible).classed('hide-toolbar', !visible);
             });
-            var filterLabel = form.append("label").attr("for", "history-" + graph.graphId + "-toolbar-filter-check");
-            var filterToggleI = filterLabel.append("i").classed('fa', true).classed("fa-circle", !filterDiv.classed('visible')).classed("fa-circle-o", filterDiv.classed('visible'));
+            var filterLabel = form.append('label').attr('for', 'history-' + graph.graphId + '-toolbar-filter-check');
+            var filterToggleI = filterLabel.append('i').classed('fa', true).classed('fa-circle', !filterDiv.classed('visible')).classed('fa-circle-o', filterDiv.classed('visible'));
 
             // Push trial
-            form.append("a").classed("toollink", true).attr("id", "history-" + graph.graphId + "-push-trial").attr("href", "#").attr("title", "Push trial").on("click", function () {
+            form.append('a').classed('toollink', true).attr('id', 'history-' + graph.graphId + '-push-trial').attr('href', '#').attr('title', 'Push trial').on('click', function () {
               return _this2.buildPushCommand(_this2.modal, _this2.modalBody);
-            }).append("i").classed("fa fa-cloud-upload", true);
+            }).append('i').classed('fa fa-cloud-upload', true);
 
             // Pull trial
-            form.append("a").classed("toollink", true).attr("id", "history-" + graph.graphId + "-pull-trial").attr("href", "#").attr("title", "Pull trial").on("click", function () {
+            form.append('a').classed('toollink', true).attr('id', 'history-' + graph.graphId + '-pull-trial').attr('href', '#').attr('title', 'Pull trial').on('click', function () {
               return _this2.buildPullCommand(_this2.modal, _this2.modalBody);
-            }).append("i").classed("fa fa-cloud-download", true);
+            }).append('i').classed('fa fa-cloud-download', true);
 
             // Add remote
-            form.append("a").classed("toollink", true).attr("id", "history-" + graph.graphId + "-add-remote").attr("href", "#").attr("title", "Add remote").on("click", function () {
+            form.append('a').classed('toollink', true).attr('id', 'history-' + graph.graphId + '-add-remote').attr('href', '#').attr('title', 'Add remote').on('click', function () {
               return _this2.buildAddRemote(_this2.modal, _this2.modalBody);
-            }).append("i").classed("fa fa-plus-circle", true);
+            }).append('i').classed('fa fa-plus-circle', true);
 
             // Edit remote
-            form.append("a").classed("toollink", true).attr("id", "history-" + graph.graphId + "-edit-remote").attr("href", "#").attr("title", "Edit remote").on("click", function () {
+            form.append('a').classed('toollink', true).attr('id', 'history-' + graph.graphId + '-edit-remote').attr('href', '#').attr('title', 'Edit remote').on('click', function () {
               return _this2.buildEditRemote(_this2.modal, _this2.modalBody);
-            }).append("i").classed("fa fa-pencil-square", true);
+            }).append('i').classed('fa fa-pencil-square', true);
 
             // Delete remote
-            form.append("a").classed("toollink", true).attr("id", "history-" + graph.graphId + "-delete-remote").attr("href", "#").attr("title", "Delete remote").on("click", function () {
+            form.append('a').classed('toollink', true).attr('id', 'history-' + graph.graphId + '-delete-remote').attr('href', '#').attr('title', 'Delete remote').on('click', function () {
               return _this2.buildDeleteRemote(_this2.modal, _this2.modalBody);
-            }).append("i").classed("fa fa-trash", true);
+            }).append('i').classed('fa fa-trash', true);
           }
         });
       });
@@ -52727,14 +52748,14 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
     key: "buildModal",
     value: function buildModal(div) {
       var _this3 = this;
-      this.modal = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(div).append("div").classed("modal fade", true).attr("id", "commandsModal").attr("tabindex", "-1").attr("role", "dialog").attr("aria-labelledby", "commandsModalTitle").style("display", "none").attr("aria-hidden", "true");
-      var modalContent = this.modal.append("div").classed("modal-dialog", true).attr("role", "document").append("div").classed("modal-content", true); //modal content
+      this.modal = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(div).append('div').classed('modal fade', true).attr('id', 'commandsModal').attr('tabindex', '-1').attr('role', 'dialog').attr('aria-labelledby', 'commandsModalTitle').style('display', 'none').attr('aria-hidden', 'true');
+      var modalContent = this.modal.append('div').classed('modal-dialog', true).attr('role', 'document').append('div').classed('modal-content', true); //modal content
 
-      var modalHeader = modalContent.append("div").classed("modal-header", true); //modal header
-      modalHeader.append("h5").classed("modal-title", true).attr("id", "exampleModalTitle").text("Change Temporary Title"); //modal title
+      var modalHeader = modalContent.append('div').classed('modal-header', true); //modal header
+      modalHeader.append('h5').classed('modal-title', true).attr('id', 'exampleModalTitle').text('Change Temporary Title'); //modal title
 
-      this.modalBody = modalContent.append("div").classed("modal-body", true);
-      modalHeader.append("button").classed("close", true).attr("type", "button").text("x").style("float", "right").on("click", function () {
+      this.modalBody = modalContent.append('div').classed('modal-body', true);
+      modalHeader.append('button').classed('close', true).attr('type', 'button').text('x').style('float', 'right').on('click', function () {
         return cleanModalBodyAndClose(_this3.modal, _this3.modalBody);
       }); //close modal
     }
@@ -52753,14 +52774,16 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildProspectiveCommand",
     value: function buildProspectiveCommand() {
-      var self = this;
-      this.rightClickMenu.append("a").classed("dropdown-item", true).attr("href", "#").attr("id", "prospective-option").text("generate prospective graph").on("click", function () {
-        var parent = this.parentNode;
-        var trialId = parent.getAttribute("selected-trial");
-        var trialDisplay = parent.getAttribute("selected-trial-simplified");
-        if (!trialId) return;
-        var prospectiveGraphWidget = new _graph_prospective_graph__WEBPACK_IMPORTED_MODULE_8__.ProspectiveGraphWidget("Prospective " + trialDisplay, "prospective-" + trialId + (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.makeid)(), trialId);
-        var parentDock = self.parent;
+      var _this4 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'prospective-option').text('generate prospective graph').on('click', function (event) {
+        var parent = event.currentTarget.parentNode;
+        var trialId = parent.getAttribute('selected-trial');
+        var trialDisplay = parent.getAttribute('selected-trial-simplified');
+        if (!trialId) {
+          return;
+        }
+        var prospectiveGraphWidget = new _graph_prospective_graph__WEBPACK_IMPORTED_MODULE_8__.ProspectiveGraphWidget('Prospective ' + trialDisplay, 'prospective-' + trialId + (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.makeid)(), trialId);
+        var parentDock = _this4.parent;
         parentDock.addGraphWidget(prospectiveGraphWidget);
         parentDock.activateWidget(prospectiveGraphWidget);
         prospectiveGraphWidget.load();
@@ -52769,47 +52792,49 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildTrialFunctionDiffCommand",
     value: function buildTrialFunctionDiffCommand(modal, modalBody, functionDiffWindow) {
-      var self = this;
-      this.rightClickMenu.append("a").classed("dropdown-item", true).attr("href", "#").attr("id", "trial-function-diff-option").text("function activation diff").on("click", function () {
+      var _this5 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'trial-function-diff-option').text('function activation diff').on('click', function (event) {
         var _parent$getAttribute;
-        var parent = this.parentNode;
-        var trialId = (_parent$getAttribute = parent.getAttribute("selected-trial")) !== null && _parent$getAttribute !== void 0 ? _parent$getAttribute : "";
-        buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, functionDiffWindow, self);
+        var parent = event.currentTarget.parentNode;
+        var trialId = (_parent$getAttribute = parent.getAttribute('selected-trial')) !== null && _parent$getAttribute !== void 0 ? _parent$getAttribute : '';
+        buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, functionDiffWindow, _this5);
       });
     }
   }, {
     key: "buildDataflowCommand",
     value: function buildDataflowCommand(modal, modalBody) {
-      var self = this;
-      this.rightClickMenu.append("a").classed("dropdown-item", true).attr("href", "#").attr("id", "dataflow-option").text("generate dataflow").on("click", function () {
+      var _this6 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'dataflow-option').text('generate dataflow').on('click', function (event) {
         var _parent$getAttribute2;
-        var parent = this.parentNode;
-        var trialId = (_parent$getAttribute2 = parent.getAttribute("selected-trial")) !== null && _parent$getAttribute2 !== void 0 ? _parent$getAttribute2 : "";
-        buildDataflowModal(modal, modalBody, parent, self.graph.config, trialId);
+        var parent = event.currentTarget.parentNode;
+        var trialId = (_parent$getAttribute2 = parent.getAttribute('selected-trial')) !== null && _parent$getAttribute2 !== void 0 ? _parent$getAttribute2 : '';
+        buildDataflowModal(modal, modalBody, parent, _this6.graph.config, trialId);
       });
     }
   }, {
     key: "buildExportPrologCommand",
     value: function buildExportPrologCommand(modal, modalBody) {
-      var self = this;
-      this.rightClickMenu.append("a").classed("dropdown-item", true).attr("href", "#").attr("id", "export-option").text("generate prolog").on("click", function () {
-        var parent = this.parentNode;
-        var trialId = parent.getAttribute("selected-trial");
-        var exportUrl = "/commands/export/" + trialId;
-        var exportWindowId = "Export window " + trialId;
-        buildExportPrologModal(modal, modalBody, exportUrl, self.graph.config, parent, exportWindowId, trialId);
+      var _this7 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'export-option').text('generate prolog').on('click', function (event) {
+        var parent = event.currentTarget.parentNode;
+        var trialId = parent.getAttribute('selected-trial');
+        var exportUrl = '/commands/export/' + trialId;
+        var exportWindowId = 'Export window ' + trialId;
+        buildExportPrologModal(modal, modalBody, exportUrl, _this7.graph.config, parent, exportWindowId, trialId);
       });
     }
   }, {
     key: "buildProvCommand",
     value: function buildProvCommand() {
-      var self = this;
-      this.rightClickMenu.append("a").classed("dropdown-item", true).attr("href", "#").attr("id", "prov-option").text("generate prov").on("click", function () {
-        var parent = this.parentNode;
-        var trialId = parent.getAttribute("selected-trial");
-        var provWindowId = "Prov window " + trialId;
-        if (document.getElementById(provWindowId)) return;
-        var provUrl = "/commands/prov/" + trialId;
+      var _this8 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'prov-option').text('generate prov').on('click', function (event) {
+        var parent = event.currentTarget.parentNode;
+        var trialId = parent.getAttribute('selected-trial');
+        var provWindowId = 'Prov window ' + trialId;
+        if (document.getElementById(provWindowId)) {
+          return;
+        }
+        var provUrl = '/commands/prov/' + trialId;
         fetch(provUrl, {
           method: 'GET',
           // *GET, POST, PUT, DELETE, etc.
@@ -52818,14 +52843,16 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
           }
         }).then(function (response) {
           response.json().then(function (json) {
-            self.graph.config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified"), provWindowId, "Prov");
+            _this8.graph.config.customWindowTabCommand(parent.getAttribute('selected-trial-simplified'), provWindowId, 'Prov');
             var provWindow = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(provWindowId));
-            if (response.status == 200) {
-              provWindow.style("overflow-y", "auto");
-              var prov_lines = json.prov.split("\n");
-              for (var line in prov_lines) provWindow.append("p").text(prov_lines[line]);
+            if (response.status === 200) {
+              provWindow.style('overflow-y', 'auto');
+              var prov_lines = json.prov.split('\n');
+              for (var line in prov_lines) {
+                provWindow.append('p').text(prov_lines[line]);
+              }
             } else {
-              window.alert("No prov to export");
+              window.alert('No prov to export');
             }
           });
         });
@@ -52834,11 +52861,11 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildRestoreFileCommand",
     value: function buildRestoreFileCommand(modal, modalBody) {
-      this.rightClickMenu.append("a").classed("dropdown-item", true).attr("href", "#").attr("id", "restore-file-option").text("restore file").on("click", function () {
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'restore-file-option').text('restore file').on('click', function () {
         var parent = this.parentNode;
-        var trialId = parent.getAttribute("selected-trial");
+        var trialId = parent.getAttribute('selected-trial');
         var trialFiles;
-        fetch("/files/" + trialId, {
+        fetch('/files/' + trialId, {
           method: 'GET',
           // *GET, POST, PUT, DELETE, etc.
           headers: {
@@ -52848,25 +52875,29 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
           response.json().then(function (json) {
             var _submitButton;
             trialFiles = json.files;
-            changeTitle(parent, "Restore file trial ");
+            changeTitle(parent, 'Restore file trial ');
             var submitButton;
             var form;
             showModal(modal);
             if (modalBody) {
-              form = modalBody.append("form").attr("onsubmit", "return false;");
+              form = modalBody.append('form').attr('onsubmit', 'return false;');
               //createFormTextInput(form, "restoreFile", "Restore file", "restoreFileHelp", "Write the name of the file you want to restore");
-              createFormSelectInput(form, "restoreFile", "Restore file", 0, trialFiles.length - 1, 0, "", "", trialFiles);
-              createFormTextInput(form, "restoreFileID", "File identifier", "restoreIDHelp", "(optional) Identifies the file to be restored. It can be either the timestamp, the number of access, or the code hash");
-              createFormTextInput(form, "restoreFileTarget", "Target file path", "restoreTargetHelp", "(optional) specifies the target path of the restored file");
-              submitButton = form.append("button").classed("btn btn-primary mb-2", true).attr("type", "submit").text("restore trial");
+              createFormSelectInput(form, 'restoreFile', 'Restore file', 0, trialFiles.length - 1, 0, '', '', trialFiles);
+              createFormTextInput(form, 'restoreFileID', 'File identifier', 'restoreIDHelp', '(optional) Identifies the file to be restored. It can be either the timestamp, the number of access, or the code hash');
+              createFormTextInput(form, 'restoreFileTarget', 'Target file path', 'restoreTargetHelp', '(optional) specifies the target path of the restored file');
+              submitButton = form.append('button').classed('btn btn-primary mb-2', true).attr('type', 'submit').text('restore trial');
             }
-            (_submitButton = submitButton) === null || _submitButton === void 0 || _submitButton.on("click", function () {
+            (_submitButton = submitButton) === null || _submitButton === void 0 || _submitButton.on('click', function () {
               //let fileToRestore : string | boolean = getTextInputFormByID("restoreFile", true);
-              var fileToRestore = document.getElementById("restoreFile").selectedOptions[0].value;
-              var fileIdentifier = getTextInputFormByID("restoreFileID", true);
-              var targetPath = getTextInputFormByID("restoreFileTarget", false);
-              var restoreUrl = "/commands/restore/file/" + trialId + "/" + fileToRestore + "/" + fileIdentifier + "/" + targetPath;
-              if (fileToRestore) getRestoreOrCollabCommand(restoreUrl, form, modalBody);else addAlert(modalBody, "alert-danger", "Error!", "The file's name is empty");
+              var fileToRestore = document.getElementById('restoreFile').selectedOptions[0].value;
+              var fileIdentifier = getTextInputFormByID('restoreFileID', true);
+              var targetPath = getTextInputFormByID('restoreFileTarget', false);
+              var restoreUrl = '/commands/restore/file/' + trialId + '/' + fileToRestore + '/' + fileIdentifier + '/' + targetPath;
+              if (fileToRestore) {
+                getRestoreOrCollabCommand(restoreUrl, form, modalBody);
+              } else {
+                addAlert(modalBody, 'alert-danger', 'Error!', "The file's name is empty");
+              }
             });
           });
         });
@@ -52875,26 +52906,26 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildRestoreTrialCommand",
     value: function buildRestoreTrialCommand(modal, modalBody) {
-      this.rightClickMenu.append("a").classed("dropdown-item", true).attr("href", "#").attr("id", "restore-trial-option").text("restore trial").on("click", function () {
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'restore-trial-option').text('restore trial').on('click', function () {
         var _submitButton2;
         var parent = this.parentNode;
-        var trialId = parent.getAttribute("selected-trial");
-        changeTitle(parent, "Restore trial ");
+        var trialId = parent.getAttribute('selected-trial');
+        changeTitle(parent, 'Restore trial ');
         var submitButton;
         var form;
         showModal(modal);
         if (modalBody) {
-          form = modalBody.append("form").attr("onsubmit", "return false;");
-          createFormCheckInput(form, "restoreSkipScript", "Skip Script");
-          createFormCheckInput(form, "restoreSkipLocalModules", "Skip Local Modules");
-          createFormCheckInput(form, "restoreSkipFileAccess", "Skip File Access");
-          submitButton = form.append("button").classed("btn btn-primary mb-2", true).attr("type", "submit").text("restore trial");
+          form = modalBody.append('form').attr('onsubmit', 'return false;');
+          createFormCheckInput(form, 'restoreSkipScript', 'Skip Script');
+          createFormCheckInput(form, 'restoreSkipLocalModules', 'Skip Local Modules');
+          createFormCheckInput(form, 'restoreSkipFileAccess', 'Skip File Access');
+          submitButton = form.append('button').classed('btn btn-primary mb-2', true).attr('type', 'submit').text('restore trial');
         }
-        (_submitButton2 = submitButton) === null || _submitButton2 === void 0 || _submitButton2.on("click", function () {
-          var skipScript = document.getElementById("restoreSkipScript").checked;
-          var skipModules = document.getElementById("restoreSkipLocalModules").checked;
-          var skipFileAccess = document.getElementById("restoreSkipFileAccess").checked;
-          var restoreUrl = "/commands/restore/trial/" + trialId + "/" + skipScript + "/" + skipModules + "/" + skipFileAccess;
+        (_submitButton2 = submitButton) === null || _submitButton2 === void 0 || _submitButton2.on('click', function () {
+          var skipScript = document.getElementById('restoreSkipScript').checked;
+          var skipModules = document.getElementById('restoreSkipLocalModules').checked;
+          var skipFileAccess = document.getElementById('restoreSkipFileAccess').checked;
+          var restoreUrl = '/commands/restore/trial/' + trialId + '/' + skipScript + '/' + skipModules + '/' + skipFileAccess;
           getRestoreOrCollabCommand(restoreUrl, form, modalBody);
         });
       });
@@ -52903,20 +52934,20 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
     key: "buildAddRemote",
     value: function buildAddRemote(modal, modalBody) {
       var _submitButton3;
-      document.getElementById("exampleModalTitle").textContent = "Add new remote";
+      document.getElementById('exampleModalTitle').textContent = 'Add new remote';
       var submitButton;
       var form;
       showModal(modal);
       if (modalBody) {
-        form = modalBody.append("form").attr("onsubmit", "return false;");
-        createFormTextInput(form, "inputAddRemoteUrl", "Remote URL: ");
-        createFormTextInput(form, "inputAddRemoteName", "Remote name: ");
-        submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Add remote");
+        form = modalBody.append('form').attr('onsubmit', 'return false;');
+        createFormTextInput(form, 'inputAddRemoteUrl', 'Remote URL: ');
+        createFormTextInput(form, 'inputAddRemoteName', 'Remote name: ');
+        submitButton = form.append('button').classed('btn btn-primary mb-2', true).text('Add remote');
       }
-      (_submitButton3 = submitButton) === null || _submitButton3 === void 0 || _submitButton3.on("click", function () {
-        var remoteURL = document.getElementById("inputAddRemoteUrl").value;
-        var remoteName = document.getElementById("inputAddRemoteName").value;
-        var addRemoteURL = "/collab/remotes/add/" + remoteName + "/" + remoteURL;
+      (_submitButton3 = submitButton) === null || _submitButton3 === void 0 || _submitButton3.on('click', function () {
+        var remoteURL = document.getElementById('inputAddRemoteUrl').value;
+        var remoteName = document.getElementById('inputAddRemoteName').value;
+        var addRemoteURL = '/collab/remotes/add/' + remoteName + '/' + remoteURL;
         fetch(addRemoteURL, {
           method: 'POST',
           // *GET, POST, PUT, DELETE, etc.
@@ -52926,10 +52957,10 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
         }).then(function (response) {
           response.json().then(function (json) {
             form.remove();
-            if (response.status == 200) {
-              addAlert(modalBody, "alert-success", "Success!", json.terminal_text);
+            if (response.status === 200) {
+              addAlert(modalBody, 'alert-success', 'Success!', json.terminal_text);
             } else {
-              addAlert(modalBody, "alert-danger", "Error!", "");
+              addAlert(modalBody, 'alert-danger', 'Error!', '');
             }
           });
         });
@@ -52938,8 +52969,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildDeleteRemote",
     value: function buildDeleteRemote(modal, modalBody) {
-      var _this4 = this;
-      fetch("/collab/remotes/getall", {
+      var _this9 = this;
+      fetch('/collab/remotes/getall', {
         method: 'GET',
         // *GET, POST, PUT, DELETE, etc.
         headers: {
@@ -52951,10 +52982,10 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return _regenerator().w(function (_context) {
               while (1) switch (_context.n) {
                 case 0:
-                  if (response.status == 200) {
-                    _this4.executeCollabCommand(modal, modalBody, "editDeleteServerUrlId", "Delete remote", "delete", json.remotes);
+                  if (response.status === 200) {
+                    _this9.executeCollabCommand(modal, modalBody, 'editDeleteServerUrlId', 'Delete remote', 'delete', json.remotes);
                   } else {
-                    console.log("Failed to get remotes");
+                    console.log('Failed to get remotes');
                   }
                 case 1:
                   return _context.a(2);
@@ -52970,8 +53001,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildEditRemote",
     value: function buildEditRemote(modal, modalBody) {
-      var _this5 = this;
-      fetch("/collab/remotes/getall", {
+      var _this0 = this;
+      fetch('/collab/remotes/getall', {
         method: 'GET',
         // *GET, POST, PUT, DELETE, etc.
         headers: {
@@ -52983,10 +53014,10 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return _regenerator().w(function (_context2) {
               while (1) switch (_context2.n) {
                 case 0:
-                  if (response.status == 200) {
-                    _this5.executeCollabCommand(modal, modalBody, "editRemoteServerUrlId", "Edit remote", "edit", json.remotes);
+                  if (response.status === 200) {
+                    _this0.executeCollabCommand(modal, modalBody, 'editRemoteServerUrlId', 'Edit remote', 'edit', json.remotes);
                   } else {
-                    console.log("Failed to get remotes");
+                    console.log('Failed to get remotes');
                   }
                 case 1:
                   return _context2.a(2);
@@ -53002,8 +53033,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildPushCommand",
     value: function buildPushCommand(modal, modalBody) {
-      var _this6 = this;
-      fetch("/collab/remotes/getall", {
+      var _this1 = this;
+      fetch('/collab/remotes/getall', {
         method: 'GET',
         // *GET, POST, PUT, DELETE, etc.
         headers: {
@@ -53015,10 +53046,10 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return _regenerator().w(function (_context3) {
               while (1) switch (_context3.n) {
                 case 0:
-                  if (response.status == 200) {
-                    _this6.executeCollabCommand(modal, modalBody, "pushServerUrlId", "Push experiment", "push", json.remotes);
+                  if (response.status === 200) {
+                    _this1.executeCollabCommand(modal, modalBody, 'pushServerUrlId', 'Push experiment', 'push', json.remotes);
                   } else {
-                    console.log("Failed to get remotes");
+                    console.log('Failed to get remotes');
                   }
                 case 1:
                   return _context3.a(2);
@@ -53034,8 +53065,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildPullCommand",
     value: function buildPullCommand(modal, modalBody) {
-      var _this7 = this;
-      fetch("/collab/remotes/getall", {
+      var _this10 = this;
+      fetch('/collab/remotes/getall', {
         method: 'GET',
         // *GET, POST, PUT, DELETE, etc.
         headers: {
@@ -53047,10 +53078,10 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return _regenerator().w(function (_context4) {
               while (1) switch (_context4.n) {
                 case 0:
-                  if (response.status == 200) {
-                    _this7.executeCollabCommand(modal, modalBody, "pullServerUrlId", "Pull experiment", "pull", json.remotes);
+                  if (response.status === 200) {
+                    _this10.executeCollabCommand(modal, modalBody, 'pullServerUrlId', 'Pull experiment', 'pull', json.remotes);
                   } else {
-                    console.log("Failed to get remotes");
+                    console.log('Failed to get remotes');
                   }
                 case 1:
                   return _context4.a(2);
@@ -53067,45 +53098,49 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
     key: "executeCollabCommand",
     value: function executeCollabCommand(modal, modalBody, serverUrlId, title, command, remotes) {
       var _submitButton4;
-      document.getElementById("exampleModalTitle").textContent = title;
+      document.getElementById('exampleModalTitle').textContent = title;
       var submitButton;
       var form;
       showModal(modal);
       var select;
       if (modalBody) {
-        form = modalBody.append("form").attr("onsubmit", "return false;");
-        form.append("label").attr("for", "remotes").text("Remote: ");
-        select = form.append("select").attr("name", "remotes").attr("id", "remotes");
+        form = modalBody.append('form').attr('onsubmit', 'return false;');
+        form.append('label').attr('for', 'remotes').text('Remote: ');
+        select = form.append('select').attr('name', 'remotes').attr('id', 'remotes');
         for (var i = 0; i < remotes.length; i++) {
-          select.append("option").attr("value", remotes[i].server_url).text(remotes[i].name);
+          select.append('option').attr('value', remotes[i].server_url).text(remotes[i].name);
         }
-        form.append("br");
-        form.append("span").text("Remote URL: ");
-        var remoteURLText = form.append("span").attr("id", serverUrlId + "Remote").text(remotes[0].server_url);
-        select.on("change", function () {
+        form.append('br');
+        form.append('span').text('Remote URL: ');
+        var remoteURLText = form.append('span').attr('id', serverUrlId + 'Remote').text(remotes[0].server_url);
+        select.on('change', function () {
           remoteURLText.text(select.node().value);
         });
-        form.append("br");
-        if (command == "edit") {
-          createFormTextInput(form, "inputEditRemoteName", "Remote new name: ");
+        form.append('br');
+        if (command === 'edit') {
+          createFormTextInput(form, 'inputEditRemoteName', 'Remote new name: ');
         }
-        submitButton = form.append("button").classed("btn btn-primary mb-2", true).text(title);
+        submitButton = form.append('button').classed('btn btn-primary mb-2', true).text(title);
       }
-      (_submitButton4 = submitButton) === null || _submitButton4 === void 0 || _submitButton4.on("click", function () {
+      (_submitButton4 = submitButton) === null || _submitButton4 === void 0 || _submitButton4.on('click', function () {
         var serverUrl = select.node().value;
-        var collabCommandUrl = "/commands/" + command + "/" + serverUrl;
-        if (command == "edit") collabCommandUrl = "/collab/remotes/edit/" + document.getElementById("inputEditRemoteName").value + "/" + serverUrl;
-        if (command == "delete") collabCommandUrl = "/collab/remotes/delete/" + serverUrl;
+        var collabCommandUrl = '/commands/' + command + '/' + serverUrl;
+        if (command === 'edit') {
+          collabCommandUrl = '/collab/remotes/edit/' + document.getElementById('inputEditRemoteName').value + '/' + serverUrl;
+        }
+        if (command === 'delete') {
+          collabCommandUrl = '/collab/remotes/delete/' + serverUrl;
+        }
         getRestoreOrCollabCommand(collabCommandUrl, form, modalBody);
       });
     }
   }], [{
     key: "url",
     value: function url() {
-      var script = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "*";
-      var execution = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "*";
+      var script = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
+      var execution = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '*';
       var summarize = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-      return "trials.json" + "?script=" + encodeURIComponent(script) + "&execution=" + encodeURIComponent(execution) + "&summarize=" + (summarize ? "1" : "0");
+      return 'trials.json' + '?script=' + encodeURIComponent(script) + '&execution=' + encodeURIComponent(execution) + '&summarize=' + (summarize ? '1' : '0');
     }
   }, {
     key: "createNode",
@@ -53115,22 +53150,22 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
       node.appendChild(content);
       var d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(content);
       var d3content = d3node.append('div').classed('history-content', true);
-      var filterDiv = d3content.append("div")
+      var filterDiv = d3content.append('div')
       //let filterDiv = form.insert("div", ":first-child")
-      .classed("filter", true).classed("hide-toolbar", true);
-      var filterInternal = filterDiv.append("div").classed("internal", true);
-      var scriptOptions = filterInternal.append("select").attr("name", "script").classed("select-style script-options", true);
-      scriptOptions.append("option").attr("value", "*").text("All Scripts");
-      var executionOptions = filterInternal.append("select").attr("name", "execution").classed("select-style exec-selection", true);
-      executionOptions.append("option").attr("value", "*").text("All Statuses");
-      executionOptions.append("option").attr("value", "finished").text("Finished Trials");
-      executionOptions.append("option").attr("value", "unfinished").text("Unfinished Trials");
-      executionOptions.append("option").attr("value", "backup").text("Backup Trials");
-      var summarize = filterInternal.append("div").classed("graph-attr", true);
-      summarize.append("input").attr("type", "checkbox").attr("name", "summarize").attr("value", "").attr("checked", false).classed("summarize", true).attr("id", "history-summarize");
-      summarize.append("label").attr("for", "history-summarize").attr("title", "Summarize History").text("Summarize");
-      var filterReload = filterInternal.append("a").attr("href", "#").classed("link-button reload-button", true);
-      filterReload.append('i').classed("fa fa-refresh", true);
+      .classed('filter', true).classed('hide-toolbar', true);
+      var filterInternal = filterDiv.append('div').classed('internal', true);
+      var scriptOptions = filterInternal.append('select').attr('name', 'script').classed('select-style script-options', true);
+      scriptOptions.append('option').attr('value', '*').text('All Scripts');
+      var executionOptions = filterInternal.append('select').attr('name', 'execution').classed('select-style exec-selection', true);
+      executionOptions.append('option').attr('value', '*').text('All Statuses');
+      executionOptions.append('option').attr('value', 'finished').text('Finished Trials');
+      executionOptions.append('option').attr('value', 'unfinished').text('Unfinished Trials');
+      executionOptions.append('option').attr('value', 'backup').text('Backup Trials');
+      var summarize = filterInternal.append('div').classed('graph-attr', true);
+      summarize.append('input').attr('type', 'checkbox').attr('name', 'summarize').attr('value', '').attr('checked', false).classed('summarize', true).attr('id', 'history-summarize');
+      summarize.append('label').attr('for', 'history-summarize').attr('title', 'Summarize History').text('Summarize');
+      var filterReload = filterInternal.append('a').attr('href', '#').classed('link-button reload-button', true);
+      filterReload.append('i').classed('fa fa-refresh', true);
       filterReload.append('span').text('Reload');
       d3content.append('div').classed('sub-content', true);
       return node;
@@ -53139,10 +53174,10 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
 }(_lumino_widgets__WEBPACK_IMPORTED_MODULE_1__.Widget);
 function buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, functionDiffWindow, self) {
   var secondTrialId;
-  changeTitle(parent, "Function activation diff trial");
+  changeTitle(parent, 'Function activation diff trial');
   //document.getElementById("exampleModalTitle")!.textContent = "Function activation diff trial " + trialId;
 
-  fetch("/getFunctionActivations/" + trialId, {
+  fetch('/getFunctionActivations/' + trialId, {
     method: 'GET',
     // *GET, POST, PUT, DELETE, etc.
     headers: {
@@ -53154,15 +53189,15 @@ function buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, function
       if (modalBody) {
         //scrollableModal(modalBody);
 
-        modalBody.append("span").text("Select this trial's activation: ");
-        var firstTrialSelectActivation = modalBody.append("select").classed("form-select", true).attr("arial-label", "firstTrialFunctionActivations").attr("id", "firstTrialFunctionActivations").style("max-width", "480px");
-        for (var activation in json["function_activations"]) {
-          firstTrialSelectActivation.append("option").attr("value", json["function_activations"][activation].id).text(JSON.stringify(json["function_activations"][activation]).replace(/{|}/g, "").substring(0, 70));
+        modalBody.append('span').text("Select this trial's activation: ");
+        var firstTrialSelectActivation = modalBody.append('select').classed('form-select', true).attr('arial-label', 'firstTrialFunctionActivations').attr('id', 'firstTrialFunctionActivations').style('max-width', '480px');
+        for (var activation in json['function_activations']) {
+          firstTrialSelectActivation.append('option').attr('value', json['function_activations'][activation].id).text(JSON.stringify(json['function_activations'][activation]).replace(/{|}/g, '').substring(0, 70));
         }
-        modalBody.append("br");
-        modalBody.append("span").text("Select the other trial: ");
-        var secondTrialSelect = modalBody.append("select").classed("form-select", true).attr("arial-label", "secondTrialSelect").attr("id", "secondTrialSelect");
-        fetch("/getAllTrialsIdsAndTags", {
+        modalBody.append('br');
+        modalBody.append('span').text('Select the other trial: ');
+        var secondTrialSelect = modalBody.append('select').classed('form-select', true).attr('arial-label', 'secondTrialSelect').attr('id', 'secondTrialSelect');
+        fetch('/getAllTrialsIdsAndTags', {
           method: 'GET',
           // *GET, POST, PUT, DELETE, etc.
           headers: {
@@ -53171,21 +53206,21 @@ function buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, function
         }).then(function (response) {
           response.json().then(function (json) {
             for (var trial in json) {
-              secondTrialSelect.append("option").attr("value", json[trial].id).text(json[trial].tag);
+              secondTrialSelect.append('option').attr('value', json[trial].id).text(json[trial].tag);
             }
-            modalBody.append("br");
-            modalBody.append("span").text("Select the other trial's activation: ");
-            var secondTrialSelectActivation = modalBody.append("select").classed("form-select", true).attr("arial-label", "secondTrialFunctionActivations").attr("id", "secondTrialFunctionActivations").style("max-width", "480px");
+            modalBody.append('br');
+            modalBody.append('span').text("Select the other trial's activation: ");
+            var secondTrialSelectActivation = modalBody.append('select').classed('form-select', true).attr('arial-label', 'secondTrialFunctionActivations').attr('id', 'secondTrialFunctionActivations').style('max-width', '480px');
             getSecondTrialFunctionActivations(secondTrialSelectActivation);
-            secondTrialSelect.on("change", function () {
+            secondTrialSelect.on('change', function () {
               getSecondTrialFunctionActivations(secondTrialSelectActivation);
             });
-            modalBody.append("br");
-            var submitButton = modalBody.append("button").classed("btn btn-primary mb-2", true).style("margin-top", "10px").text("Confirm");
-            submitButton.on("click", function () {
-              var firstTrialFunctionId = document.getElementById("firstTrialFunctionActivations").selectedOptions[0].value;
-              var secondTrialFunctionId = document.getElementById("secondTrialFunctionActivations").selectedOptions[0].value;
-              var url = "/commands/diff/" + trialId + "/" + firstTrialFunctionId + "/" + secondTrialId + "/" + secondTrialFunctionId;
+            modalBody.append('br');
+            var submitButton = modalBody.append('button').classed('btn btn-primary mb-2', true).style('margin-top', '10px').text('Confirm');
+            submitButton.on('click', function () {
+              var firstTrialFunctionId = document.getElementById('firstTrialFunctionActivations').selectedOptions[0].value;
+              var secondTrialFunctionId = document.getElementById('secondTrialFunctionActivations').selectedOptions[0].value;
+              var url = '/commands/diff/' + trialId + '/' + firstTrialFunctionId + '/' + secondTrialId + '/' + secondTrialFunctionId;
               fetch(url, {
                 method: 'GET',
                 // *GET, POST, PUT, DELETE, etc.
@@ -53194,7 +53229,7 @@ function buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, function
                 }
               }).then(function (response) {
                 response.json().then(function (json) {
-                  functionDiffWindow(json, "Diff trial " + trialId + " activation_id " + firstTrialFunctionId + " trial " + secondTrialId + " activation_id " + secondTrialFunctionId, self.parent);
+                  functionDiffWindow(json, 'Diff trial ' + trialId + ' activation_id ' + firstTrialFunctionId + ' trial ' + secondTrialId + ' activation_id ' + secondTrialFunctionId, self.parent);
                 });
               });
               cleanModalBodyAndClose(modal, modalBody);
@@ -53205,8 +53240,8 @@ function buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, function
     });
   });
   function getSecondTrialFunctionActivations(secondTrialSelectActivation) {
-    secondTrialId = document.getElementById("secondTrialSelect").selectedOptions[0].value;
-    fetch("/getFunctionActivations/" + secondTrialId, {
+    secondTrialId = document.getElementById('secondTrialSelect').selectedOptions[0].value;
+    fetch('/getFunctionActivations/' + secondTrialId, {
       method: 'GET',
       // *GET, POST, PUT, DELETE, etc.
       headers: {
@@ -53214,9 +53249,9 @@ function buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, function
       }
     }).then(function (response) {
       response.json().then(function (json) {
-        secondTrialSelectActivation.html("");
-        for (var activation in json["function_activations"]) {
-          secondTrialSelectActivation.append("option").attr("value", json["function_activations"][activation].id).text(JSON.stringify(json["function_activations"][activation]).replace(/{|}/g, "").substring(0, 70));
+        secondTrialSelectActivation.html('');
+        for (var activation in json['function_activations']) {
+          secondTrialSelectActivation.append('option').attr('value', json['function_activations'][activation].id).text(JSON.stringify(json['function_activations'][activation]).replace(/{|}/g, '').substring(0, 70));
         }
       });
     });
@@ -53226,25 +53261,25 @@ function buildExportPrologModal(modal, modalBody, exportUrl, config, parent, exp
   var _submitButton5;
   var submitButton;
   var form;
-  document.getElementById("exampleModalTitle").textContent = "Prolog";
+  document.getElementById('exampleModalTitle').textContent = 'Prolog';
   showModal(modal);
   if (modalBody) {
-    form = modalBody.append("form").attr("onsubmit", "return false;");
-    createFormCheckInput(form, "exportProvRules", "Also exports inference rules");
-    createFormCheckInput(form, "exportProvHideTimestamps", "Hide timestamps");
-    submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate prolog");
+    form = modalBody.append('form').attr('onsubmit', 'return false;');
+    createFormCheckInput(form, 'exportProvRules', 'Also exports inference rules');
+    createFormCheckInput(form, 'exportProvHideTimestamps', 'Hide timestamps');
+    submitButton = form.append('button').classed('btn btn-primary mb-2', true).text('Generate prolog');
   }
-  (_submitButton5 = submitButton) === null || _submitButton5 === void 0 || _submitButton5.on("click", function () {
-    var inferenceRules = document.getElementById("exportProvRules").checked;
-    var hideTimestamps = document.getElementById("exportProvHideTimestamps").checked;
-    exportUrl += "/" + inferenceRules + "/" + hideTimestamps;
+  (_submitButton5 = submitButton) === null || _submitButton5 === void 0 || _submitButton5.on('click', function () {
+    var inferenceRules = document.getElementById('exportProvRules').checked;
+    var hideTimestamps = document.getElementById('exportProvHideTimestamps').checked;
+    exportUrl += '/' + inferenceRules + '/' + hideTimestamps;
     buildExportPrologTab(exportUrl, config, parent, exportWindowId, trialId);
     cleanModalBodyAndClose(modal, modalBody);
   });
 }
 function buildExportPrologTab(exportUrl, config, parent, exportWindowId, trialId) {
   if (document.getElementById(exportWindowId)) {
-    window.alert("Close trial " + trialId + " prolog tab before generating a new prolog");
+    window.alert('Close trial ' + trialId + ' prolog tab before generating a new prolog');
     return;
   }
   fetch(exportUrl, {
@@ -53255,79 +53290,79 @@ function buildExportPrologTab(exportUrl, config, parent, exportWindowId, trialId
     }
   }).then(function (response) {
     response.json().then(function (json) {
-      if (response.status == 200) {
-        config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified"), exportWindowId, "Prolog");
+      if (response.status === 200) {
+        config.customWindowTabCommand(parent.getAttribute('selected-trial-simplified'), exportWindowId, 'Prolog');
         var exportWindow = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(exportWindowId));
-        var form = exportWindow.append("form").attr("onsubmit", "return false;").append("div").classed("form-row", true);
-        createFormTextInput(form, "exportPrologProgram" + trialId, "Prolog").classed("col-7", true);
-        createFormTextInput(form, "exportPrologQuery" + trialId, "Query").classed("col", true);
-        var submitButton = form.append("div").classed("col-auto", true).style("padding-top", "5vh").append("button").classed("btn btn-primary mb-2", true).text("Execute Query");
-        document.getElementById("exportPrologProgram" + trialId).value = json["export"];
+        var form = exportWindow.append('form').attr('onsubmit', 'return false;').append('div').classed('form-row', true);
+        createFormTextInput(form, 'exportPrologProgram' + trialId, 'Prolog').classed('col-7', true);
+        createFormTextInput(form, 'exportPrologQuery' + trialId, 'Query').classed('col', true);
+        var submitButton = form.append('div').classed('col-auto', true).style('padding-top', '5vh').append('button').classed('btn btn-primary mb-2', true).text('Execute Query');
+        document.getElementById('exportPrologProgram' + trialId).value = json["export"];
         var prologSession = pl.create(1000);
         var _answerCallback = function answerCallback(answer, answerString) {
-          if (answer == false) {
-            var answerCardTextId = "Answers prolog card text " + trialId;
+          if (answer === false) {
+            var answerCardTextId = 'Answers prolog card text ' + trialId;
             var answerCardText = document.getElementById(answerCardTextId) ? (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(answerCardTextId)) : null;
             if (answerCardText == null) {
-              var answerWindow = exportWindow.append("div");
-              answerWindow.classed("card", true).append("div").classed("card-header", true).text("Answers");
-              answerCardText = answerWindow.append("div").classed("card-body", true).append("p").classed("card-text", true).attr("id", answerCardTextId).style("overflow-y", "auto").style("max-height", "35vh");
+              var answerWindow = exportWindow.append('div');
+              answerWindow.classed('card', true).append('div').classed('card-header', true).text('Answers');
+              answerCardText = answerWindow.append('div').classed('card-body', true).append('p').classed('card-text', true).attr('id', answerCardTextId).style('overflow-y', 'auto').style('max-height', '35vh');
             }
             answerCardText.html(answerString);
             return;
           }
-          answerString += prologSession.format_answer(answer).toString() + "<br>";
+          answerString += prologSession.format_answer(answer).toString() + '<br>';
           prologSession.answer(function (answer) {
             return _answerCallback(answer, answerString);
           });
         };
-        submitButton.on("click", function () {
-          var prologProgram = getTextInputFormByID("exportPrologProgram" + trialId);
-          var userQuery = getTextInputFormByID("exportPrologQuery" + trialId);
+        submitButton.on('click', function () {
+          var prologProgram = getTextInputFormByID('exportPrologProgram' + trialId);
+          var userQuery = getTextInputFormByID('exportPrologQuery' + trialId);
           if (prologProgram && userQuery) {
             prologSession.consult(prologProgram, {
               success: function success() {
-                console.log("Prolog consult success");
+                console.log('Prolog consult success');
                 prologSession.query(userQuery, {
                   success: function success() {
                     prologSession.answer(function (answer) {
-                      return _answerCallback(answer, "");
+                      return _answerCallback(answer, '');
                     });
                   },
                   error: function error() {
-                    console.log("Erro query");
+                    console.log('Erro query');
                   }
                 });
               },
               error: function error() {
-                console.log("Prolog consult error");
+                console.log('Prolog consult error');
               }
             });
           }
         });
       } else {
-        console.log("Export error");
+        console.log('Export error');
       }
     });
   });
 }
 function scrollableModal(modalBody) {
-  var modalDialog = document.getElementsByClassName("modal-dialog")[0];
-  modalDialog.style.overflowY = "initial";
-  modalDialog.style.maxHeight = "85%";
-  modalBody.style("overflow-y", "auto").style("height", "80vh");
+  var modalDialog = document.getElementsByClassName('modal-dialog')[0];
+  modalDialog.style.overflowY = 'initial';
+  modalDialog.style.maxHeight = '85%';
+  modalBody.style('overflow-y', 'auto').style('height', '80vh');
 }
 function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
   response.json().then(function (json) {
-    if (response.status == 200) {
-      var trialIdSimplified = parent.getAttribute("selected-trial-simplified");
-      config.customWindowTabCommand(trialIdSimplified, dataflowWindowId, "Dataflow");
+    if (response.status === 200) {
+      var trialIdSimplified = parent.getAttribute('selected-trial-simplified');
+      config.customWindowTabCommand(trialIdSimplified, dataflowWindowId, 'Dataflow');
       console.log(json.dataflow);
       (0,_viz_js_viz__WEBPACK_IMPORTED_MODULE_11__.instance)().then(function (viz) {
         var dataflowWindow = document.getElementById(dataflowWindowId);
 
         // Download SVG Button, excluding hint, and excluding checkbox
-        dataflowButtons(dataflowWindow, dataflowWindowId, "Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience", json.dataflow);
+        dataflowButtons(dataflowWindow, dataflowWindowId, 'Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience', json.dataflow);
         var selectedNode;
         var selectedEdge;
 
@@ -53340,29 +53375,29 @@ function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
         });
         var _loop = function _loop(nodeIndex) {
           var presentNode = svgElement.children[0].children[0].children[nodeIndex];
-          if (presentNode.getAttribute("class") == "node" && presentNode.children[1].tagName.toLowerCase() == "polygon") {
+          if (presentNode.getAttribute('class') === 'node' && presentNode.children[1].tagName.toLowerCase() === 'polygon') {
             var presentNodeSelection = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(presentNode);
-            presentNodeSelection.style("cursor", "pointer");
-            presentNodeSelection.on("click", function (event) {
+            presentNodeSelection.style('cursor', 'pointer');
+            presentNodeSelection.on('click', function (event) {
               if (selectedNode) {
-                selectedNode.children[1].setAttribute("stroke", "black");
+                selectedNode.children[1].setAttribute('stroke', 'black');
               }
               if (selectedNode && (event.ctrlKey || event.shiftKey)) {
                 deletePriorNodes(selectedNode, presentNode, viz, dataflowUrl, config, trialIdSimplified, dataflowWindowId);
               } else {
                 selectedNode = svgElement.children[0].children[0].children[nodeIndex];
-                selectedNode.children[1].setAttribute("stroke", "red");
+                selectedNode.children[1].setAttribute('stroke', 'red');
               }
             });
-          } else if (presentNode.getAttribute("class") == "edge" && presentNode.children[1].tagName.toLowerCase() == "path") {
+          } else if (presentNode.getAttribute('class') === 'edge' && presentNode.children[1].tagName.toLowerCase() === 'path') {
             var _presentNodeSelection = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(presentNode);
-            _presentNodeSelection.style("cursor", "pointer");
-            _presentNodeSelection.on("click", function () {
+            _presentNodeSelection.style('cursor', 'pointer');
+            _presentNodeSelection.on('click', function () {
               if (selectedEdge) {
-                selectedEdge.children[1].setAttribute("stroke", "black");
+                selectedEdge.children[1].setAttribute('stroke', 'black');
               }
               selectedEdge = svgElement.children[0].children[0].children[nodeIndex];
-              selectedEdge.children[1].setAttribute("stroke", "red");
+              selectedEdge.children[1].setAttribute('stroke', 'red');
             });
           }
         };
@@ -53371,38 +53406,40 @@ function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
         }
       });
     } else {
-      console.log("Dataflow error");
+      console.log('Dataflow error');
     }
   });
 }
 function checkboxOpenDataflowExcludeProvenanceNewWindow(dataflowWindow) {
   var dataflowWindowD3Select = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(dataflowWindow);
-  var checkboxID = dataflowWindow.getAttribute("id") + "OpenNewWindowOption";
-  dataflowWindowD3Select.append("input").attr("id", checkboxID).attr("type", "checkbox");
-  dataflowWindowD3Select.append("label").attr("for", checkboxID).text("Don't open dataflow with excluded provenance in a new tab").style('font-family', 'sans-serif').style('font-size', '12px').style('pointer-events', 'none');
+  var checkboxID = dataflowWindow.getAttribute('id') + 'OpenNewWindowOption';
+  dataflowWindowD3Select.append('input').attr('id', checkboxID).attr('type', 'checkbox');
+  dataflowWindowD3Select.append('label').attr('for', checkboxID).text("Don't open dataflow with excluded provenance in a new tab").style('font-family', 'sans-serif').style('font-size', '12px').style('pointer-events', 'none');
 }
 function excludePriorProvenanceHint(dataflowWindow, text) {
-  ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(dataflowWindow).append("div").append("div").text(text).style('font-family', 'sans-serif').style('font-size', '12px').style('pointer-events', 'none');
+  ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(dataflowWindow).append('div').append('div').text(text).style('font-family', 'sans-serif').style('font-size', '12px').style('pointer-events', 'none');
 }
 function chooseDataflowExcludedProvenanceWindowId(presentWindowId, newWindowId) {
-  if (document.getElementById(presentWindowId + "OpenNewWindowOption").checked) return presentWindowId;
+  if (document.getElementById(presentWindowId + 'OpenNewWindowOption').checked) {
+    return presentWindowId;
+  }
   return newWindowId;
 }
 function deletePriorNodes(selectedNode, presentNode, viz, dataflowUrl, config, trialIdSimplified, presentWindowId) {
-  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
-  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf('/'));
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf('/')) + '/true/';
   var selectedNodeEvaluationTitle = selectedNode.children[0].innerHTML;
   var presentNodeOrderEvaluationTitle = presentNode.children[0].innerHTML;
-  var firstEvaluationOrder = Number(selectedNodeEvaluationTitle.replace("e_", ""));
-  var lastEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace("e_", ""));
+  var firstEvaluationOrder = Number(selectedNodeEvaluationTitle.replace('e_', ''));
+  var lastEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace('e_', ''));
   if (firstEvaluationOrder > lastEvaluationOrder) {
     lastEvaluationOrder = firstEvaluationOrder;
-    firstEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace("e_", ""));
+    firstEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace('e_', ''));
   }
   var dataflowUrlLastEvaluation = dataflowUrl + lastEvaluationOrder;
   var dataflowUrlFirstEvaluation = dataflowUrl + firstEvaluationOrder;
-  var excludingProvenanceWindow = getDataflowWindowExcludeSomeProvenance(presentWindowId, "Dataflow excluding prior " + presentNodeOrderEvaluationTitle + " " + selectedNodeEvaluationTitle + " window " + trialIdSimplified, trialIdSimplified, config);
-  excludingProvenanceWindow.textContent = "Loading...";
+  var excludingProvenanceWindow = getDataflowWindowExcludeSomeProvenance(presentWindowId, 'Dataflow excluding prior ' + presentNodeOrderEvaluationTitle + ' ' + selectedNodeEvaluationTitle + ' window ' + trialIdSimplified, trialIdSimplified, config);
+  excludingProvenanceWindow.textContent = 'Loading...';
   fetch(dataflowUrlLastEvaluation, {
     method: 'GET',
     // *GET, POST, PUT, DELETE, etc.
@@ -53431,25 +53468,25 @@ function getDataflowWindowExcludeSomeProvenance(presentWindowId, newWindowId, tr
   var excludingProvenanceWindowId = chooseDataflowExcludedProvenanceWindowId(presentWindowId, newWindowId);
   var excludingProvenanceWindow = document.getElementById(excludingProvenanceWindowId);
   if (!excludingProvenanceWindow) {
-    config.customWindowTabCommand(trialIdSimplified, excludingProvenanceWindowId, "Dataflow excluding some provenance");
+    config.customWindowTabCommand(trialIdSimplified, excludingProvenanceWindowId, 'Dataflow excluding some provenance');
     excludingProvenanceWindow = document.getElementById(excludingProvenanceWindowId);
   }
   return excludingProvenanceWindow;
 }
 function dataflowAMinusDataflowB(dataflowA, dataflowB, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config, lastEvaluationId) {
   //SET MINUS OPERATION A-B "The set A−B consists of elements that are in A but not in B. For example if A={1,2,3} and B={3,5}, then A−B={1,2}."
-  var linesDataflowA = dataflowA.split("\n");
-  var linesDataflowB = dataflowB.split("\n");
+  var linesDataflowA = dataflowA.split('\n');
+  var linesDataflowB = dataflowB.split('\n');
   var newDataflow = linesDataflowA.slice(0);
   removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowB, newDataflow, selectedEvaluationOrder);
   var dataflowIsAligned = addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow, selectedEvaluationOrder, linesDataflowA);
   removesDeletedEvaluationsFromAligment(dataflowIsAligned, newDataflow);
-  console.log("------");
-  var newDataflowString = newDataflow.join("\n");
+  console.log('------');
+  var newDataflowString = newDataflow.join('\n');
   console.log(newDataflowString);
-  console.log("------");
-  excludingProvenanceWindow.textContent = "";
-  dataflowButtons(excludingProvenanceWindow, excludingProvenanceWindow.getAttribute("id"), "(Ctrl or Shift)+click on a function call to exclude prior provenience", newDataflowString);
+  console.log('------');
+  excludingProvenanceWindow.textContent = '';
+  dataflowButtons(excludingProvenanceWindow, excludingProvenanceWindow.getAttribute('id'), '(Ctrl or Shift)+click on a function call to exclude prior provenience', newDataflowString);
   var svgElement = viz.renderSVGElement(newDataflowString);
   excludingProvenanceWindow.appendChild(svgElement);
   svgPanZoom(svgElement, {
@@ -53462,21 +53499,23 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz
   var selectedEdge;
   var _loop2 = function _loop2(nodeIndex) {
     var selectedNode = svgElement.children[0].children[0].children[nodeIndex];
-    if (selectedNode.getAttribute("class") == "node" && selectedNode.children[1].tagName.toLowerCase() == "polygon") {
+    if (selectedNode.getAttribute('class') === 'node' && selectedNode.children[1].tagName.toLowerCase() === 'polygon') {
       var selectedNodeSelection = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(selectedNode);
-      selectedNodeSelection.style("cursor", "pointer");
-      selectedNodeSelection.on("click", function (event) {
-        if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
+      selectedNodeSelection.style('cursor', 'pointer');
+      selectedNodeSelection.on('click', function (event) {
+        if (event.ctrlKey || event.shiftKey) {
+          deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
+        }
       });
-    } else if (selectedNode.getAttribute("class") == "edge" && selectedNode.children[1].tagName.toLowerCase() == "path") {
+    } else if (selectedNode.getAttribute('class') === 'edge' && selectedNode.children[1].tagName.toLowerCase() === 'path') {
       var _selectedNodeSelection = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(selectedNode);
-      _selectedNodeSelection.style("cursor", "pointer");
-      _selectedNodeSelection.on("click", function () {
+      _selectedNodeSelection.style('cursor', 'pointer');
+      _selectedNodeSelection.on('click', function () {
         if (selectedEdge) {
-          selectedEdge.children[1].setAttribute("stroke", "black");
+          selectedEdge.children[1].setAttribute('stroke', 'black');
         }
         selectedEdge = svgElement.children[0].children[0].children[nodeIndex];
-        selectedEdge.children[1].setAttribute("stroke", "red");
+        selectedEdge.children[1].setAttribute('stroke', 'red');
       });
     }
   };
@@ -53487,18 +53526,18 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz
 function deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId) {
   var _excludingProvenanceW;
   var selectedNodeOrderEvaluationTitle = selectedNode.children[0].innerHTML;
-  var selectedEvaluationOrder = Number(selectedNodeOrderEvaluationTitle.replace("e_", ""));
-  if (lastEvaluationId == selectedEvaluationOrder) {
+  var selectedEvaluationOrder = Number(selectedNodeOrderEvaluationTitle.replace('e_', ''));
+  if (lastEvaluationId === selectedEvaluationOrder) {
     window.alert("You can't remove everything.");
     return undefined;
   }
-  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
-  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf('/'));
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf('/')) + '/true/';
   var dataflowUrlPresentEvaluation = dataflowUrl + selectedEvaluationOrder;
-  var excludingProvenanceWindowId = (_excludingProvenanceW = excludingProvenanceWindow) === null || _excludingProvenanceW === void 0 ? void 0 : _excludingProvenanceW.getAttribute("id");
-  excludingProvenanceWindow = getDataflowWindowExcludeSomeProvenance(excludingProvenanceWindowId, excludingProvenanceWindowId + "OneMore", "", config); //TODO get simplifiedtrialid from wxcludingprovenancewindow
+  var excludingProvenanceWindowId = (_excludingProvenanceW = excludingProvenanceWindow) === null || _excludingProvenanceW === void 0 ? void 0 : _excludingProvenanceW.getAttribute('id');
+  excludingProvenanceWindow = getDataflowWindowExcludeSomeProvenance(excludingProvenanceWindowId, excludingProvenanceWindowId + 'OneMore', '', config); //TODO get simplifiedtrialid from wxcludingprovenancewindow
 
-  excludingProvenanceWindow.textContent = "Loading...";
+  excludingProvenanceWindow.textContent = 'Loading...';
   fetch(dataflowUrlPresentEvaluation, {
     method: 'GET',
     // *GET, POST, PUT, DELETE, etc.
@@ -53517,26 +53556,36 @@ function removesDeletedEvaluationsFromAligment(dataflowIsAligned, newDataflow) {
     var evaluations = [];
     for (var lineIndex = 3; lineIndex < newDataflow.length; lineIndex++) {
       var line = newDataflow[lineIndex];
-      if (line.includes("label")) evaluations.push(line.replace(/\[[^\]]*?\];/, "").split(" ")[4].trim());else if (line.includes("{rank=")) {
-        var alignedEvaluations = line.split(" ");
+      if (line.includes('label')) {
+        evaluations.push(line.replace(/\[[^\]]*?\];/, '').split(' ')[4].trim());
+      } else if (line.includes('{rank=')) {
+        var alignedEvaluations = line.split(' ');
         for (var alignedEvalIndex = 5; alignedEvalIndex < alignedEvaluations.length; alignedEvalIndex++) {
-          var alignedEval = alignedEvaluations[alignedEvalIndex].replace("}\r", "").trim();
-          if (!evaluations.includes(alignedEval)) newDataflow[lineIndex] = newDataflow[lineIndex].replace(alignedEval, "");
+          var alignedEval = alignedEvaluations[alignedEvalIndex].replace('}\r', '').trim();
+          if (!evaluations.includes(alignedEval)) {
+            newDataflow[lineIndex] = newDataflow[lineIndex].replace(alignedEval, '');
+          }
         }
-      } else if (line.includes("->")) break;
+      } else if (line.includes('->')) {
+        break;
+      }
     }
   }
 }
 function removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowB, newDataflow, selectedEvaluationOrder) {
   var _loop3 = function _loop3() {
     var indexOfDataflowLineToRemove;
-    if (linesDataflowB[i].includes("->") && linesDataflowB[i].includes("[")) {
-      var lineToRemove = linesDataflowB[i].replace(/\[[^\]]*\]/, "");
+    if (linesDataflowB[i].includes('->') && linesDataflowB[i].includes('[')) {
+      var lineToRemove = linesDataflowB[i].replace(/\[[^\]]*\]/, '');
       indexOfDataflowLineToRemove = newDataflow.findIndex(function (dataflowLine) {
-        return dataflowLine.replace(/\[[^\]]*\]/, "") == lineToRemove;
+        return dataflowLine.replace(/\[[^\]]*\]/, '') === lineToRemove;
       });
-    } else indexOfDataflowLineToRemove = newDataflow.indexOf(linesDataflowB[i]);
-    if (indexOfDataflowLineToRemove > -1 && !linesDataflowB[i].includes("_" + selectedEvaluationOrder + " [")) newDataflow.splice(indexOfDataflowLineToRemove, 1);
+    } else {
+      indexOfDataflowLineToRemove = newDataflow.indexOf(linesDataflowB[i]);
+    }
+    if (indexOfDataflowLineToRemove > -1 && !linesDataflowB[i].includes('_' + selectedEvaluationOrder + ' [')) {
+      newDataflow.splice(indexOfDataflowLineToRemove, 1);
+    }
   };
   for (var i = 3; i < linesDataflowB.length - 2; i++) {
     _loop3();
@@ -53546,15 +53595,19 @@ function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow, select
   var tempArray = [];
   var isAligned = false;
   newDataflow.forEach(function (line) {
-    if (!isAligned && line.includes("{rank")) isAligned = true;
-    if (line.includes("->")) {
-      var evaluationWithoutSettings = line.split(" ")[6];
-      if (Number(evaluationWithoutSettings.replace("e_", "").replace("a_", "")) < selectedEvaluationOrder) {
+    if (!isAligned && line.includes('{rank')) {
+      isAligned = true;
+    }
+    if (line.includes('->')) {
+      var evaluationWithoutSettings = line.split(' ')[6];
+      if (Number(evaluationWithoutSettings.replace('e_', '').replace('a_', '')) < selectedEvaluationOrder) {
         // TODO revise if firstEvaluationOrder is right
         var lineToAdd = linesDataflowA.find(function (string) {
-          return string.includes(evaluationWithoutSettings + " [");
+          return string.includes(evaluationWithoutSettings + ' [');
         });
-        if (newDataflow.indexOf(lineToAdd) < 0) tempArray.push(lineToAdd);
+        if (newDataflow.indexOf(lineToAdd) < 0) {
+          tempArray.push(lineToAdd);
+        }
       }
     }
   });
@@ -53567,8 +53620,8 @@ function buildDataflowModal(modal, modalBody, parent, config, trialId) {
   var submitButton;
   var evaluationList;
   var form;
-  document.getElementById("exampleModalTitle").textContent = "Dataflow";
-  fetch("/dataflow/evaluations/" + trialId, {
+  document.getElementById('exampleModalTitle').textContent = 'Dataflow';
+  fetch('/dataflow/evaluations/' + trialId, {
     method: 'GET',
     // *GET, POST, PUT, DELETE, etc.
     headers: {
@@ -53582,52 +53635,54 @@ function buildDataflowModal(modal, modalBody, parent, config, trialId) {
       showModal(modal);
       if (modalBody) {
         scrollableModal(modalBody);
-        form = modalBody.append("form").attr("onsubmit", "return false;");
-        createFormCheckInput(form, "dataFlowShowType", "Show type nodes");
-        createFormCheckInput(form, "dataFlowHideTimestamps", "Hide timestamps");
-        createFormCheckInput(form, "dataFlowHideInternals", "Show variables and functions which name starts with a leading underscore");
-        createFormCheckInput(form, "dataFlowHideNotCode", "Hide evaluations that aren't from the code");
-        createFormCheckInput(form, "dataFlowActivationNames", "Display nodes with their activation names instead");
-        createFormCheckInput(form, "dataFlowHideFunc", "Hide func type evaluations");
-        createFormSelectInput(form, "dataflowShowAccesses", "Show file accesses", 0, 4, 1, "dataflowShowAccessesHelp", "(default: Shows each file once (hide external accesses))", ["Hides file accesses", "Shows each file once (hide external accesses)", "Shows each file once (show external accesses)", "Shows all accesses (except external accesses)", "Shows all accesses (including external accesses)"]);
-        createFormSelectInput(form, "dataflowEvaluation", "Combine evaluation nodes", 0, 2, 1, "dataflowEvaluationHelp", "(default: Combines evaluation nodes by assignment)", ["Not combine evaluation nodes", "Combines evaluation nodes by assignment", "Combines evaluation nodes by value"]);
-        createFormSelectInput(form, "dataflowGroup", "Align evalutions in the same column", 0, 2, 0, "dataflowGroupHelp", "(default: Does no align). With this option, all variables in a loop appear grouped, reducing the width of the graph. It may affect the graph legibility. The alignment is independent for each activation.", ["Does no align", "Aligns by line", "Aligns by line and column"]);
-        createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 4, 1, "dataflowModeHelp", "(default: coarseGrain). 'activation' presents only function activations and file accesses. Dependencies on the dataflow are clustered by depth(-d). 'coarseGrain' is the same as the activation dataflow, but with the addition of parameters and variable assignment of function activations. 'looplessCoarseGrain' is the same as the coarseGrain dataflow, but it doesn't repeat function activations when they're in the same line in a loop. 'fineGrain' is the same as the coarseGrain dataflow with the addition of variables, all user defined evaluations and data values. 'all' presents a dataflow with all evaluations and function activations. Dependencies on the dataflow are not clustered.", ["activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"]);
-        createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity. This parameter is ignored when the mode is \"all\"");
-        createFormNumberInput(form, "dataflowValueLength", "Maximum length of values", 0, 0, "dataflowValueLengthHelp", "(default: 0). 0 indicates that values should be hidden.The values appear on the second line of node lables. E.g. if it is set to '10', it will show 'data.dat',  but it will transform 'data2.dat' in to 'da...dat' to respect the length restriction (note that '' is part of the value). Minimum displayable value: 5. Suggested: 55.");
-        createFormNumberInput(form, "dataflowName", "Maximum length of names", 0, 55, "dataflowNameHelp", "(default: 55). 0 indicates that values should be hidden. Minimum displayable value: 5. Suggested: 55.");
-        var dataflowEvaluationInput = createFormTextInput(form, "dataflowTextInputEvaluation", "Evaluation was derived from: ", "dataflowSelectEvaluationHelp", "Filter that shows only one evaluation and the ones that derived it");
-        form.append("div").attr("id", "autocompleteSuggestionsResults");
-        dataflowTextInputEvaluation = document.getElementById("dataflowTextInputEvaluation");
+        form = modalBody.append('form').attr('onsubmit', 'return false;');
+        createFormCheckInput(form, 'dataFlowShowType', 'Show type nodes');
+        createFormCheckInput(form, 'dataFlowHideTimestamps', 'Hide timestamps');
+        createFormCheckInput(form, 'dataFlowHideInternals', 'Show variables and functions which name starts with a leading underscore');
+        createFormCheckInput(form, 'dataFlowHideNotCode', "Hide evaluations that aren't from the code");
+        createFormCheckInput(form, 'dataFlowActivationNames', 'Display nodes with their activation names instead');
+        createFormCheckInput(form, 'dataFlowHideFunc', 'Hide func type evaluations');
+        createFormSelectInput(form, 'dataflowShowAccesses', 'Show file accesses', 0, 4, 1, 'dataflowShowAccessesHelp', '(default: Shows each file once (hide external accesses))', ['Hides file accesses', 'Shows each file once (hide external accesses)', 'Shows each file once (show external accesses)', 'Shows all accesses (except external accesses)', 'Shows all accesses (including external accesses)']);
+        createFormSelectInput(form, 'dataflowEvaluation', 'Combine evaluation nodes', 0, 2, 1, 'dataflowEvaluationHelp', '(default: Combines evaluation nodes by assignment)', ['Not combine evaluation nodes', 'Combines evaluation nodes by assignment', 'Combines evaluation nodes by value']);
+        createFormSelectInput(form, 'dataflowGroup', 'Align evalutions in the same column', 0, 2, 0, 'dataflowGroupHelp', '(default: Does no align). With this option, all variables in a loop appear grouped, reducing the width of the graph. It may affect the graph legibility. The alignment is independent for each activation.', ['Does no align', 'Aligns by line', 'Aligns by line and column']);
+        createFormSelectInput(form, 'dataflowMode', 'Graph mode', 0, 4, 1, 'dataflowModeHelp', "(default: coarseGrain). 'activation' presents only function activations and file accesses. Dependencies on the dataflow are clustered by depth(-d). 'coarseGrain' is the same as the activation dataflow, but with the addition of parameters and variable assignment of function activations. 'looplessCoarseGrain' is the same as the coarseGrain dataflow, but it doesn't repeat function activations when they're in the same line in a loop. 'fineGrain' is the same as the coarseGrain dataflow with the addition of variables, all user defined evaluations and data values. 'all' presents a dataflow with all evaluations and function activations. Dependencies on the dataflow are not clustered.", ['activation', 'coarseGrain', 'looplessCoarseGrain', 'fineGrain', 'all']);
+        createFormNumberInput(form, 'dataflowDepth', 'Visualization depth', 0, 0, 'dataflowDepthHelp', '(default: 0) 0 represents infinity. This parameter is ignored when the mode is "all"');
+        createFormNumberInput(form, 'dataflowValueLength', 'Maximum length of values', 0, 0, 'dataflowValueLengthHelp', "(default: 0). 0 indicates that values should be hidden.The values appear on the second line of node lables. E.g. if it is set to '10', it will show 'data.dat',  but it will transform 'data2.dat' in to 'da...dat' to respect the length restriction (note that '' is part of the value). Minimum displayable value: 5. Suggested: 55.");
+        createFormNumberInput(form, 'dataflowName', 'Maximum length of names', 0, 55, 'dataflowNameHelp', '(default: 55). 0 indicates that values should be hidden. Minimum displayable value: 5. Suggested: 55.');
+        var dataflowEvaluationInput = createFormTextInput(form, 'dataflowTextInputEvaluation', 'Evaluation was derived from: ', 'dataflowSelectEvaluationHelp', 'Filter that shows only one evaluation and the ones that derived it');
+        form.append('div').attr('id', 'autocompleteSuggestionsResults');
+        dataflowTextInputEvaluation = document.getElementById('dataflowTextInputEvaluation');
         addsAutocompleteToDataflowWDF(dataflowEvaluationInput, dataflowTextInputEvaluation, evaluationList);
-        submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate dataflow");
+        submitButton = form.append('button').classed('btn btn-primary mb-2', true).text('Generate dataflow');
       }
-      submitButton.on("click", function () {
-        var dataFlowShowType = document.getElementById("dataFlowShowType").checked;
-        var dataFlowHideTimestamps = document.getElementById("dataflowMode").checked;
-        var dataFlowHideInternals = document.getElementById("dataFlowHideInternals").checked;
-        var dataFlowHideNotCode = document.getElementById("dataFlowHideNotCode").checked;
-        var dataFlowActivationNames = document.getElementById("dataFlowActivationNames").checked;
-        var dataFlowHideFunc = document.getElementById("dataFlowHideFunc").checked;
-        var dataflowFileAccesses = document.getElementById("dataflowShowAccesses").selectedOptions[0].index;
-        var dataflowEvaluation = document.getElementById("dataflowEvaluation").selectedOptions[0].index;
-        var dataflowGroup = document.getElementById("dataflowGroup").selectedOptions[0].index;
-        var dataflowMode = document.getElementById("dataflowMode").selectedOptions[0].value;
-        var dataflowDepth = document.getElementById("dataflowDepth").value;
-        var dataflowValueLength = document.getElementById("dataflowValueLength").value;
-        var dataflowName = document.getElementById("dataflowName").value;
-        var trialId = parent.getAttribute("selected-trial");
-        selectedEvaluation = dataflowTextInputEvaluation.getAttribute("selectedEvaluationID");
-        var dataflowUrl = "/commands/dataflow/" + trialId + "/" + dataFlowShowType + "/" + dataFlowHideTimestamps + "/" + dataFlowHideInternals + "/" + dataFlowHideNotCode + "/" + dataFlowActivationNames + "/" + dataFlowHideFunc + "/" + dataflowFileAccesses + "/" + dataflowEvaluation + "/" + dataflowGroup + "/" + dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
-        dataflowUrl += selectedEvaluation && !selectedEvaluation.includes("undefined") ? "/true/" + selectedEvaluation : "/false/0";
-        var dataflowWindowId = "Dataflow window " + trialId;
+      submitButton.on('click', function () {
+        var dataFlowShowType = document.getElementById('dataFlowShowType').checked;
+        var dataFlowHideTimestamps = document.getElementById('dataflowMode').checked;
+        var dataFlowHideInternals = document.getElementById('dataFlowHideInternals').checked;
+        var dataFlowHideNotCode = document.getElementById('dataFlowHideNotCode').checked;
+        var dataFlowActivationNames = document.getElementById('dataFlowActivationNames').checked;
+        var dataFlowHideFunc = document.getElementById('dataFlowHideFunc').checked;
+        var dataflowFileAccesses = document.getElementById('dataflowShowAccesses').selectedOptions[0].index;
+        var dataflowEvaluation = document.getElementById('dataflowEvaluation').selectedOptions[0].index;
+        var dataflowGroup = document.getElementById('dataflowGroup').selectedOptions[0].index;
+        var dataflowMode = document.getElementById('dataflowMode').selectedOptions[0].value;
+        var dataflowDepth = document.getElementById('dataflowDepth').value;
+        var dataflowValueLength = document.getElementById('dataflowValueLength').value;
+        var dataflowName = document.getElementById('dataflowName').value;
+        var trialId = parent.getAttribute('selected-trial');
+        selectedEvaluation = dataflowTextInputEvaluation.getAttribute('selectedEvaluationID');
+        var dataflowUrl = '/commands/dataflow/' + trialId + '/' + dataFlowShowType + '/' + dataFlowHideTimestamps + '/' + dataFlowHideInternals + '/' + dataFlowHideNotCode + '/' + dataFlowActivationNames + '/' + dataFlowHideFunc + '/' + dataflowFileAccesses + '/' + dataflowEvaluation + '/' + dataflowGroup + '/' + dataflowDepth + '/' + dataflowValueLength + '/' + dataflowName + '/' + dataflowMode;
+        dataflowUrl += selectedEvaluation && !selectedEvaluation.includes('undefined') ? '/true/' + selectedEvaluation : '/false/0';
+        var dataflowWindowId = 'Dataflow window ' + trialId;
 
         /* if (document.getElementById(dataflowWindowId)) {
           window.alert("Close trial " + trialId + " dataflow tab before generating a new dataflow");
           return;
         } */
 
-        if (document.getElementById(dataflowWindowId)) dataflowWindowId += crypto.randomUUID();
+        if (document.getElementById(dataflowWindowId)) {
+          dataflowWindowId += crypto.randomUUID();
+        }
         fetch(dataflowUrl, {
           method: 'GET',
           // *GET, POST, PUT, DELETE, etc.
@@ -53644,36 +53699,38 @@ function buildDataflowModal(modal, modalBody, parent, config, trialId) {
   });
 }
 function addsAutocompleteToDataflowWDF(dataflowEvaluationInput, dataflowTextInputEvaluation, evaluationList) {
-  dataflowEvaluationInput.on("keyup", function () {
+  dataflowEvaluationInput.on('keyup', function () {
     var input = dataflowTextInputEvaluation.value;
-    var autocompleteSuggestionsResults = document.getElementById("autocompleteSuggestionsResults");
-    var evaluationInputHint = document.getElementById("dataflowSelectEvaluationHelp");
-    autocompleteSuggestionsResults.innerHTML = "";
+    var autocompleteSuggestionsResults = document.getElementById('autocompleteSuggestionsResults');
+    var evaluationInputHint = document.getElementById('dataflowSelectEvaluationHelp');
+    autocompleteSuggestionsResults.innerHTML = '';
     var suggestions;
-    if (input == "") {
-      autocompleteSuggestionsResults.setAttribute("style", "");
-      evaluationInputHint.style.opacity = "1";
+    if (input === '') {
+      autocompleteSuggestionsResults.setAttribute('style', '');
+      evaluationInputHint.style.opacity = '1';
       suggestions = [];
-      dataflowTextInputEvaluation.setAttribute("selectedEvaluationID", "undefined");
+      dataflowTextInputEvaluation.setAttribute('selectedEvaluationID', 'undefined');
     } else {
-      autocompleteSuggestionsResults.style.border = "1px solid #ccc";
-      autocompleteSuggestionsResults.style.padding = "3px";
-      autocompleteSuggestionsResults.style.marginTop = "-3rem";
-      evaluationInputHint.style.opacity = "0";
+      autocompleteSuggestionsResults.style.border = '1px solid #ccc';
+      autocompleteSuggestionsResults.style.padding = '3px';
+      autocompleteSuggestionsResults.style.marginTop = '-3rem';
+      evaluationInputHint.style.opacity = '0';
       suggestions = evaluationList.filter(function (evaluation) {
-        if (evaluation.name.includes(input)) return evaluation;
+        if (evaluation.name.includes(input)) {
+          return evaluation;
+        }
       });
-      autocompleteSuggestionsResults.innerHTML = "<ul id=\"dataflowEvaluationSuggestionsBoxId\" style=\"list-style-type: none; padding: 0; margin: 0;\"></ul>";
+      autocompleteSuggestionsResults.innerHTML = '<ul id="dataflowEvaluationSuggestionsBoxId" style="list-style-type: none; padding: 0; margin: 0;"></ul>';
       var _loop4 = function _loop4(i) {
-        var evaluationSuggestionId = suggestions[i].evaluation_id + " " + "evaluationSuggestionItem";
-        (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById("dataflowEvaluationSuggestionsBoxId")).append("li").attr("id", evaluationSuggestionId).style("padding", "5px 0").style("z-index", 1).text("Evaluation: " + suggestions[i].name + "         " + "Code_line: " + suggestions[i].first_char_line).on("click", function () {
+        var evaluationSuggestionId = suggestions[i].evaluation_id + ' ' + 'evaluationSuggestionItem';
+        (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById('dataflowEvaluationSuggestionsBoxId')).append('li').attr('id', evaluationSuggestionId).style('padding', '5px 0').style('z-index', 1).text('Evaluation: ' + suggestions[i].name + '         ' + 'Code_line: ' + suggestions[i].first_char_line).on('click', function () {
           dataflowTextInputEvaluation.value = suggestions[i].name;
           input = suggestions[i].name;
-          dataflowTextInputEvaluation.setAttribute("selectedEvaluationID", suggestions[i].evaluation_id);
-        }).on("mouseover", function () {
-          ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(evaluationSuggestionId)).style("background-color", "#eee");
-        }).on("mouseout", function () {
-          ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(evaluationSuggestionId)).style("background-color", "");
+          dataflowTextInputEvaluation.setAttribute('selectedEvaluationID', suggestions[i].evaluation_id);
+        }).on('mouseover', function () {
+          ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(evaluationSuggestionId)).style('background-color', '#eee');
+        }).on('mouseout', function () {
+          ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(evaluationSuggestionId)).style('background-color', '');
         });
       };
       for (var i = 0; i < suggestions.length; i++) {
@@ -53683,24 +53740,24 @@ function addsAutocompleteToDataflowWDF(dataflowEvaluationInput, dataflowTextInpu
   });
 }
 function downloadDataflowAsSVG(dataflowWindow, dataflowWindowId, dataflowDOT, appendDiv) {
-  var div = appendDiv ? (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(dataflowWindow).append("div").attr("id", dataflowWindowId + "-downloadDiv") : (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(dataflowWindowId + "-downloadDiv"));
-  div.append("a").classed("toollink", true).attr("id", dataflowWindowId + "-downloadSVG").attr("href", "#").style("color", "black").style("margin-right", "10px").attr("title", "Download dataflow SVG").on("click", function () {
+  var div = appendDiv ? (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(dataflowWindow).append('div').attr('id', dataflowWindowId + '-downloadDiv') : (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(dataflowWindowId + '-downloadDiv'));
+  div.append('a').classed('toollink', true).attr('id', dataflowWindowId + '-downloadSVG').attr('href', '#').style('color', 'black').style('margin-right', '10px').attr('title', 'Download dataflow SVG').on('click', function () {
     (0,_viz_js_viz__WEBPACK_IMPORTED_MODULE_11__.instance)().then(function (viz) {
       var svgElement = viz.renderSVGElement(dataflowDOT);
       file_saver__WEBPACK_IMPORTED_MODULE_10__.saveAs(new Blob([svgElement.outerHTML], {
-        type: "image/svg+xml"
-      }), "dataflow.svg");
+        type: 'image/svg+xml'
+      }), 'dataflow.svg');
     });
     //fs.saveAs(new Blob([dataflowWindow!.getElementsByTagName("svg")[0].outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
-  }).append("i").classed("fa fa-download", true);
+  }).append('i').classed('fa fa-download', true);
 }
 function downloadDataflowAsDOT(dataflowWindow, dataflowWindowId, dataflowDOT, appendDiv) {
-  var div = appendDiv ? (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(dataflowWindow).append("div").attr("id", dataflowWindowId + "-downloadDiv") : (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(dataflowWindowId + "-downloadDiv"));
-  div.append("a").classed("toollink", true).attr("id", dataflowWindowId + "-downloadDOT").attr("href", "#").style("color", "black").attr("title", "Download dataflow DOT").on("click", function () {
+  var div = appendDiv ? (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(dataflowWindow).append('div').attr('id', dataflowWindowId + '-downloadDiv') : (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(dataflowWindowId + '-downloadDiv'));
+  div.append('a').classed('toollink', true).attr('id', dataflowWindowId + '-downloadDOT').attr('href', '#').style('color', 'black').attr('title', 'Download dataflow DOT').on('click', function () {
     file_saver__WEBPACK_IMPORTED_MODULE_10__.saveAs(new Blob([dataflowDOT.trim()], {
-      type: "text/plain;charset=utf-8"
-    }), "dataflow.dot");
-  }).append("i").classed("fa fa-file-text", true);
+      type: 'text/plain;charset=utf-8'
+    }), 'dataflow.dot');
+  }).append('i').classed('fa fa-file-text', true);
 }
 function dataflowButtons(dataflowWindow, dataflowWindowId, excludeProvenanceHint, dataflowDOT) {
   downloadDataflowAsSVG(dataflowWindow, dataflowWindowId, dataflowDOT, true);
@@ -53720,78 +53777,88 @@ function getRestoreOrCollabCommand(serverUrl, form, modalBody) {
       form.remove();
       // The server answers from the exit status of `now`; the text is what
       // it printed, and may name a path that contains "not".
-      if (response.status == 200) {
-        addAlert(modalBody, "alert-success", "Success!", json.terminal_text);
+      if (response.status === 200) {
+        addAlert(modalBody, 'alert-success', 'Success!', json.terminal_text);
       } else {
-        addAlert(modalBody, "alert-danger", "Error!", json.terminal_text);
+        addAlert(modalBody, 'alert-danger', 'Error!', json.terminal_text);
       }
     });
   });
 }
 function changeTitle(parent, commandTitle) {
-  var trialIdTitle = parent.getAttribute("selected-trial-simplified");
-  document.getElementById("exampleModalTitle").textContent = commandTitle + trialIdTitle;
+  var trialIdTitle = parent.getAttribute('selected-trial-simplified');
+  document.getElementById('exampleModalTitle').textContent = commandTitle + trialIdTitle;
 }
 function cleanModalBodyAndClose(modal, modalBody) {
-  document.getElementsByClassName("modal-body")[0].textContent = "";
-  modalBody.style("height", null);
+  document.getElementsByClassName('modal-body')[0].textContent = '';
+  modalBody.style('height', null);
   hideModal(modal);
 }
 function addAlert(div, alertType, title, text) {
-  var feedbackAlert = div.append("div").classed("alert " + alertType, true).attr("role", "alert");
-  feedbackAlert.append("h4").text(title).append("button").classed("close", true).attr("type", "button").text("x").on("click", function () {
+  var feedbackAlert = div.append('div').classed('alert ' + alertType, true).attr('role', 'alert');
+  feedbackAlert.append('h4').text(title).append('button').classed('close', true).attr('type', 'button').text('x').on('click', function () {
     feedbackAlert.remove();
   });
-  feedbackAlert.append("p").text(text);
+  feedbackAlert.append('p').text(text);
 }
 function createFormCheckInput(form, checkInputId, text) {
-  var checkDiv = form.append("div").classed("form-check", true);
-  checkDiv.append("input").classed("form-check-input", true).attr("value", "").attr("id", checkInputId).attr("type", "checkbox");
-  checkDiv.append("label").classed("form-check-label", true).attr("for", checkInputId).text(text);
+  var checkDiv = form.append('div').classed('form-check', true);
+  checkDiv.append('input').classed('form-check-input', true).attr('value', '').attr('id', checkInputId).attr('type', 'checkbox');
+  checkDiv.append('label').classed('form-check-label', true).attr('for', checkInputId).text(text);
 }
 function createFormTextInput(form, textInputId, text, helpId, helpText) {
-  var textDiv = form.append("div").classed("form-group", true);
-  textDiv.append("label").attr("for", textInputId).text(text);
-  var textInput = textDiv.append("textarea").classed("form-control", true).attr("id", textInputId);
+  var textDiv = form.append('div').classed('form-group', true);
+  textDiv.append('label').attr('for', textInputId).text(text);
+  var textInput = textDiv.append('textarea').classed('form-control', true).attr('id', textInputId);
   if (helpId && helpText) {
-    textInput.attr("aria-describedby", helpId);
-    textDiv.append("small").classed("form-text text-muted", true).attr("id", helpId).text(helpText);
+    textInput.attr('aria-describedby', helpId);
+    textDiv.append('small').classed('form-text text-muted', true).attr('id', helpId).text(helpText);
   }
   return textDiv;
 }
 function createFormSelectInput(form, selectId, selectText, minOptionNumber, maxOptionNumber, defaultOption, helpId, helpText, optionsLabels) {
-  var selectDiv = form.append("div").classed("form-group", true);
-  var selectInput = selectDiv.append("label").attr("for", selectId).text(selectText).append("select").classed("form-control", true).attr("id", selectId);
+  var selectDiv = form.append('div').classed('form-group', true);
+  var selectInput = selectDiv.append('label').attr('for', selectId).text(selectText).append('select').classed('form-control', true).attr('id', selectId);
   if (helpId && helpText) {
-    selectInput.attr("aria-describedby", helpId);
-    selectDiv.append("small").classed("form-text text-muted", true).attr("id", helpId).text(helpText);
+    selectInput.attr('aria-describedby', helpId);
+    selectDiv.append('small').classed('form-text text-muted', true).attr('id', helpId).text(helpText);
   }
   for (var optionNumber = minOptionNumber; optionNumber <= maxOptionNumber; optionNumber++) {
     var inputLabel = optionsLabels ? optionsLabels[optionNumber] : optionNumber;
-    var input = selectInput.append("option").text(inputLabel);
-    if (defaultOption && optionNumber == defaultOption) input.attr("selected", "selected");
+    var input = selectInput.append('option').text(inputLabel);
+    if (defaultOption && optionNumber === defaultOption) {
+      input.attr('selected', 'selected');
+    }
   }
 }
 function createFormNumberInput(form, id, text, minValue, defaultValue, helpId, helpText) {
-  var numberDiv = form.append("div").classed("form-group", true);
-  numberDiv.append("label").classed("form-check-label", true).attr("for", id).text(text);
-  numberDiv.append("input").attr("type", "number").attr("id", id).attr("min", minValue).attr("value", defaultValue).attr("oninput", "validity.valid||(value='');").attr("aria-describedby", "dataflowDepthHelp");
+  var numberDiv = form.append('div').classed('form-group', true);
+  numberDiv.append('label').classed('form-check-label', true).attr('for', id).text(text);
+  numberDiv.append('input').attr('type', 'number').attr('id', id).attr('min', minValue).attr('value', defaultValue).attr('oninput', "validity.valid||(value='');").attr('aria-describedby', 'dataflowDepthHelp');
   if (helpId && helpText) {
-    numberDiv.attr("aria-describedby", helpId);
-    numberDiv.append("small").classed("form-text text-muted", true).attr("id", helpId).text(helpText);
+    numberDiv.attr('aria-describedby', helpId);
+    numberDiv.append('small').classed('form-text text-muted', true).attr('id', helpId).text(helpText);
   }
 }
 function getTextInputFormByID(id, replace) {
   var formTextInput = document.getElementById(id).value;
-  if (replace) formTextInput.replace("/", "%2F").replace("\\", "%5C");
-  if (!formTextInput) formTextInput = false;
+  if (replace) {
+    formTextInput.replace('/', '%2F').replace('\\', '%5C');
+  }
+  if (!formTextInput) {
+    formTextInput = false;
+  }
   return formTextInput;
 }
 function hideModal(modal) {
-  if (modal) modal.style("display", "none").style("padding-right", "").classed("show", false).attr("aria-hidden", "true");
+  if (modal) {
+    modal.style('display', 'none').style('padding-right', '').classed('show', false).attr('aria-hidden', 'true');
+  }
 }
 function showModal(modal) {
-  if (modal) modal.style("display", "block").style("padding-right", "17px").classed("show", true).attr("aria-hidden", "false");
+  if (modal) {
+    modal.style('display', 'block').style('padding-right', '17px').classed('show', true).attr('aria-hidden', 'false');
+  }
 }
 
 /***/ },
@@ -53829,7 +53896,6 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
 
 
 
-var svgPanZoom = __webpack_require__(/*! svg-pan-zoom */ "../../node_modules/svg-pan-zoom/src/browserify.js");
 var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
   function ProspectiveGraphWidget(name, cls, trialId) {
     var _this;
@@ -53838,8 +53904,8 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
       node: ProspectiveGraphWidget.createNode(cls)
     }]);
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
-    _this.addClass("content");
-    _this.addClass("prospective-widget");
+    _this.addClass('content');
+    _this.addClass('prospective-widget');
     _this.title.label = name;
     _this.title.closable = true;
     _this.title.caption = "".concat(name, " Prospective Graph");
@@ -53857,28 +53923,28 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
     key: "createToolbar",
     value: function createToolbar() {
       var _this2 = this;
-      var toolbar = this.d3node.select(".prospective-toolbar");
-      toolbar.append("a").classed("toollink", true).attr("href", "#").attr("title", "Zoom In").style("padding", "4px 8px").style("text-decoration", "none").style("color", "#333").style("font-size", "14px").on("click", function (event) {
+      var toolbar = this.d3node.select('.prospective-toolbar');
+      toolbar.append('a').classed('toollink', true).attr('href', '#').attr('title', 'Zoom In').style('padding', '4px 8px').style('text-decoration', 'none').style('color', '#333').style('font-size', '14px').on('click', function (event) {
         event.preventDefault();
         _this2.applyZoom(1.2);
-      }).append("i").classed("fa fa-search-plus", true);
-      toolbar.append("a").classed("toollink", true).attr("href", "#").attr("title", "Zoom Out").style("padding", "4px 8px").style("text-decoration", "none").style("color", "#333").style("font-size", "14px").on("click", function (event) {
+      }).append('i').classed('fa fa-search-plus', true);
+      toolbar.append('a').classed('toollink', true).attr('href', '#').attr('title', 'Zoom Out').style('padding', '4px 8px').style('text-decoration', 'none').style('color', '#333').style('font-size', '14px').on('click', function (event) {
         event.preventDefault();
         _this2.applyZoom(0.8);
-      }).append("i").classed("fa fa-search-minus", true);
-      toolbar.append("a").classed("toollink", true).attr("href", "#").attr("title", "Download graph SVG").style("padding", "4px 8px").style("text-decoration", "none").style("color", "#333").style("font-size", "14px").on("click", function () {
+      }).append('i').classed('fa fa-search-minus', true);
+      toolbar.append('a').classed('toollink', true).attr('href', '#').attr('title', 'Download graph SVG').style('padding', '4px 8px').style('text-decoration', 'none').style('color', '#333').style('font-size', '14px').on('click', function () {
         _this2.downloadSVG();
-      }).append("i").classed("fa fa-download", true);
-      toolbar.append("a").classed("toollink", true).attr("href", "#").attr("title", "Download graph DOT").style("padding", "4px 8px").style("text-decoration", "none").style("color", "#333").style("font-size", "14px").on("click", function () {
+      }).append('i').classed('fa fa-download', true);
+      toolbar.append('a').classed('toollink', true).attr('href', '#').attr('title', 'Download graph DOT').style('padding', '4px 8px').style('text-decoration', 'none').style('color', '#333').style('font-size', '14px').on('click', function () {
         _this2.downloadDOT();
-      }).append("i").classed("fa fa-file-text", true);
+      }).append('i').classed('fa fa-file-text', true);
     }
   }, {
     key: "load",
     value: function load() {
       var _this3 = this;
-      var contentDiv = this.node.getElementsByClassName("prospective-content")[0];
-      contentDiv.innerHTML = "<p>Loading prospective provenance for trial:" + this.trialId + "</p>";
+      var contentDiv = this.node.getElementsByClassName('prospective-content')[0];
+      contentDiv.innerHTML = '<p>Loading prospective provenance for trial:' + this.trialId + '</p>';
 
       // Fetch DOT content from backend
       var url = ProspectiveGraphWidget.url(this.trialId);
@@ -53893,8 +53959,8 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
         _this3.dotContent = dotContent;
         _this3.renderGraph(dotContent, contentDiv);
       })["catch"](function (error) {
-        console.error("Error fetching prospective provenance:", error);
-        container.innerHTML = "<p>Error fetching prospective provenance:" + error + "</p>";
+        console.error('Error fetching prospective provenance:', error);
+        container.innerHTML = '<p>Error fetching prospective provenance:' + error + '</p>';
       });
     }
   }, {
@@ -53902,11 +53968,11 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
     value: function renderGraph(dotContent, container) {
       var _this4 = this;
       (0,_viz_js_viz__WEBPACK_IMPORTED_MODULE_2__.instance)().then(function (viz) {
-        container.innerHTML = "";
+        container.innerHTML = '';
         var svgElement = viz.renderSVGElement(dotContent);
-        var viewBoxAttr = svgElement.getAttribute("viewBox");
+        var viewBoxAttr = svgElement.getAttribute('viewBox');
         if (viewBoxAttr) {
-          var values = viewBoxAttr.split(" ").map(parseFloat);
+          var values = viewBoxAttr.split(' ').map(parseFloat);
           _this4.originalViewBox = {
             x: values[0],
             y: values[1],
@@ -53918,19 +53984,19 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
           var newHeight = _this4.originalViewBox.height * zoomFactor;
           var newX = _this4.originalViewBox.x + (_this4.originalViewBox.width - newWidth) / 2;
           var newY = _this4.originalViewBox.y + (_this4.originalViewBox.height - newHeight) / 2;
-          svgElement.setAttribute("viewBox", "".concat(newX, " ").concat(newY, " ").concat(newWidth, " ").concat(newHeight));
+          svgElement.setAttribute('viewBox', "".concat(newX, " ").concat(newY, " ").concat(newWidth, " ").concat(newHeight));
         }
-        svgElement.style.width = "100%";
-        svgElement.style.height = "100%";
-        svgElement.style.display = "block";
-        svgElement.style.position = "absolute";
-        svgElement.style.top = "0";
-        svgElement.style.left = "0";
+        svgElement.style.width = '100%';
+        svgElement.style.height = '100%';
+        svgElement.style.display = 'block';
+        svgElement.style.position = 'absolute';
+        svgElement.style.top = '0';
+        svgElement.style.left = '0';
         container.appendChild(svgElement);
         _this4.addPanFunctionality(svgElement);
       })["catch"](function (error) {
-        console.error("Error rendering prospective graph:", error);
-        container.innerHTML = "<p>Error rendering graph: " + error + "</p>";
+        console.error('Error rendering prospective graph:', error);
+        container.innerHTML = '<p>Error rendering graph: ' + error + '</p>';
       });
     }
   }, {
@@ -53945,44 +54011,48 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
         x: 0,
         y: 0
       };
-      svgElement.style.cursor = "grab";
-      svgElement.addEventListener("mousedown", function (e) {
+      svgElement.style.cursor = 'grab';
+      svgElement.addEventListener('mousedown', function (e) {
         isPanning = true;
         startPoint = {
           x: e.clientX,
           y: e.clientY
         };
-        var viewBoxAttr = svgElement.getAttribute("viewBox");
+        var viewBoxAttr = svgElement.getAttribute('viewBox');
         if (viewBoxAttr) {
-          var values = viewBoxAttr.split(" ").map(parseFloat);
+          var values = viewBoxAttr.split(' ').map(parseFloat);
           startViewBox = {
             x: values[0],
             y: values[1]
           };
         }
-        svgElement.style.cursor = "grabbing";
+        svgElement.style.cursor = 'grabbing';
         e.preventDefault();
       });
-      svgElement.addEventListener("mousemove", function (e) {
-        if (!isPanning) return;
-        var viewBoxAttr = svgElement.getAttribute("viewBox");
-        if (!viewBoxAttr) return;
-        var values = viewBoxAttr.split(" ").map(parseFloat);
+      svgElement.addEventListener('mousemove', function (e) {
+        if (!isPanning) {
+          return;
+        }
+        var viewBoxAttr = svgElement.getAttribute('viewBox');
+        if (!viewBoxAttr) {
+          return;
+        }
+        var values = viewBoxAttr.split(' ').map(parseFloat);
         var width = values[2];
         var height = values[3];
         var dx = (e.clientX - startPoint.x) * (width / svgElement.clientWidth);
         var dy = (e.clientY - startPoint.y) * (height / svgElement.clientHeight);
         var newX = startViewBox.x - dx;
         var newY = startViewBox.y - dy;
-        svgElement.setAttribute("viewBox", "".concat(newX, " ").concat(newY, " ").concat(width, " ").concat(height));
+        svgElement.setAttribute('viewBox', "".concat(newX, " ").concat(newY, " ").concat(width, " ").concat(height));
       });
-      svgElement.addEventListener("mouseup", function () {
+      svgElement.addEventListener('mouseup', function () {
         isPanning = false;
-        svgElement.style.cursor = "grab";
+        svgElement.style.cursor = 'grab';
       });
-      svgElement.addEventListener("mouseleave", function () {
+      svgElement.addEventListener('mouseleave', function () {
         isPanning = false;
-        svgElement.style.cursor = "grab";
+        svgElement.style.cursor = 'grab';
       });
     }
   }, {
@@ -53993,8 +54063,8 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
         (0,_viz_js_viz__WEBPACK_IMPORTED_MODULE_2__.instance)().then(function (viz) {
           var svgElement = viz.renderSVGElement(_this5.dotContent);
           file_saver__WEBPACK_IMPORTED_MODULE_3__.saveAs(new Blob([svgElement.outerHTML], {
-            type: "image/svg+xml"
-          }), "prospective_" + _this5.trialId + ".svg");
+            type: 'image/svg+xml'
+          }), 'prospective_' + _this5.trialId + '.svg');
         });
       }
     }
@@ -54003,18 +54073,22 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
     value: function downloadDOT() {
       if (this.dotContent) {
         file_saver__WEBPACK_IMPORTED_MODULE_3__.saveAs(new Blob([this.dotContent], {
-          type: "text/plain;charset=utf-8"
-        }), "prospective_" + this.trialId + ".dot");
+          type: 'text/plain;charset=utf-8'
+        }), 'prospective_' + this.trialId + '.dot');
       }
     }
   }, {
     key: "applyZoom",
     value: function applyZoom(factor) {
-      var svgElement = this.node.querySelector("svg");
-      if (!svgElement || !this.originalViewBox) return;
-      var viewBoxAttr = svgElement.getAttribute("viewBox");
-      if (!viewBoxAttr) return;
-      var values = viewBoxAttr.split(" ").map(parseFloat);
+      var svgElement = this.node.querySelector('svg');
+      if (!svgElement || !this.originalViewBox) {
+        return;
+      }
+      var viewBoxAttr = svgElement.getAttribute('viewBox');
+      if (!viewBoxAttr) {
+        return;
+      }
+      var values = viewBoxAttr.split(' ').map(parseFloat);
       var currentX = values[0];
       var currentY = values[1];
       var currentWidth = values[2];
@@ -54026,7 +54100,7 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
       var centerY = currentY + currentHeight / 2;
       var newX = centerX - newWidth / 2;
       var newY = centerY - newHeight / 2;
-      svgElement.setAttribute("viewBox", "".concat(newX, " ").concat(newY, " ").concat(newWidth, " ").concat(newHeight));
+      svgElement.setAttribute('viewBox', "".concat(newX, " ").concat(newY, " ").concat(newWidth, " ").concat(newHeight));
     }
   }], [{
     key: "url",
@@ -54036,15 +54110,15 @@ var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createNode",
     value: function createNode(cls) {
-      var node = document.createElement("div");
+      var node = document.createElement('div');
       var d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(node);
-      node.style.display = "flex";
-      node.style.flexDirection = "column";
-      node.style.width = "100%";
-      node.style.height = "100%";
-      node.style.overflow = "hidden";
-      d3node.append("div").classed("prospective-toolbar", true).style("flex-shrink", "0").style("height", "30px").style("min-height", "30px").style("max-height", "30px").style("padding", "2px 5px").style("background", "#f5f5f5").style("border-bottom", "1px solid #ddd").style("display", "flex").style("align-items", "center").style("gap", "8px");
-      d3node.append("div").classed("prospective-content", true).style("flex", "1").style("min-height", "0").style("overflow", "hidden").style("position", "relative");
+      node.style.display = 'flex';
+      node.style.flexDirection = 'column';
+      node.style.width = '100%';
+      node.style.height = '100%';
+      node.style.overflow = 'hidden';
+      d3node.append('div').classed('prospective-toolbar', true).style('flex-shrink', '0').style('height', '30px').style('min-height', '30px').style('max-height', '30px').style('padding', '2px 5px').style('background', '#f5f5f5').style('border-bottom', '1px solid #ddd').style('display', 'flex').style('align-items', 'center').style('gap', '8px');
+      d3node.append('div').classed('prospective-content', true).style('flex', '1').style('min-height', '0').style('overflow', 'hidden').style('position', 'relative');
       return node;
     }
   }]);
@@ -54097,8 +54171,8 @@ var TrialGraphWidget = /*#__PURE__*/function (_BaseActivationGraphW) {
       node: _base_activation_graph__WEBPACK_IMPORTED_MODULE_2__.BaseActivationGraphWidget.createNode(cls)
     }]);
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
-    _this.d3node.select('.reload-button').on("click", function () {
-      _this.load(_this.d3node.select(".graph-type").property("value"), _this.d3node.select(".use-cache").property("checked"));
+    _this.d3node.select('.reload-button').on('click', function () {
+      _this.load(_this.d3node.select('.graph-type').property('value'), _this.d3node.select('.use-cache').property('checked'));
     });
     _this.addClass('content');
     _this.addClass('trial-widget');
@@ -54116,31 +54190,31 @@ var TrialGraphWidget = /*#__PURE__*/function (_BaseActivationGraphW) {
     key: "setGraph",
     value: function setGraph(data) {
       var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      var sub = this.node.getElementsByClassName("sub-content")[0];
-      sub.innerHTML = "";
+      var sub = this.node.getElementsByClassName('sub-content')[0];
+      sub.innerHTML = '';
       this.graph = new _noworkflow_trial__WEBPACK_IMPORTED_MODULE_3__.TrialGraph(this.cls, sub, config);
       this.graph.load(data, this.t1, this.t2);
     }
   }, {
     key: "graphDefinition",
     value: function graphDefinition() {
-      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "namespace_match";
+      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'namespace_match';
       var useCache = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
       var genDataflow = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
       var data = arguments.length > 3 ? arguments[3] : undefined;
       var result = _superPropGet(TrialGraphWidget, "graphDefinition", this, 3)([selectedGraph, useCache, genDataflow, data]);
       return Object.assign({}, result, {
-        queryTooltip: selectedGraph != "definition_tree"
+        queryTooltip: selectedGraph !== 'definition_tree'
       });
     }
   }, {
     key: "load",
     value: function load() {
       var _this2 = this;
-      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "namespace_match";
+      var selectedGraph = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'namespace_match';
       var useCache = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-      var sub = this.node.getElementsByClassName("sub-content")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_1__.json)("Trial", sub, TrialGraphWidget.url(this.t1, selectedGraph, useCache), function (data) {
+      var sub = this.node.getElementsByClassName('sub-content')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_1__.json)('Trial', sub, TrialGraphWidget.url(this.t1, selectedGraph, useCache), function (data) {
         _this2.configureGraph(selectedGraph, useCache, true, data);
       });
     }
@@ -54156,8 +54230,8 @@ var TrialGraphWidget = /*#__PURE__*/function (_BaseActivationGraphW) {
   }], [{
     key: "url",
     value: function url(trialId, selectedGraph, useCache) {
-      var cache = useCache ? "1" : "0";
-      return "trials/" + trialId + "/" + selectedGraph + "/" + cache + ".json";
+      var cache = useCache ? '1' : '0';
+      return 'trials/' + trialId + '/' + selectedGraph + '/' + cache + '.json';
     }
   }]);
 }(_base_activation_graph__WEBPACK_IMPORTED_MODULE_2__.BaseActivationGraphWidget);
@@ -54207,7 +54281,7 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
     }]);
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_2__["default"])(_this.node);
     _this.addClass('content');
-    _this.title.label = "Group Information";
+    _this.title.label = 'Group Information';
     _this.title.closable = false;
     _this.title.caption = "Group";
     _this.setNode();
@@ -54226,14 +54300,14 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
     key: "setUsers",
     value: function () {
       var _setUsers = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var _thiss, response, obj;
+        var _this2 = this;
+        var response, obj;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
             case 0:
-              _thiss = this;
-              _thiss.userIn.html("");
+              this.userIn.html('');
               _context.n = 1;
-              return fetch("users", {
+              return fetch('users', {
                 method: 'GET',
                 // *GET, POST, PUT, DELETE, etc.
                 headers: {
@@ -54242,17 +54316,17 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
               });
             case 1:
               response = _context.v;
-              if (!(response.status == 200)) {
+              if (!(response.status === 200)) {
                 _context.n = 3;
                 break;
               }
-              _thiss.users = new Array();
+              this.users = new Array();
               _context.n = 2;
               return response.json();
             case 2:
               obj = _context.v;
               obj.forEach(function (item) {
-                _thiss.users.push({
+                _this2.users.push({
                   id: item.id,
                   login: item.userLogin
                 });
@@ -54260,10 +54334,10 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
               _context.n = 4;
               break;
             case 3:
-              this.showNode(_thiss.errorFeedback);
+              this.showNode(this.errorFeedback);
             case 4:
-              _thiss.users.forEach(function (obj) {
-                _thiss.userIn.append("option").attr("value", obj.id).text(obj.login);
+              this.users.forEach(function (obj) {
+                _this2.userIn.append('option').attr('value', obj.id).text(obj.login);
               });
             case 5:
               return _context.a(2);
@@ -54278,20 +54352,20 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "resfreshGroups",
     value: function resfreshGroups() {
-      this.tBody.html("");
+      this.tBody.html('');
       this.setGroups();
     }
   }, {
     key: "setGroups",
     value: function () {
       var _setGroups = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-        var _thiss, response, obj;
+        var _this3 = this;
+        var response, obj;
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.n) {
             case 0:
-              _thiss = this;
               _context2.n = 1;
-              return fetch("groups", {
+              return fetch('groups', {
                 method: 'GET',
                 // *GET, POST, PUT, DELETE, etc.
                 headers: {
@@ -54300,11 +54374,11 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
               });
             case 1:
               response = _context2.v;
-              if (!(response.status == 200)) {
+              if (!(response.status === 200)) {
                 _context2.n = 3;
                 break;
               }
-              _thiss.groups = new Array();
+              this.groups = new Array();
               _context2.n = 2;
               return response.json();
             case 2:
@@ -54321,15 +54395,15 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
                     login: user.userLogin
                   });
                 });
-                _thiss.groups.push(group);
+                _this3.groups.push(group);
               });
               _context2.n = 4;
               break;
             case 3:
-              this.showNode(_thiss.errorFeedback);
+              this.showNode(this.errorFeedback);
             case 4:
               this.groups.forEach(function (obj) {
-                _thiss.addGrpRow(obj);
+                _this3.addGrpRow(obj);
               });
             case 5:
               return _context2.a(2);
@@ -54350,7 +54424,7 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
           while (1) switch (_context3.n) {
             case 0:
               _context3.n = 1;
-              return fetch("/groups/" + grpId, {
+              return fetch('/groups/' + grpId, {
                 method: 'DELETE',
                 // *GET, POST, PUT, DELETE, etc.
                 headers: {
@@ -54359,7 +54433,7 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
               });
             case 1:
               response = _context3.v;
-              if (response.status == 200) {
+              if (response.status === 200) {
                 this.showNode(this.successFeedback);
                 this.resfreshGroups();
               } else {
@@ -54378,77 +54452,77 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "addGrpRow",
     value: function addGrpRow(grp) {
-      var _thiss = this;
-      var item = this.tBody.append("tr");
-      item.append("th").attr("scope", "row").text(grp.id);
-      item.append("td").text(grp.name);
-      var membersText = "";
+      var _this4 = this;
+      var item = this.tBody.append('tr');
+      item.append('th').attr('scope', 'row').text(grp.id);
+      item.append('td').text(grp.name);
+      var membersText = '';
       grp.members.forEach(function (user) {
-        membersText += user.login + " ";
+        membersText += user.login + ' ';
       });
-      item.append("td").text(membersText);
-      var actions = item.append("td");
-      var addMemberButton = actions.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Add User");
-      addMemberButton.on("click", function () {
-        _thiss.showNode(_thiss.addMemberForm);
-        _thiss.currentGroup = grp.id;
+      item.append('td').text(membersText);
+      var actions = item.append('td');
+      var addMemberButton = actions.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Add User');
+      addMemberButton.on('click', function () {
+        _this4.showNode(_this4.addMemberForm);
+        _this4.currentGroup = grp.id;
       });
-      var deleteGroupButton = actions.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Delete Group");
-      deleteGroupButton.on("click", function () {
-        if (confirm("Are you sure you want to delete group: " + grp.name + " ?")) {
-          _thiss.deleteGrp(grp.id);
+      var deleteGroupButton = actions.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Delete Group');
+      deleteGroupButton.on('click', function () {
+        if (confirm('Are you sure you want to delete group: ' + grp.name + ' ?')) {
+          _this4.deleteGrp(grp.id);
         }
       });
-      deleteGroupButton.style("margin-left", 4);
+      deleteGroupButton.style('margin-left', 4);
     }
   }, {
     key: "addFormInput",
     value: function addFormInput(form, fieldId, fieldLabel, fieldType) {
-      var grp = form.append("div").classed("form-group row", true);
-      grp.append("label").classed("col-sm-2 col-form-label", true).attr("for", fieldId).text(fieldLabel + ": ");
-      var divIn = grp.append("div").classed("col-sm-10", true);
+      var grp = form.append('div').classed('form-group row', true);
+      grp.append('label').classed('col-sm-2 col-form-label', true).attr('for', fieldId).text(fieldLabel + ': ');
+      var divIn = grp.append('div').classed('col-sm-10', true);
       var inp = divIn.append(fieldType);
-      inp.classed("form-control", true).attr("id", fieldId);
+      inp.classed('form-control', true).attr('id', fieldId);
       return inp;
     }
   }, {
     key: "addFeedBackinfo",
     value: function addFeedBackinfo(baseNode, cls, txt, desc) {
-      var _thiss = this;
-      var feedbackNode = baseNode.append("div").classed("alert", true).classed(cls, true).classed("alert-dismissible", true).classed("fade", true).classed("show", true);
-      feedbackNode.append("strong").text(txt);
-      feedbackNode.append("span").text(" " + desc).append("button").attr("type", "button").classed("close", true).attr("data-dismiss", "alert").text("x").on("click", function () {
-        _thiss.hideNode(feedbackNode);
+      var _this5 = this;
+      var feedbackNode = baseNode.append('div').classed('alert', true).classed(cls, true).classed('alert-dismissible', true).classed('fade', true).classed('show', true);
+      feedbackNode.append('strong').text(txt);
+      feedbackNode.append('span').text(' ' + desc).append('button').attr('type', 'button').classed('close', true).attr('data-dismiss', 'alert').text('x').on('click', function () {
+        _this5.hideNode(feedbackNode);
       });
       return feedbackNode;
     }
   }, {
     key: "hideNode",
     value: function hideNode(node) {
-      node.classed("d-none", true);
+      node.classed('d-none', true);
     }
   }, {
     key: "showNode",
     value: function showNode(node) {
-      node.classed("d-none", false);
+      node.classed('d-none', false);
     }
   }, {
     key: "createAddGroupForm",
     value: function createAddGroupForm(projectsDiv) {
-      var _thiss = this;
-      var inputsDiv = projectsDiv.append("div");
-      var nameIn = this.addFormInput(inputsDiv, "groupNameInput", "Name: ", "input");
-      var confimButton = inputsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Confirm");
-      var addGrpButton = projectsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Add Group");
-      inputsDiv.classed("d-none", true);
-      confimButton.on("click", function () {
-        _thiss.hideNode(_thiss.errorFeedback);
-        _thiss.hideNode(_thiss.successFeedback);
+      var _this6 = this;
+      var inputsDiv = projectsDiv.append('div');
+      var nameIn = this.addFormInput(inputsDiv, 'groupNameInput', 'Name: ', 'input');
+      var confimButton = inputsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Confirm');
+      var addGrpButton = projectsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Add Group');
+      inputsDiv.classed('d-none', true);
+      confimButton.on('click', function () {
+        _this6.hideNode(_this6.errorFeedback);
+        _this6.hideNode(_this6.successFeedback);
         var newGrp = {
-          name: nameIn.property("value"),
+          name: nameIn.property('value'),
           members: new Array()
         };
-        fetch("groups", {
+        fetch('groups', {
           method: 'POST',
           // *GET, POST, PUT, DELETE, etc.
           headers: {
@@ -54456,42 +54530,42 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
           },
           body: JSON.stringify(newGrp) // body data type must match "Content-Type" header
         }).then(function (response) {
-          if (response.status == 201) {
+          if (response.status === 201) {
             response.json().then(function (obj) {
               newGrp.id = obj.id;
-              _thiss.addGrpRow(newGrp);
-              _thiss.hideNode(inputsDiv);
-              _thiss.showNode(addGrpButton);
-              _thiss.showNode(_thiss.successFeedback);
+              _this6.addGrpRow(newGrp);
+              _this6.hideNode(inputsDiv);
+              _this6.showNode(addGrpButton);
+              _this6.showNode(_this6.successFeedback);
             });
           } else {
-            _thiss.showNode(_thiss.errorFeedback);
+            _this6.showNode(_this6.errorFeedback);
           }
         });
       });
-      addGrpButton.on("click", function () {
-        _thiss.showNode(inputsDiv);
-        _thiss.hideNode(addGrpButton);
+      addGrpButton.on('click', function () {
+        _this6.showNode(inputsDiv);
+        _this6.hideNode(addGrpButton);
       });
     }
   }, {
     key: "createAddMemberForm",
     value: function createAddMemberForm(projectsDiv) {
-      var _thiss = this;
-      _thiss.addMemberForm = projectsDiv.append("div");
-      var inputsDiv = _thiss.addMemberForm;
-      this.userIn = this.addFormInput(inputsDiv, "groupUsersInput", "User", "select");
-      var confimButton = inputsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Confirm");
-      confimButton.on("click", function () {
-        _thiss.hideNode(_thiss.errorFeedback);
-        _thiss.hideNode(_thiss.successFeedback);
-        var select = _thiss.userIn.node();
+      var _this7 = this;
+      this.addMemberForm = projectsDiv.append('div');
+      var inputsDiv = this.addMemberForm;
+      this.userIn = this.addFormInput(inputsDiv, 'groupUsersInput', 'User', 'select');
+      var confimButton = inputsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Confirm');
+      confimButton.on('click', function () {
+        _this7.hideNode(_this7.errorFeedback);
+        _this7.hideNode(_this7.successFeedback);
+        var select = _this7.userIn.node();
         if (select != null) {
           var option = select.options[select.selectedIndex];
           var newGrp = {
             userId: option.value
           };
-          fetch("groups/" + _thiss.currentGroup + "/users", {
+          fetch('groups/' + _this7.currentGroup + '/users', {
             method: 'POST',
             // *GET, POST, PUT, DELETE, etc.
             headers: {
@@ -54499,40 +54573,40 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
             },
             body: JSON.stringify(newGrp) // body data type must match "Content-Type" header
           }).then(function (response) {
-            if (response.status == 201) {
+            if (response.status === 201) {
               response.json().then(function (obj) {
-                _thiss.hideNode(_thiss.addMemberForm);
-                _thiss.showNode(_thiss.successFeedback);
-                _thiss.resfreshGroups();
+                _this7.hideNode(_this7.addMemberForm);
+                _this7.showNode(_this7.successFeedback);
+                _this7.resfreshGroups();
               });
             } else {
-              _thiss.showNode(_thiss.errorFeedback);
+              _this7.showNode(_this7.errorFeedback);
             }
           });
         }
       });
-      _thiss.hideNode(_thiss.addMemberForm);
+      this.hideNode(this.addMemberForm);
     }
   }, {
     key: "setNode",
     value: function setNode() {
       var content = this.d3node.append('div').classed('config-content', true);
-      var projectsDiv = content.append("div");
-      projectsDiv.append("h2").text("Groups:");
-      this.errorFeedback = this.addFeedBackinfo(projectsDiv, "alert-danger", "Error!", "A problem has been occurred while submitting your data.");
-      this.successFeedback = this.addFeedBackinfo(projectsDiv, "alert-success", "Success!", "");
+      var projectsDiv = content.append('div');
+      projectsDiv.append('h2').text('Groups:');
+      this.errorFeedback = this.addFeedBackinfo(projectsDiv, 'alert-danger', 'Error!', 'A problem has been occurred while submitting your data.');
+      this.successFeedback = this.addFeedBackinfo(projectsDiv, 'alert-success', 'Success!', '');
       this.hideNode(this.errorFeedback);
       this.hideNode(this.successFeedback);
       this.createAddMemberForm(projectsDiv);
-      projectsDiv.append("br");
+      projectsDiv.append('br');
       this.createAddGroupForm(projectsDiv);
-      var table = projectsDiv.append("table").classed("table", true);
-      var header = table.append("thead").append("tr");
-      header.append("th").attr("scope", "col").text("id");
-      header.append("th").attr("scope", "col").text("name");
-      header.append("th").attr("scope", "col").text("Members");
-      header.append("th").attr("scope", "col").text("Actions");
-      this.tBody = table.append("tbody");
+      var table = projectsDiv.append('table').classed('table', true);
+      var header = table.append('thead').append('tr');
+      header.append('th').attr('scope', 'col').text('id');
+      header.append('th').attr('scope', 'col').text('name');
+      header.append('th').attr('scope', 'col').text('Members');
+      header.append('th').attr('scope', 'col').text('Actions');
+      this.tBody = table.append('tbody');
     }
   }], [{
     key: "createNode",
@@ -54599,7 +54673,7 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
     _this.addClass('content');
     _this.addClass('trial-info');
-    _this.title.label = display1 + "<->" + display2 + " - Diff Info";
+    _this.title.label = display1 + '<->' + display2 + ' - Diff Info';
     _this.title.closable = true;
     _this.title.caption = "Diff ".concat(display1, "-").concat(display2, " Information");
     _this.load(trial1, trial2);
@@ -54610,8 +54684,8 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
     key: "load",
     value: function load(trial1, trial2) {
       var _this2 = this;
-      var sub = this.node.getElementsByClassName("trial-info")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)("Info", sub, DiffInfoWidget.url(trial1, trial2), function (data) {
+      var sub = this.node.getElementsByClassName('trial-info')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)('Info', sub, DiffInfoWidget.url(trial1, trial2), function (data) {
         _this2.createMain(data);
         _this2.loadModules(trial1, trial2);
         _this2.loadEnvironment(trial1, trial2);
@@ -54624,81 +54698,81 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
       var trial = data.trial;
       var trial1 = data.trial1;
       var trial2 = data.trial2;
-      var content = this.d3node.select('.trial-info').html("").append('div').classed('side-info', true);
+      var content = this.d3node.select('.trial-info').html('').append('div').classed('side-info', true);
       var main = content.append('div').classed('main', true);
-      var h1 = main.append("h1");
+      var h1 = main.append('h1');
 
       // Title
-      h1.append("span").classed("dbefore", true).text("Trial " + this.display1);
-      h1.append("span").text(" <-> ");
-      h1.append("span").classed("dafter", true).text("Trial " + this.display2);
+      h1.append('span').classed('dbefore', true).text('Trial ' + this.display1);
+      h1.append('span').text(' <-> ');
+      h1.append('span').classed('dafter', true).text('Trial ' + this.display2);
 
       // Code hash
-      if (trial.code_hash == undefined) {
-        main.append("h3").classed("hash", true).text(trial1.code_hash || "");
+      if (trial.code_hash == null) {
+        main.append('h3').classed('hash', true).text(trial1.code_hash || '');
       } else {
-        main.append("h3").classed("hash dbefore", true).text(trial.code_hash[0] || "");
-        main.append("h3").classed("hash dafter", true).text(trial.code_hash[1] || "");
+        main.append('h3').classed('hash dbefore', true).text(trial.code_hash[0] || '');
+        main.append('h3').classed('hash dafter', true).text(trial.code_hash[1] || '');
       }
-      this.info(main, "id", "Id", trial1.id, trial2.id);
-      this.info(main, "script", "Script", trial1.script, trial2.script);
-      this.info(main, "start", "Start", trial1.start, trial2.start);
-      this.info(main, "finish", "Finish", trial1.finish, trial2.finish);
-      this.info(main, "duration", "Duration", trial1.duration_text, trial2.duration_text);
-      if (trial.arguments == undefined) {
+      this.info(main, 'id', 'Id', trial1.id, trial2.id);
+      this.info(main, 'script', 'Script', trial1.script, trial2.script);
+      this.info(main, 'start', 'Start', trial1.start, trial2.start);
+      this.info(main, 'finish', 'Finish', trial1.finish, trial2.finish);
+      this.info(main, 'duration', 'Duration', trial1.duration_text, trial2.duration_text);
+      if (trial.arguments == null) {
         if (trial1.arguments) {
-          var attr = main.append("span").classed("attr", true);
-          attr.append("span").classed("desc", true).text("Arguments: ");
-          attr.append("span").classed("arguments", true).text(trial1.arguments);
+          var attr = main.append('span').classed('attr', true);
+          attr.append('span').classed('desc', true).text('Arguments: ');
+          attr.append('span').classed('arguments', true).text(trial1.arguments);
         }
       } else {
         if (trial1.arguments) {
-          var _attr = main.append("span").classed("attr", true);
-          _attr.append("span").classed("desc dbefore", true).text("Arguments: ");
-          _attr.append("span").classed("arguments", true).text(trial1.arguments);
+          var _attr = main.append('span').classed('attr', true);
+          _attr.append('span').classed('desc dbefore', true).text('Arguments: ');
+          _attr.append('span').classed('arguments', true).text(trial1.arguments);
         }
         if (trial2.arguments) {
-          var _attr2 = main.append("span").classed("attr", true);
-          _attr2.append("span").classed("desc dafter", true).text("Arguments: ");
-          _attr2.append("span").classed("arguments", true).text(trial2.arguments);
+          var _attr2 = main.append('span').classed('attr', true);
+          _attr2.append('span').classed('desc dafter', true).text('Arguments: ');
+          _attr2.append('span').classed('arguments', true).text(trial2.arguments);
         }
       }
-      content.append("div").classed("modules", true);
-      content.append("div").classed("environment", true);
-      content.append("div").classed("file-accesses", true);
+      content.append('div').classed('modules', true);
+      content.append('div').classed('environment', true);
+      content.append('div').classed('file-accesses', true);
     }
   }, {
     key: "filter_trial",
     value: function filter_trial(filter, filterfn) {
-      var select_trial = filter.filterdiv.append("select");
-      select_trial.append("option").attr("value", "3").text("Do not filter Trial");
-      select_trial.append("option").attr("value", "1").text("First Trial Only");
-      select_trial.append("option").attr("value", "5").text("Exists in First Trial");
-      select_trial.append("option").attr("value", "2").text("Second Trial Only");
-      select_trial.append("option").attr("value", "6").text("Exists in Second Trial");
-      select_trial.append("option").attr("value", "4").text("Both Trials Only");
-      select_trial.property("value", "3");
+      var select_trial = filter.filterdiv.append('select');
+      select_trial.append('option').attr('value', '3').text('Do not filter Trial');
+      select_trial.append('option').attr('value', '1').text('First Trial Only');
+      select_trial.append('option').attr('value', '5').text('Exists in First Trial');
+      select_trial.append('option').attr('value', '2').text('Second Trial Only');
+      select_trial.append('option').attr('value', '6').text('Exists in Second Trial');
+      select_trial.append('option').attr('value', '4').text('Both Trials Only');
+      select_trial.property('value', '3');
       var newfilter = function newfilter() {
-        filterfn(Number(select_trial.property("value")));
+        filterfn(Number(select_trial.property('value')));
       };
-      select_trial.on("change", newfilter);
+      select_trial.on('change', newfilter);
       filter.on_change(newfilter);
     }
   }, {
     key: "loadModules",
     value: function loadModules(trial1, trial2) {
       var _this3 = this;
-      var sub = this.node.getElementsByClassName("modules")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)("Modules", sub, DiffInfoWidget.modules_url(trial1, trial2), function (data) {
-        var modules = _this3.d3node.select(".modules").html("");
+      var sub = this.node.getElementsByClassName('modules')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)('Modules', sub, DiffInfoWidget.modules_url(trial1, trial2), function (data) {
+        var modules = _this3.d3node.select('.modules').html('');
         if (data.modules_added.length > 0 || data.modules_removed.length > 0 || data.modules_replaced.length > 0) {
-          var fold = _trial_info__WEBPACK_IMPORTED_MODULE_6__.TrialInfoWidget.createFold(modules, "Modules");
-          var foldable = modules.append("div").classed("foldable show-toolbar", true);
+          var fold = _trial_info__WEBPACK_IMPORTED_MODULE_6__.TrialInfoWidget.createFold(modules, 'Modules');
+          var foldable = modules.append('div').classed('foldable show-toolbar', true);
           var filter = _modules_info__WEBPACK_IMPORTED_MODULE_3__.ModulesInfoWidget.createFilter(foldable);
-          var ul = foldable.append("ul").classed("mod-list", true);
+          var ul = foldable.append('ul').classed('mod-list', true);
           _this3.filter_trial(filter, function (strial) {
-            ul.html("");
-            if ((strial & 1) == 1) {
+            ul.html('');
+            if ((strial & 1) === 1) {
               var _iterator = _createForOfIteratorHelper(data.modules_removed),
                 _step;
               try {
@@ -54715,16 +54789,16 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
                 _iterator.f();
               }
             }
-            if ((strial & 2) == 2) {
+            if ((strial & 2) === 2) {
               var _iterator2 = _createForOfIteratorHelper(data.modules_added),
                 _step2;
               try {
                 for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-                  var element = _step2.value;
-                  if (!filter.valid(data.t2_path, element)) {
+                  var _element = _step2.value;
+                  if (!filter.valid(data.t2_path, _element)) {
                     continue;
                   }
-                  _this3.mod_li(ul, 'liafter', element);
+                  _this3.mod_li(ul, 'liafter', _element);
                 }
               } catch (err) {
                 _iterator2.e(err);
@@ -54743,14 +54817,14 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
                   if (!filter.valid(data.t1_path, rem) || !filter.valid(data.t2_path, add)) {
                     continue;
                   }
-                  var li = ul.append("li");
-                  li.append("div").classed("name", true).text(rem.name);
-                  var version = li.append("div").classed("version", true);
-                  version.append("div").classed("dbefore", true).text(rem.version);
-                  version.append("div").classed("dafter", true).text(add.version);
-                  li.append("div").classed("clear", true);
-                  li.append("div").classed("hash dbefore", true).attr("title", rem.path).text(rem.code_hash);
-                  li.append("div").classed("hash dafter", true).attr("title", add.path).text(add.code_hash);
+                  var li = ul.append('li');
+                  li.append('div').classed('name', true).text(rem.name);
+                  var version = li.append('div').classed('version', true);
+                  version.append('div').classed('dbefore', true).text(rem.version);
+                  version.append('div').classed('dafter', true).text(add.version);
+                  li.append('div').classed('clear', true);
+                  li.append('div').classed('hash dbefore', true).attr('title', rem.path).text(rem.code_hash);
+                  li.append('div').classed('hash dafter', true).attr('title', add.path).text(add.code_hash);
                 }
               } catch (err) {
                 _iterator3.e(err);
@@ -54767,17 +54841,17 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
     key: "loadEnvironment",
     value: function loadEnvironment(trial1, trial2) {
       var _this4 = this;
-      var sub = this.node.getElementsByClassName("environment")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)("Environment", sub, DiffInfoWidget.environment_url(trial1, trial2), function (data) {
-        var environment = _this4.d3node.select(".environment").html("");
+      var sub = this.node.getElementsByClassName('environment')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)('Environment', sub, DiffInfoWidget.environment_url(trial1, trial2), function (data) {
+        var environment = _this4.d3node.select('.environment').html('');
         if (data.env_added.length > 0 || data.env_removed.length > 0 || data.env_replaced.length > 0) {
-          var fold = _trial_info__WEBPACK_IMPORTED_MODULE_6__.TrialInfoWidget.createFold(environment, "Environment");
-          var foldable = environment.append("div").classed("foldable show-toolbar", true);
+          var fold = _trial_info__WEBPACK_IMPORTED_MODULE_6__.TrialInfoWidget.createFold(environment, 'Environment');
+          var foldable = environment.append('div').classed('foldable show-toolbar', true);
           var filter = _environment_info__WEBPACK_IMPORTED_MODULE_4__.EnvironmentInfoWidget.createFilter(foldable);
-          var ul = foldable.append("ul").classed("env-list", true);
+          var ul = foldable.append('ul').classed('env-list', true);
           _this4.filter_trial(filter, function (strial) {
-            ul.html("");
-            if ((strial & 1) == 1) {
+            ul.html('');
+            if ((strial & 1) === 1) {
               var _iterator4 = _createForOfIteratorHelper(data.env_removed),
                 _step4;
               try {
@@ -54794,16 +54868,16 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
                 _iterator4.f();
               }
             }
-            if ((strial & 2) == 2) {
+            if ((strial & 2) === 2) {
               var _iterator5 = _createForOfIteratorHelper(data.env_added),
                 _step5;
               try {
                 for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-                  var element = _step5.value;
-                  if (!filter.valid(element)) {
+                  var _element2 = _step5.value;
+                  if (!filter.valid(_element2)) {
                     continue;
                   }
-                  _this4.env_li(ul, 'dafter', element);
+                  _this4.env_li(ul, 'dafter', _element2);
                 }
               } catch (err) {
                 _iterator5.e(err);
@@ -54839,17 +54913,17 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
     key: "loadFileAccess",
     value: function loadFileAccess(trial1, trial2) {
       var _this5 = this;
-      var sub = this.node.getElementsByClassName("file-accesses")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)("File Accesses", sub, DiffInfoWidget.accesses_url(trial1, trial2), function (data) {
-        var accesses = _this5.d3node.select(".file-accesses").html("");
+      var sub = this.node.getElementsByClassName('file-accesses')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)('File Accesses', sub, DiffInfoWidget.accesses_url(trial1, trial2), function (data) {
+        var accesses = _this5.d3node.select('.file-accesses').html('');
         if (data.fa_added.length > 0 || data.fa_removed.length > 0 || data.fa_replaced.length > 0) {
-          var fold = _trial_info__WEBPACK_IMPORTED_MODULE_6__.TrialInfoWidget.createFold(accesses, "File Accesses");
-          var foldable = accesses.append("div").classed("foldable show-toolbar", true);
+          var fold = _trial_info__WEBPACK_IMPORTED_MODULE_6__.TrialInfoWidget.createFold(accesses, 'File Accesses');
+          var foldable = accesses.append('div').classed('foldable show-toolbar', true);
           var filter = _file_accesses_info__WEBPACK_IMPORTED_MODULE_5__.FileAccessesInfoWidget.createFilter(foldable);
-          var ul = foldable.append("ul").classed("fac-list", true);
+          var ul = foldable.append('ul').classed('fac-list', true);
           _this5.filter_trial(filter, function (strial) {
-            ul.html("");
-            if ((strial & 1) == 1) {
+            ul.html('');
+            if ((strial & 1) === 1) {
               var _iterator7 = _createForOfIteratorHelper(data.fa_removed),
                 _step7;
               try {
@@ -54866,16 +54940,16 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
                 _iterator7.f();
               }
             }
-            if ((strial & 2) == 2) {
+            if ((strial & 2) === 2) {
               var _iterator8 = _createForOfIteratorHelper(data.fa_added),
                 _step8;
               try {
                 for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-                  var element = _step8.value;
-                  if (!filter.valid(data.t2_path, element)) {
+                  var _element3 = _step8.value;
+                  if (!filter.valid(data.t2_path, _element3)) {
                     continue;
                   }
-                  _this5.fa_li(ul, 'liafter', element);
+                  _this5.fa_li(ul, 'liafter', _element3);
                 }
               } catch (err) {
                 _iterator8.e(err);
@@ -54894,11 +54968,11 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
                   if (!filter.valid(data.t1_path, rem) || !filter.valid(data.t2_path, add)) {
                     continue;
                   }
-                  var li = ul.append("li");
+                  var li = ul.append('li');
                   _this5.fa_cfield(li, 'name', 'Name', rem.name, add.name);
                   _this5.fa_cfield(li, 'mode', 'Mode', rem.mode, add.mode);
                   _this5.fa_cfield(li, 'buffering', 'Buffering', rem.buffering, add.buffering);
-                  li.append("div").classed("clear", true);
+                  li.append('div').classed('clear', true);
                   _this5.fa_cfield(li, 'timestamp', 'Time', rem.timestamp, add.timestamp);
                   _this5.fa_cfield(li, 'content_hash_before hash', 'Content hash before', rem.content_hash_before, add.content_hash_before);
                   _this5.fa_cfield(li, 'content_hash_after hash', 'Content hash after', rem.content_hash_after, add.content_hash_after);
@@ -54918,60 +54992,60 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "info",
     value: function info(main, cls, label, value1, value2) {
-      if (value1 == value2) {
-        var attr = main.append("span").classed("attr", true);
-        attr.append("span").classed("desc", true).text(label + ": ");
-        attr.append("span").classed(cls, true).text(value1);
+      if (value1 === value2) {
+        var attr = main.append('span').classed('attr', true);
+        attr.append('span').classed('desc', true).text(label + ': ');
+        attr.append('span').classed(cls, true).text(value1);
       } else {
-        var attr1 = main.append("span").classed("attr dbefore", true);
-        attr1.append("span").classed("desc", true).text(label + ": ");
-        attr1.append("span").classed(cls, true).text(value1);
-        var attr2 = main.append("span").classed("attr dafter", true);
-        attr2.append("span").classed("desc", true).text(label + ": ");
-        attr2.append("span").classed(cls, true).text(value2);
+        var attr1 = main.append('span').classed('attr dbefore', true);
+        attr1.append('span').classed('desc', true).text(label + ': ');
+        attr1.append('span').classed(cls, true).text(value1);
+        var attr2 = main.append('span').classed('attr dafter', true);
+        attr2.append('span').classed('desc', true).text(label + ': ');
+        attr2.append('span').classed(cls, true).text(value2);
       }
     }
   }, {
     key: "mod_li",
     value: function mod_li(element, cls, mod) {
-      var li = element.append("li").classed(cls, true);
-      li.append("div").classed("name", true).text(mod.name);
-      li.append("div").classed("version", true).text(mod.version);
-      li.append("div").classed("clear", true);
-      li.append("div").classed("hash", true).attr("title", mod.path).text(mod.code_hash);
+      var li = element.append('li').classed(cls, true);
+      li.append('div').classed('name', true).text(mod.name);
+      li.append('div').classed('version', true).text(mod.version);
+      li.append('div').classed('clear', true);
+      li.append('div').classed('hash', true).attr('title', mod.path).text(mod.code_hash);
     }
   }, {
     key: "env_field",
     value: function env_field(element, env) {
-      element.append("span").classed("key", true).text(env.name);
-      element.append("span").classed("equal", true).text(" = ");
-      element.append("span").classed("value", true).text(env.value);
+      element.append('span').classed('key', true).text(env.name);
+      element.append('span').classed('equal', true).text(' = ');
+      element.append('span').classed('value', true).text(env.value);
     }
   }, {
     key: "env_li",
     value: function env_li(element, cls, env) {
-      this.env_field(element.append("li").classed(cls, true), env);
+      this.env_field(element.append('li').classed(cls, true), env);
     }
   }, {
     key: "env_cli",
     value: function env_cli(element, rem, add) {
-      var li = element.append("li");
-      this.env_field(li.append("div").classed("dbefore", true), rem);
-      this.env_field(li.append("div").classed("dafter", true), add);
+      var li = element.append('li');
+      this.env_field(li.append('div').classed('dbefore', true), rem);
+      this.env_field(li.append('div').classed('dafter', true), add);
     }
   }, {
     key: "fa_field",
     value: function fa_field(element, cls, title, value) {
-      element.append("div").classed(cls, true).attr("title", title).text(value);
+      element.append('div').classed(cls, true).attr('title', title).text(value);
     }
   }, {
     key: "fa_li",
     value: function fa_li(element, cls, fa) {
-      var li = element.append("li").classed(cls, true);
+      var li = element.append('li').classed(cls, true);
       this.fa_field(li, 'name', 'Name', fa.name);
       this.fa_field(li, 'mode', 'Mode', fa.mode);
       this.fa_field(li, 'buffering', 'Buffering', fa.buffering);
-      li.append("div").classed("clear", true);
+      li.append('div').classed('clear', true);
       this.fa_field(li, 'timestamp', 'Time', fa.timestamp);
       this.fa_field(li, 'content_hash_before hash', 'Content hash before', fa.content_hash_before);
       this.fa_field(li, 'content_hash_after hash', 'Content hash after', fa.content_hash_after);
@@ -54980,32 +55054,32 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "fa_cfield",
     value: function fa_cfield(element, cls, title, v1, v2) {
-      if (v1 == v2) {
+      if (v1 === v2) {
         this.fa_field(element, cls, title, v1);
       } else {
-        this.fa_field(element, cls + " dbefore", title, v1);
-        this.fa_field(element, cls + " dafter", title, v2);
+        this.fa_field(element, cls + ' dbefore', title, v1);
+        this.fa_field(element, cls + ' dafter', title, v2);
       }
     }
   }], [{
     key: "url",
     value: function url(trial1, trial2) {
-      return "diff/" + trial1 + "/" + trial2 + "/info.json";
+      return 'diff/' + trial1 + '/' + trial2 + '/info.json';
     }
   }, {
     key: "modules_url",
     value: function modules_url(trial1, trial2) {
-      return "diff/" + trial1 + "/" + trial2 + "/dependencies.json";
+      return 'diff/' + trial1 + '/' + trial2 + '/dependencies.json';
     }
   }, {
     key: "environment_url",
     value: function environment_url(trial1, trial2) {
-      return "diff/" + trial1 + "/" + trial2 + "/environment.json";
+      return 'diff/' + trial1 + '/' + trial2 + '/environment.json';
     }
   }, {
     key: "accesses_url",
     value: function accesses_url(trial1, trial2) {
-      return "diff/" + trial1 + "/" + trial2 + "/file_accesses.json";
+      return 'diff/' + trial1 + '/' + trial2 + '/file_accesses.json';
     }
   }, {
     key: "createNode",
@@ -55054,7 +55128,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
 var EnvironmentInfoWidget = /*#__PURE__*/function (_Widget) {
   function EnvironmentInfoWidget(trialDisplay, data) {
     var _this;
-    var default_local = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "0";
+    var default_local = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '0';
     _classCallCheck(this, EnvironmentInfoWidget);
     _this = _callSuper(this, EnvironmentInfoWidget, [{
       node: EnvironmentInfoWidget.createNode(trialDisplay, data, default_local)
@@ -55062,7 +55136,7 @@ var EnvironmentInfoWidget = /*#__PURE__*/function (_Widget) {
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
     _this.addClass('content');
     _this.addClass('trial-info-list');
-    _this.title.label = trialDisplay + "- Environment";
+    _this.title.label = trialDisplay + '- Environment';
     _this.title.closable = true;
     _this.title.caption = "Trial ".concat(trialDisplay, " Environment");
     return _this;
@@ -55071,44 +55145,46 @@ var EnvironmentInfoWidget = /*#__PURE__*/function (_Widget) {
   return _createClass(EnvironmentInfoWidget, null, [{
     key: "url",
     value: function url(trialId) {
-      return "trials/" + trialId + "/environment.json";
+      return 'trials/' + trialId + '/environment.json';
     }
   }, {
     key: "createItem",
     value: function createItem(parent, key, value) {
       if (value) {
-        var li = parent.append("li");
-        li.append("span").classed("key", true).text(key);
-        li.append("span").classed("equal", true).text(" = ");
-        li.append("span").classed("value", true).text(value);
+        var li = parent.append('li');
+        li.append('span').classed('key', true).text(key);
+        li.append('span').classed('equal', true).text(' = ');
+        li.append('span').classed('value', true).text(value);
       }
     }
   }, {
     key: "createFilterDiv",
     value: function createFilterDiv(parent) {
-      return parent.append("div");
+      return parent.append('div');
     }
   }, {
     key: "createFilter",
     value: function createFilter(parent) {
-      var default_local = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "0";
+      var default_local = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '0';
       var filterdiv = this.createFilterDiv(parent);
-      var text_filter = filterdiv.append("input").attr("type", "search");
-      var select_local = filterdiv.append("select");
-      select_local.append("option").attr("value", "0").text("Do not filter Main");
-      select_local.append("option").attr("value", "1").text("Main Environment Only");
-      select_local.append("option").attr("value", "2").text("Non-Main Environment Only");
-      select_local.property("value", default_local);
+      var text_filter = filterdiv.append('input').attr('type', 'search');
+      var select_local = filterdiv.append('select');
+      select_local.append('option').attr('value', '0').text('Do not filter Main');
+      select_local.append('option').attr('value', '1').text('Main Environment Only');
+      select_local.append('option').attr('value', '2').text('Non-Main Environment Only');
+      select_local.property('value', default_local);
       return {
         filterdiv: filterdiv,
         valid: function valid(element) {
-          var stext = text_filter.property("value").toLowerCase();
-          var slocal = Number(select_local.property("value"));
+          var stext = text_filter.property('value').toLowerCase();
+          var slocal = Number(select_local.property('value'));
           var check_text = function check_text() {
             return element.name.toLowerCase().indexOf(stext) >= 0 || element.value.toLowerCase().indexOf(stext) >= 0;
           };
           var check_local = function check_local() {
-            if (slocal == 0) return true;
+            if (slocal === 0) {
+              return true;
+            }
             switch (element.name) {
               case 'PYTHON_IMPLEMENTATION':
               case 'PYTHON_VERSION':
@@ -55120,16 +55196,16 @@ var EnvironmentInfoWidget = /*#__PURE__*/function (_Widget) {
               case 'HOSTNAME':
               case 'ARCH':
               case 'PROCESSOR':
-                return slocal == 1;
+                return slocal === 1;
               default:
-                return slocal != 1;
+                return slocal !== 1;
             }
           };
           return check_text() && check_local();
         },
         on_change: function on_change(filterfn) {
-          text_filter.on("keyup", filterfn);
-          select_local.on("change", filterfn);
+          text_filter.on('keyup', filterfn);
+          select_local.on('change', filterfn);
           filterfn();
         }
       };
@@ -55137,11 +55213,11 @@ var EnvironmentInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createList",
     value: function createList(parent, data) {
-      var default_local = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "0";
+      var default_local = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '0';
       var filter = EnvironmentInfoWidget.createFilter(parent, default_local);
-      var list = parent.append("ul").classed("env-list", true);
+      var list = parent.append('ul').classed('env-list', true);
       filter.on_change(function () {
-        list.html("");
+        list.html('');
         var _iterator = _createForOfIteratorHelper(data),
           _step;
         try {
@@ -55163,11 +55239,11 @@ var EnvironmentInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createNode",
     value: function createNode(trialDisplay, data) {
-      var default_local = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "0";
+      var default_local = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '0';
       var node = document.createElement('div');
       var d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(node);
       var content = d3node.append('div').classed('list', true).append('div').classed('side-info', true);
-      content.append("div").classed("main", true).append("h1").text("Environment (" + trialDisplay + ")");
+      content.append('div').classed('main', true).append('h1').text('Environment (' + trialDisplay + ')');
       EnvironmentInfoWidget.createList(content, data, default_local);
       return node;
     }
@@ -55210,7 +55286,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
 var FileAccessesInfoWidget = /*#__PURE__*/function (_Widget) {
   function FileAccessesInfoWidget(trialDisplay, data, trial_path) {
     var _this;
-    var default_local = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "0";
+    var default_local = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '0';
     _classCallCheck(this, FileAccessesInfoWidget);
     _this = _callSuper(this, FileAccessesInfoWidget, [{
       node: FileAccessesInfoWidget.createNode(trialDisplay, data, trial_path, default_local)
@@ -55218,7 +55294,7 @@ var FileAccessesInfoWidget = /*#__PURE__*/function (_Widget) {
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
     _this.addClass('content');
     _this.addClass('trial-info-list');
-    _this.title.label = trialDisplay + "- Accesses";
+    _this.title.label = trialDisplay + '- Accesses';
     _this.title.closable = true;
     _this.title.caption = "Trial ".concat(trialDisplay, " Accesses");
     return _this;
@@ -55227,39 +55303,39 @@ var FileAccessesInfoWidget = /*#__PURE__*/function (_Widget) {
   return _createClass(FileAccessesInfoWidget, null, [{
     key: "url",
     value: function url(trialId) {
-      return "trials/" + trialId + "/file_accesses.json";
+      return 'trials/' + trialId + '/file_accesses.json';
     }
   }, {
     key: "createFilterDiv",
     value: function createFilterDiv(parent) {
-      return parent.append("div");
+      return parent.append('div');
     }
   }, {
     key: "createFilter",
     value: function createFilter(parent) {
-      var default_local = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "0";
+      var default_local = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '0';
       var filterdiv = this.createFilterDiv(parent);
-      var text_filter = filterdiv.append("input").attr("placeholder", "Name").attr("type", "search");
-      var mode_filter = filterdiv.append("input").attr("placeholder", "Mode").attr("type", "search");
-      var select_hash = filterdiv.append("select");
-      select_hash.append("option").attr("value", "0").text("Do not filter Existence");
-      select_hash.append("option").attr("value", "1").text("Exists only before trial");
-      select_hash.append("option").attr("value", "2").text("Exists only after trial");
-      select_hash.append("option").attr("value", "3").text("Changes during trial");
-      select_hash.append("option").attr("value", "7").text("Does not change during trial");
-      select_hash.property("value", "0");
-      var select_local = filterdiv.append("select");
-      select_local.append("option").attr("value", "0").text("Do not filter Locality");
-      select_local.append("option").attr("value", "1").text("Local files only");
-      select_local.append("option").attr("value", "2").text("Non-local files only");
-      select_local.property("value", default_local);
+      var text_filter = filterdiv.append('input').attr('placeholder', 'Name').attr('type', 'search');
+      var mode_filter = filterdiv.append('input').attr('placeholder', 'Mode').attr('type', 'search');
+      var select_hash = filterdiv.append('select');
+      select_hash.append('option').attr('value', '0').text('Do not filter Existence');
+      select_hash.append('option').attr('value', '1').text('Exists only before trial');
+      select_hash.append('option').attr('value', '2').text('Exists only after trial');
+      select_hash.append('option').attr('value', '3').text('Changes during trial');
+      select_hash.append('option').attr('value', '7').text('Does not change during trial');
+      select_hash.property('value', '0');
+      var select_local = filterdiv.append('select');
+      select_local.append('option').attr('value', '0').text('Do not filter Locality');
+      select_local.append('option').attr('value', '1').text('Local files only');
+      select_local.append('option').attr('value', '2').text('Non-local files only');
+      select_local.property('value', default_local);
       return {
         filterdiv: filterdiv,
         valid: function valid(local, element) {
-          var stext = text_filter.property("value").toLowerCase();
-          var smode = mode_filter.property("value").toLowerCase();
-          var shash = Number(select_hash.property("value"));
-          var slocal = Number(select_local.property("value"));
+          var stext = text_filter.property('value').toLowerCase();
+          var smode = mode_filter.property('value').toLowerCase();
+          var shash = Number(select_hash.property('value'));
+          var slocal = Number(select_local.property('value'));
           var check_text = function check_text() {
             return element.name.toLowerCase().indexOf(stext) >= 0;
           };
@@ -55267,27 +55343,45 @@ var FileAccessesInfoWidget = /*#__PURE__*/function (_Widget) {
             return element.mode.toLowerCase().indexOf(smode) >= 0;
           };
           var check_hash = function check_hash() {
-            if ((shash & 1) == 1 && element.content_hash_before == null) return false;
-            if ((shash & 2) == 2 && element.content_hash_after == null) return false;
-            if (shash == 1) return element.content_hash_after == null;
-            if (shash == 2) return element.content_hash_before == null;
-            if (shash == 3) return element.content_hash_before != element.content_hash_after;
-            if (shash == 4) return element.content_hash_before == element.content_hash_after;
+            if ((shash & 1) === 1 && element.content_hash_before == null) {
+              return false;
+            }
+            if ((shash & 2) === 2 && element.content_hash_after == null) {
+              return false;
+            }
+            if (shash === 1) {
+              return element.content_hash_after == null;
+            }
+            if (shash === 2) {
+              return element.content_hash_before == null;
+            }
+            if (shash === 3) {
+              return element.content_hash_before !== element.content_hash_after;
+            }
+            if (shash === 4) {
+              return element.content_hash_before === element.content_hash_after;
+            }
             return true;
           };
           var check_local = function check_local() {
-            if (slocal == 0) return true;
-            if (!/^((\/)|(\w+:\\))/.test(element.name)) return slocal == 1; // not absolute path
-            if (element.name.startsWith(local)) return slocal == 1;
-            return slocal != 1;
+            if (slocal === 0) {
+              return true;
+            }
+            if (!/^((\/)|(\w+:\\))/.test(element.name)) {
+              return slocal === 1;
+            } // not absolute path
+            if (element.name.startsWith(local)) {
+              return slocal === 1;
+            }
+            return slocal !== 1;
           };
           return check_text() && check_mode() && check_hash() && check_local();
         },
         on_change: function on_change(filterfn) {
-          text_filter.on("keyup", filterfn);
-          mode_filter.on("keyup", filterfn);
-          select_hash.on("change", filterfn);
-          select_local.on("change", filterfn);
+          text_filter.on('keyup', filterfn);
+          mode_filter.on('keyup', filterfn);
+          select_hash.on('change', filterfn);
+          select_local.on('change', filterfn);
           filterfn();
         }
       };
@@ -55295,11 +55389,11 @@ var FileAccessesInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createList",
     value: function createList(parent, data, trial_path) {
-      var default_local = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "0";
+      var default_local = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '0';
       var filter = FileAccessesInfoWidget.createFilter(parent, default_local);
-      var list = parent.append("ul").classed("fac-list", true);
+      var list = parent.append('ul').classed('fac-list', true);
       filter.on_change(function () {
-        list.html("");
+        list.html('');
         var _iterator = _createForOfIteratorHelper(data),
           _step;
         try {
@@ -55308,21 +55402,21 @@ var FileAccessesInfoWidget = /*#__PURE__*/function (_Widget) {
             if (!filter.valid(trial_path, element)) {
               continue;
             }
-            var li = list.append("li");
+            var li = list.append('li');
 
             //name of file for request
-            var name = element.name.split("/");
+            var name = element.name.split('/');
             var pos = name.length - 1;
             var fileName = name[pos];
-            li.append("a").classed("name", true).attr("title", "Name").text(element.name).attr("href", "/trials/files/" + element.content_hash_after + "/" + fileName); //file after execution
-            li.append("div").classed("mode", true).attr("title", "Mode").text(element.mode);
-            li.append("div").classed("buffering", true).attr("title", "Buffering").text(element.buffering);
-            li.append("div").classed("clear", true);
-            li.append("div").classed("timestamp", true).attr("title", "Time").text(element.timestamp);
-            li.append("a").classed("content_hash_before hash", true).attr("title", "Content hash before").text(element.content_hash_before).attr("href", "/trials/files/" + element.content_hash_before + "/" + fileName);
-            li.append("div"); //spacing
-            li.append("a").classed("content_hash_after hash", true).attr("title", "Content hash after").text(element.content_hash_after).attr("href", "/trials/files/" + element.content_hash_after + "/" + fileName);
-            li.append("div").classed("stack", true).attr("title", "Stack").text(element.stack);
+            li.append('a').classed('name', true).attr('title', 'Name').text(element.name).attr('href', '/trials/files/' + element.content_hash_after + '/' + fileName); //file after execution
+            li.append('div').classed('mode', true).attr('title', 'Mode').text(element.mode);
+            li.append('div').classed('buffering', true).attr('title', 'Buffering').text(element.buffering);
+            li.append('div').classed('clear', true);
+            li.append('div').classed('timestamp', true).attr('title', 'Time').text(element.timestamp);
+            li.append('a').classed('content_hash_before hash', true).attr('title', 'Content hash before').text(element.content_hash_before).attr('href', '/trials/files/' + element.content_hash_before + '/' + fileName);
+            li.append('div'); //spacing
+            li.append('a').classed('content_hash_after hash', true).attr('title', 'Content hash after').text(element.content_hash_after).attr('href', '/trials/files/' + element.content_hash_after + '/' + fileName);
+            li.append('div').classed('stack', true).attr('title', 'Stack').text(element.stack);
           }
         } catch (err) {
           _iterator.e(err);
@@ -55335,11 +55429,11 @@ var FileAccessesInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createNode",
     value: function createNode(trialDisplay, data, trial_path) {
-      var default_local = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "0";
+      var default_local = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '0';
       var node = document.createElement('div');
       var d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(node);
       var content = d3node.append('div').classed('list', true).append('div').classed('side-info', true);
-      content.append("div").classed("main", true).append("h1").text("File Accesses (" + trialDisplay + ")");
+      content.append('div').classed('main', true).append('h1').text('File Accesses (' + trialDisplay + ')');
       FileAccessesInfoWidget.createList(content, data, trial_path, default_local);
       return node;
     }
@@ -55389,7 +55483,7 @@ var ModulesInfoWidget = /*#__PURE__*/function (_Widget) {
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
     _this.addClass('content');
     _this.addClass('trial-info-list');
-    _this.title.label = trialDisplay + "- Modules";
+    _this.title.label = trialDisplay + '- Modules';
     _this.title.closable = true;
     _this.title.caption = "Trial ".concat(trialDisplay, " Modules");
     return _this;
@@ -55398,57 +55492,71 @@ var ModulesInfoWidget = /*#__PURE__*/function (_Widget) {
   return _createClass(ModulesInfoWidget, null, [{
     key: "url",
     value: function url(trialId) {
-      return "trials/" + trialId + "/dependencies.json";
+      return 'trials/' + trialId + '/dependencies.json';
     }
   }, {
     key: "createFilterDiv",
     value: function createFilterDiv(parent) {
-      return parent.append("div");
+      return parent.append('div');
     }
   }, {
     key: "createFilter",
     value: function createFilter(parent) {
-      var default_local = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "0";
+      var default_local = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '0';
       var filterdiv = this.createFilterDiv(parent);
-      var text_filter = filterdiv.append("input").attr("type", "search");
-      var select_version = filterdiv.append("select");
-      select_version.append("option").attr("value", "both").text("Do not filter Version");
-      select_version.append("option").attr("value", "1").text("Filter In Version");
-      select_version.append("option").attr("value", "0").text("Filter Out Version");
-      select_version.property("value", "both");
-      var select_local = filterdiv.append("select");
-      select_local.append("option").attr("value", "0").text("Do not filter Locality");
-      select_local.append("option").attr("value", "1").text("Local Modules Only");
-      select_local.append("option").attr("value", "2").text("Non-Local Modules Only");
-      select_local.property("value", default_local);
+      var text_filter = filterdiv.append('input').attr('type', 'search');
+      var select_version = filterdiv.append('select');
+      select_version.append('option').attr('value', 'both').text('Do not filter Version');
+      select_version.append('option').attr('value', '1').text('Filter In Version');
+      select_version.append('option').attr('value', '0').text('Filter Out Version');
+      select_version.property('value', 'both');
+      var select_local = filterdiv.append('select');
+      select_local.append('option').attr('value', '0').text('Do not filter Locality');
+      select_local.append('option').attr('value', '1').text('Local Modules Only');
+      select_local.append('option').attr('value', '2').text('Non-Local Modules Only');
+      select_local.property('value', default_local);
       return {
         filterdiv: filterdiv,
         valid: function valid(local, element) {
-          var stext = text_filter.property("value").toLowerCase();
-          var sversion = select_version.property("value");
-          var slocal = Number(select_local.property("value"));
+          var stext = text_filter.property('value').toLowerCase();
+          var sversion = select_version.property('value');
+          var slocal = Number(select_local.property('value'));
           var check_text = function check_text() {
             return element.name.toLowerCase().indexOf(stext) >= 0;
           };
           var check_version = function check_version() {
-            if (sversion == "both") return true;
-            if (sversion == "1") return element.version != null;
-            if (sversion == "0") return element.version == null;
+            if (sversion === 'both') {
+              return true;
+            }
+            if (sversion === '1') {
+              return element.version != null;
+            }
+            if (sversion === '0') {
+              return element.version == null;
+            }
             return false;
           };
           var check_local = function check_local() {
-            if (slocal == 0) return true;
-            if (element.path == null) return slocal != 1;
-            if (!/^((\/)|(\w+:\\))/.test(element.path)) return slocal == 1; // not absolute path
-            if (element.path.startsWith(local)) return slocal == 1;
-            return slocal != 1;
+            if (slocal === 0) {
+              return true;
+            }
+            if (element.path == null) {
+              return slocal !== 1;
+            }
+            if (!/^((\/)|(\w+:\\))/.test(element.path)) {
+              return slocal === 1;
+            } // not absolute path
+            if (element.path.startsWith(local)) {
+              return slocal === 1;
+            }
+            return slocal !== 1;
           };
           return check_text() && check_version() && check_local();
         },
         on_change: function on_change(filterfn) {
-          text_filter.on("keyup", filterfn);
-          select_version.on("change", filterfn);
-          select_local.on("change", filterfn);
+          text_filter.on('keyup', filterfn);
+          select_version.on('change', filterfn);
+          select_local.on('change', filterfn);
           filterfn();
         }
       };
@@ -55456,11 +55564,11 @@ var ModulesInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createList",
     value: function createList(parent, data, trial_path) {
-      var default_local = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "0";
+      var default_local = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '0';
       var filter = ModulesInfoWidget.createFilter(parent, default_local);
-      var list = parent.append("ul").classed("mod-list", true);
+      var list = parent.append('ul').classed('mod-list', true);
       filter.on_change(function () {
-        list.html("");
+        list.html('');
         var _iterator = _createForOfIteratorHelper(data),
           _step;
         try {
@@ -55469,11 +55577,11 @@ var ModulesInfoWidget = /*#__PURE__*/function (_Widget) {
             if (!filter.valid(trial_path, element)) {
               continue;
             }
-            var li = list.append("li");
-            li.append("div").classed("name", true).text(element.name);
-            li.append("div").classed("version", true).text(element.version === null ? "" : element.version);
-            li.append("div").classed("clear", true);
-            li.append("div").classed("hash", true).attr("title", element.path).text(element.code_hash);
+            var li = list.append('li');
+            li.append('div').classed('name', true).text(element.name);
+            li.append('div').classed('version', true).text(element.version === null ? '' : element.version);
+            li.append('div').classed('clear', true);
+            li.append('div').classed('hash', true).attr('title', element.path).text(element.code_hash);
           }
         } catch (err) {
           _iterator.e(err);
@@ -55489,7 +55597,7 @@ var ModulesInfoWidget = /*#__PURE__*/function (_Widget) {
       var node = document.createElement('div');
       var d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(node);
       var content = d3node.append('div').classed('list', true).append('div').classed('side-info', true);
-      content.append("div").classed("main", true).append("h1").text("Modules (" + trialDisplay + ")");
+      content.append('div').classed('main', true).append('h1').text('Modules (' + trialDisplay + ')');
       ModulesInfoWidget.createList(content, data, trial_path);
       return node;
     }
@@ -55546,7 +55654,7 @@ var TrialInfoWidget = /*#__PURE__*/function (_Widget) {
     _this.d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(_this.node);
     _this.addClass('content');
     _this.addClass('trial-info');
-    _this.title.label = trial.display + "- Information";
+    _this.title.label = trial.display + '- Information';
     _this.title.closable = true;
     _this.title.caption = "Trial ".concat(trial.display, " Information");
     _this.loadModules();
@@ -55560,12 +55668,12 @@ var TrialInfoWidget = /*#__PURE__*/function (_Widget) {
     key: "loadModules",
     value: function loadModules() {
       var _this2 = this;
-      var sub = this.node.getElementsByClassName("modules")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)("Modules", sub, _modules_info__WEBPACK_IMPORTED_MODULE_3__.ModulesInfoWidget.url(this.trial.title), function (data) {
-        var modules = _this2.d3node.select(".modules").html("");
+      var sub = this.node.getElementsByClassName('modules')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)('Modules', sub, _modules_info__WEBPACK_IMPORTED_MODULE_3__.ModulesInfoWidget.url(this.trial.title), function (data) {
+        var modules = _this2.d3node.select('.modules').html('');
         if (data.all.length > 0) {
-          var fold = TrialInfoWidget.createFold(modules, "Modules");
-          var filter = _modules_info__WEBPACK_IMPORTED_MODULE_3__.ModulesInfoWidget.createList(modules.append("div").classed("foldable show-toolbar", true), data.all, data.trial_path, "1");
+          var fold = TrialInfoWidget.createFold(modules, 'Modules');
+          var filter = _modules_info__WEBPACK_IMPORTED_MODULE_3__.ModulesInfoWidget.createList(modules.append('div').classed('foldable show-toolbar', true), data.all, data.trial_path, '1');
           TrialInfoWidget.createFilterFold(fold, filter);
         }
       });
@@ -55574,11 +55682,11 @@ var TrialInfoWidget = /*#__PURE__*/function (_Widget) {
     key: "loadEnvironment",
     value: function loadEnvironment() {
       var _this3 = this;
-      var sub = this.node.getElementsByClassName("environment")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)("Environment", sub, _environment_info__WEBPACK_IMPORTED_MODULE_4__.EnvironmentInfoWidget.url(this.trial.title), function (data) {
-        var environment = _this3.d3node.select(".environment").html("");
-        var fold = TrialInfoWidget.createFold(environment, "Environment");
-        var filter = _environment_info__WEBPACK_IMPORTED_MODULE_4__.EnvironmentInfoWidget.createList(environment.append("div").classed("foldable show-toolbar", true), data.all, "1");
+      var sub = this.node.getElementsByClassName('environment')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)('Environment', sub, _environment_info__WEBPACK_IMPORTED_MODULE_4__.EnvironmentInfoWidget.url(this.trial.title), function (data) {
+        var environment = _this3.d3node.select('.environment').html('');
+        var fold = TrialInfoWidget.createFold(environment, 'Environment');
+        var filter = _environment_info__WEBPACK_IMPORTED_MODULE_4__.EnvironmentInfoWidget.createList(environment.append('div').classed('foldable show-toolbar', true), data.all, '1');
         TrialInfoWidget.createFilterFold(fold, filter);
       });
     }
@@ -55586,12 +55694,12 @@ var TrialInfoWidget = /*#__PURE__*/function (_Widget) {
     key: "loadFileAccess",
     value: function loadFileAccess() {
       var _this4 = this;
-      var sub = this.node.getElementsByClassName("file-accesses")[0];
-      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)("File Accesses", sub, _file_accesses_info__WEBPACK_IMPORTED_MODULE_5__.FileAccessesInfoWidget.url(this.trial.title), function (data) {
-        var accesses = _this4.d3node.select(".file-accesses").html("");
+      var sub = this.node.getElementsByClassName('file-accesses')[0];
+      (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_2__.json)('File Accesses', sub, _file_accesses_info__WEBPACK_IMPORTED_MODULE_5__.FileAccessesInfoWidget.url(this.trial.title), function (data) {
+        var accesses = _this4.d3node.select('.file-accesses').html('');
         if (data.file_accesses.length > 0) {
-          var fold = TrialInfoWidget.createFold(accesses, "File Accesses");
-          var filter = _file_accesses_info__WEBPACK_IMPORTED_MODULE_5__.FileAccessesInfoWidget.createList(accesses.append("div").classed("foldable show-toolbar", true), data.file_accesses, data.trial_path);
+          var fold = TrialInfoWidget.createFold(accesses, 'File Accesses');
+          var filter = _file_accesses_info__WEBPACK_IMPORTED_MODULE_5__.FileAccessesInfoWidget.createList(accesses.append('div').classed('foldable show-toolbar', true), data.file_accesses, data.trial_path);
           TrialInfoWidget.createFilterFold(fold, filter);
         }
       });
@@ -55604,35 +55712,35 @@ var TrialInfoWidget = /*#__PURE__*/function (_Widget) {
       var d3node = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(node);
       var content = d3node.append('div').classed('trial-info', true).append('div').classed('side-info', true);
       var main = content.append('div').classed('main', true);
-      main.append("h1").text("Trial " + trial.display);
-      main.append("a").classed("hash", true).text(info.code_hash || "").attr('href', 'trials/' + trial.id + '/' + info.code_hash + '/' + info.script); // href for script
+      main.append('h1').text('Trial ' + trial.display);
+      main.append('a').classed('hash', true).text(info.code_hash || '').attr('href', 'trials/' + trial.id + '/' + info.code_hash + '/' + info.script); // href for script
 
-      var idAttr = main.append("span").classed("attr", true);
-      idAttr.append("span").classed("desc", true).text("Id: ");
-      idAttr.append("span").classed("id", true).text(trial.title);
-      var scriptAttr = main.append("span").classed("attr", true);
-      scriptAttr.append("span").classed("desc", true).text("Script: ");
-      scriptAttr.append("a").classed("script", true).text(info.script).attr('href', 'trials/' + trial.id + '/' + info.code_hash + '/' + info.script); // href for  script
+      var idAttr = main.append('span').classed('attr', true);
+      idAttr.append('span').classed('desc', true).text('Id: ');
+      idAttr.append('span').classed('id', true).text(trial.title);
+      var scriptAttr = main.append('span').classed('attr', true);
+      scriptAttr.append('span').classed('desc', true).text('Script: ');
+      scriptAttr.append('a').classed('script', true).text(info.script).attr('href', 'trials/' + trial.id + '/' + info.code_hash + '/' + info.script); // href for  script
 
-      var startAttr = main.append("span").classed("attr", true);
-      startAttr.append("span").classed("desc", true).text("Start: ");
-      startAttr.append("span").classed("start", true).text(info.str_start || "");
-      var finishAttr = main.append("span").classed("attr", true);
-      finishAttr.append("span").classed("desc", true).text("Finish: ");
-      finishAttr.append("span").classed("finish", true).text(info.str_finish || "");
-      var durationAttr = main.append("span").classed("attr", true);
-      durationAttr.append("span").classed("desc", true).text("Duration: ");
-      durationAttr.append("span").classed("duration", true).text(info.duration_text || "");
+      var startAttr = main.append('span').classed('attr', true);
+      startAttr.append('span').classed('desc', true).text('Start: ');
+      startAttr.append('span').classed('start', true).text(info.str_start || '');
+      var finishAttr = main.append('span').classed('attr', true);
+      finishAttr.append('span').classed('desc', true).text('Finish: ');
+      finishAttr.append('span').classed('finish', true).text(info.str_finish || '');
+      var durationAttr = main.append('span').classed('attr', true);
+      durationAttr.append('span').classed('desc', true).text('Duration: ');
+      durationAttr.append('span').classed('duration', true).text(info.duration_text || '');
       if (info.command) {
-        var argumentsAttr = main.append("span").classed("attr", true);
-        argumentsAttr.append("span").classed("desc", true).text("Arguments: ");
-        argumentsAttr.append("span").classed("arguments", true).text(info.command);
+        var argumentsAttr = main.append('span').classed('attr', true);
+        argumentsAttr.append('span').classed('desc', true).text('Arguments: ');
+        argumentsAttr.append('span').classed('arguments', true).text(info.command);
       }
-      content.append("div").classed("modules", true);
-      content.append("div").classed("environment", true);
-      content.append("div").classed("file-accesses", true);
-      var anntButton = content.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Manage Annotations");
-      anntButton.on("click", function () {
+      content.append('div').classed('modules', true);
+      content.append('div').classed('environment', true);
+      content.append('div').classed('file-accesses', true);
+      var anntButton = content.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Manage Annotations');
+      anntButton.on('click', function () {
         annontationWidget.activeAnnotation(trial.title);
       });
       return node;
@@ -55640,31 +55748,31 @@ var TrialInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createFold",
     value: function createFold(parent, title) {
-      var fold = parent.append("div").classed("fold", true);
-      var foldI = fold.append("i").classed("fa fa-minus", true);
-      var spanI = fold.append("span").text(title);
+      var fold = parent.append('div').classed('fold', true);
+      var foldI = fold.append('i').classed('fa fa-minus', true);
+      var spanI = fold.append('span').text(title);
       var click = function click() {
-        var visible = foldI.classed("fa-plus");
-        foldI.classed("fa-plus", !visible);
-        foldI.classed("fa-minus", visible);
-        parent.select(".foldable").classed("show-toolbar", visible).classed("hide-toolbar", !visible);
+        var visible = foldI.classed('fa-plus');
+        foldI.classed('fa-plus', !visible);
+        foldI.classed('fa-minus', visible);
+        parent.select('.foldable').classed('show-toolbar', visible).classed('hide-toolbar', !visible);
         return false;
       };
-      foldI.on("click", click);
-      spanI.on("click", click);
+      foldI.on('click', click);
+      spanI.on('click', click);
       return fold;
     }
   }, {
     key: "createFilterFold",
     value: function createFilterFold(fold, filter) {
-      filter.filterdiv.classed("info-filter", true).classed("show-toolbar", false).classed("hide-toolbar", true);
-      var foldA = fold.append("a").attr("href", "#").attr("title", "Search").classed("show-all", true);
-      var foldAI = foldA.append("i").classed("fa fa-search-plus", true);
-      foldA.on("click", function () {
-        var visible = foldAI.classed("fa-search-plus");
-        foldAI.classed("fa-search-plus", !visible);
-        foldAI.classed("fa-search-minus", visible);
-        filter.filterdiv.classed("show-toolbar", visible).classed("hide-toolbar", !visible);
+      filter.filterdiv.classed('info-filter', true).classed('show-toolbar', false).classed('hide-toolbar', true);
+      var foldA = fold.append('a').attr('href', '#').attr('title', 'Search').classed('show-all', true);
+      var foldAI = foldA.append('i').classed('fa fa-search-plus', true);
+      foldA.on('click', function () {
+        var visible = foldAI.classed('fa-search-plus');
+        foldAI.classed('fa-search-plus', !visible);
+        foldAI.classed('fa-search-minus', visible);
+        filter.filterdiv.classed('show-toolbar', visible).classed('hide-toolbar', !visible);
         return false;
       });
     }
@@ -55704,20 +55812,20 @@ function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) 
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 ;
 function findInLayout(area, widget) {
-  if (area == null || area.type == 'tab-area') {
+  if (area == null || area.type === 'tab-area') {
     return null;
   }
   var splitconfig = area;
   var result = null;
   splitconfig.children.every(function (child, index) {
-    if (child.type == 'tab-area') {
+    if (child.type === 'tab-area') {
       var tabconfig = child;
       var _iterator = _createForOfIteratorHelper(tabconfig.widgets),
         _step;
       try {
         for (_iterator.s(); !(_step = _iterator.n()).done;) {
           var tabwidget = _step.value;
-          if (tabwidget == widget) {
+          if (tabwidget === widget) {
             result = {
               area: area,
               index: index
@@ -55752,7 +55860,7 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
     value: function addMainWidget(widget) {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       if (options.ref) {
-        if (options.ref.nowVis != "main") {
+        if (options.ref.nowVis !== 'main') {
           console.log("Warning: options.ref is not 'main'");
         }
       } else {
@@ -55762,7 +55870,7 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
             var w = _step2.value;
             var wnow = w;
-            if (wnow.nowVis == "main") {
+            if (wnow.nowVis === 'main') {
               options.ref = w;
             }
           }
@@ -55772,16 +55880,16 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           _iterator2.f();
         }
       }
-      widget.nowVis = "main";
+      widget.nowVis = 'main';
       this.addWidget(widget, options);
     }
   }, {
     key: "addGraphWidget",
     value: function addGraphWidget(widget) {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      var operation = "none";
+      var operation = 'none';
       if (options.ref) {
-        if (options.ref.nowVis != "graph") {
+        if (options.ref.nowVis !== 'graph') {
           console.log("Warning: options.ref is not 'graph'");
         }
       } else {
@@ -55791,18 +55899,18 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
             var w = _step3.value;
             var wnow = w;
-            if (wnow.nowVis == "main" && !options.ref) {
+            if (wnow.nowVis === 'main' && !options.ref) {
               options.ref = w;
-              options.mode = "split-bottom";
-              operation = "main";
-            } else if (wnow.nowVis == "info" && operation != "graph") {
+              options.mode = 'split-bottom';
+              operation = 'main';
+            } else if (wnow.nowVis === 'info' && operation !== 'graph') {
               options.ref = w;
-              options.mode = "split-left";
-              operation = "info";
-            } else if (wnow.nowVis == "graph") {
+              options.mode = 'split-left';
+              operation = 'info';
+            } else if (wnow.nowVis === 'graph') {
               options.ref = w;
-              options.mode = "tab-after";
-              operation = "graph";
+              options.mode = 'tab-after';
+              operation = 'graph';
             }
           }
         } catch (err) {
@@ -55810,28 +55918,27 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
         } finally {
           _iterator3.f();
         }
-        ;
       }
-      widget.nowVis = "graph";
+      widget.nowVis = 'graph';
       this.addWidget(widget, options);
-      if (operation == "main") {
+      if (operation === 'main') {
         var layout = this.saveLayout();
         var sublayout = findInLayout(layout.main, widget);
         if (sublayout) {
           var sizes = sublayout.area.sizes;
-          sizes[0] = 0.20;
-          sizes[1] = 0.80;
+          sizes[0] = 0.2;
+          sizes[1] = 0.8;
           this.restoreLayout(layout);
         }
       }
-      if (operation == "info") {
-        var layout = this.saveLayout();
-        var sublayout = findInLayout(layout.main, widget);
-        if (sublayout) {
-          var sizes = sublayout.area.sizes;
-          sizes[0] = 0.80;
-          sizes[1] = 0.20;
-          this.restoreLayout(layout);
+      if (operation === 'info') {
+        var _layout = this.saveLayout();
+        var _sublayout = findInLayout(_layout.main, widget);
+        if (_sublayout) {
+          var _sizes = _sublayout.area.sizes;
+          _sizes[0] = 0.8;
+          _sizes[1] = 0.2;
+          this.restoreLayout(_layout);
         }
       }
     }
@@ -55839,9 +55946,9 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
     key: "addInfoWidget",
     value: function addInfoWidget(widget) {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      var operation = "none";
+      var operation = 'none';
       if (options.ref) {
-        if (options.ref.nowVis != "info") {
+        if (options.ref.nowVis !== 'info') {
           console.log("Warning: options.ref is not 'info'");
         }
       } else {
@@ -55851,18 +55958,18 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
             var w = _step4.value;
             var wnow = w;
-            if (wnow.nowVis == "main" && !options.ref) {
+            if (wnow.nowVis === 'main' && !options.ref) {
               options.ref = w;
-              options.mode = "split-bottom";
-              operation = "main";
-            } else if (wnow.nowVis == "graph" && operation != "info") {
+              options.mode = 'split-bottom';
+              operation = 'main';
+            } else if (wnow.nowVis === 'graph' && operation !== 'info') {
               options.ref = w;
-              options.mode = "split-right";
-              operation = "graph";
-            } else if (wnow.nowVis == "info") {
+              options.mode = 'split-right';
+              operation = 'graph';
+            } else if (wnow.nowVis === 'info') {
               options.ref = w;
-              options.mode = "tab-after";
-              operation = "info";
+              options.mode = 'tab-after';
+              operation = 'info';
             }
           }
         } catch (err) {
@@ -55870,28 +55977,27 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
         } finally {
           _iterator4.f();
         }
-        ;
       }
-      widget.nowVis = "info";
+      widget.nowVis = 'info';
       this.addWidget(widget, options);
-      if (operation == "main") {
+      if (operation === 'main') {
         var layout = this.saveLayout();
         var sublayout = findInLayout(layout.main, widget);
         if (sublayout) {
           var sizes = sublayout.area.sizes;
-          sizes[0] = 0.20;
-          sizes[1] = 0.80;
+          sizes[0] = 0.2;
+          sizes[1] = 0.8;
           this.restoreLayout(layout);
         }
       }
-      if (operation == "graph") {
-        var layout = this.saveLayout();
-        var sublayout = findInLayout(layout.main, widget);
-        if (sublayout) {
-          var sizes = sublayout.area.sizes;
-          sizes[0] = 0.80;
-          sizes[1] = 0.20;
-          this.restoreLayout(layout);
+      if (operation === 'graph') {
+        var _layout2 = this.saveLayout();
+        var _sublayout2 = findInLayout(_layout2.main, widget);
+        if (_sublayout2) {
+          var _sizes2 = _sublayout2.area.sizes;
+          _sizes2[0] = 0.8;
+          _sizes2[1] = 0.2;
+          this.restoreLayout(_layout2);
         }
       }
     }
@@ -55941,7 +56047,7 @@ var ProjectWidget = /*#__PURE__*/function (_Widget) {
     _this.experiments = experiments;
     _this.setNode();
     _this.addClass('content');
-    _this.title.label = "Experiment Selection";
+    _this.title.label = 'Experiment Selection';
     _this.title.closable = false;
     _this.title.caption = "Experiment";
     return _this;
@@ -55950,16 +56056,16 @@ var ProjectWidget = /*#__PURE__*/function (_Widget) {
   return _createClass(ProjectWidget, [{
     key: "addExpRow",
     value: function addExpRow(exp) {
-      var link = window.location.href + "experiments/" + exp.id;
-      var item = this.expTBody.append("tr");
-      item.append("th").attr("scope", "row").text(exp.id);
-      item.append("td").text(exp.name);
-      item.append("td").text(exp.description);
-      item.append("td").append("a").attr("href", link).text(link);
-      var cloneCommandText = "now pull --url " + link;
-      item.append("td").text(cloneCommandText + " ").append("i").classed("fa fa-clone", true).attr("aria-hidden", "true").attr("id", exp.id + "CopyIcon").on("click", function () {
+      var link = window.location.href + 'experiments/' + exp.id;
+      var item = this.expTBody.append('tr');
+      item.append('th').attr('scope', 'row').text(exp.id);
+      item.append('td').text(exp.name);
+      item.append('td').text(exp.description);
+      item.append('td').append('a').attr('href', link).text(link);
+      var cloneCommandText = 'now pull --url ' + link;
+      item.append('td').text(cloneCommandText + ' ').append('i').classed('fa fa-clone', true).attr('aria-hidden', 'true').attr('id', exp.id + 'CopyIcon').on('click', function () {
         navigator.clipboard.writeText(cloneCommandText).then(function () {
-          var divCopied = (0,d3_selection__WEBPACK_IMPORTED_MODULE_2__["default"])(document.getElementById(exp.id + "CopyIcon")).append("small").classed("alert alert-secondary p-0", true).text("Copied!");
+          var divCopied = (0,d3_selection__WEBPACK_IMPORTED_MODULE_2__["default"])(document.getElementById(exp.id + 'CopyIcon')).append('small').classed('alert alert-secondary p-0', true).text('Copied!');
           setTimeout(function () {
             divCopied.remove();
           }, 3000);
@@ -55969,66 +56075,67 @@ var ProjectWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "addFormInput",
     value: function addFormInput(form, fieldId, fieldLabel, fieldType) {
-      var grp = form.append("div").classed("form-group row", true);
-      grp.append("label").classed("col-sm-2 col-form-label", true).attr("for", fieldId).text(fieldLabel + ": ");
-      var divIn = grp.append("div").classed("col-sm-10", true);
+      var grp = form.append('div').classed('form-group row', true);
+      grp.append('label').classed('col-sm-2 col-form-label', true).attr('for', fieldId).text(fieldLabel + ': ');
+      var divIn = grp.append('div').classed('col-sm-10', true);
       var inp = divIn.append(fieldType);
-      inp.classed("form-control", true).attr("id", fieldId);
+      inp.classed('form-control', true).attr('id', fieldId);
       return inp;
     }
   }, {
     key: "addFeedBackinfo",
     value: function addFeedBackinfo(baseNode, cls, txt, desc) {
-      var _thiss = this;
-      var feedbackNode = baseNode.append("div").classed("alert", true).classed(cls, true).classed("alert-dismissible", true).classed("fade", true).classed("show", true);
-      feedbackNode.append("strong").text(txt);
-      feedbackNode.append("span").text(" " + desc).append("button").attr("type", "button").classed("close", true).attr("data-dismiss", "alert").text("x").on("click", function () {
-        _thiss.hideNode(feedbackNode);
+      var _this2 = this;
+      var feedbackNode = baseNode.append('div').classed('alert', true).classed(cls, true).classed('alert-dismissible', true).classed('fade', true).classed('show', true);
+      feedbackNode.append('strong').text(txt);
+      feedbackNode.append('span').text(' ' + desc).append('button').attr('type', 'button').classed('close', true).attr('data-dismiss', 'alert').text('x').on('click', function () {
+        _this2.hideNode(feedbackNode);
       });
       return feedbackNode;
     }
   }, {
     key: "hideNode",
     value: function hideNode(node) {
-      node.classed("d-none", true);
+      node.classed('d-none', true);
     }
   }, {
     key: "showNode",
     value: function showNode(node) {
-      node.classed("d-none", false);
+      node.classed('d-none', false);
     }
   }, {
     key: "setNode",
     value: function setNode() {
+      var _this3 = this;
       var content = this.d3node.append('div').classed('config-content', true);
-      var projectsDiv = content.append("div");
-      projectsDiv.append("h2").text("Experiments:");
-      this.errorFeedback = this.addFeedBackinfo(projectsDiv, "alert-danger", "Error!", "A problem has been occurred while submitting your data.");
-      this.successFeedback = this.addFeedBackinfo(projectsDiv, "alert-success", "Success!", "Experiment created successfully");
+      var projectsDiv = content.append('div');
+      projectsDiv.append('h2').text('Experiments:');
+      this.errorFeedback = this.addFeedBackinfo(projectsDiv, 'alert-danger', 'Error!', 'A problem has been occurred while submitting your data.');
+      this.successFeedback = this.addFeedBackinfo(projectsDiv, 'alert-success', 'Success!', 'Experiment created successfully');
       this.hideNode(this.errorFeedback);
       this.hideNode(this.successFeedback);
-      var inputsDiv = projectsDiv.append("div");
-      var nameIn = this.addFormInput(inputsDiv, "experimentNameInput", "Name", "input");
-      var descIn = this.addFormInput(inputsDiv, "experimentDescInput", "Description", "textarea");
-      var confimButton = inputsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Confirm");
-      var addExpButton = projectsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Add Experiment");
-      var table = projectsDiv.append("table").classed("table", true);
-      var header = table.append("thead").append("tr");
-      header.append("th").attr("scope", "col").text("id");
-      header.append("th").attr("scope", "col").text("name");
-      header.append("th").attr("scope", "col").text("description");
-      header.append("th").attr("scope", "col").text("url");
-      header.append("th").attr("scope", "col").html("<i class=\"fa fa-terminal\" aria-hidden=\"true\"></i> clone ").append("i").classed("fa fa-question-circle-o", true).attr("aria-hidden", "true").attr("title", "Run this command on the command line, in the desired folder, to clone the experiment.");
-      this.expTBody = table.append("tbody");
-      inputsDiv.classed("d-none", true);
-      confimButton.on("click", function () {
-        _thiss.hideNode(_thiss.errorFeedback);
-        _thiss.hideNode(_thiss.successFeedback);
+      var inputsDiv = projectsDiv.append('div');
+      var nameIn = this.addFormInput(inputsDiv, 'experimentNameInput', 'Name', 'input');
+      var descIn = this.addFormInput(inputsDiv, 'experimentDescInput', 'Description', 'textarea');
+      var confimButton = inputsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Confirm');
+      var addExpButton = projectsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Add Experiment');
+      var table = projectsDiv.append('table').classed('table', true);
+      var header = table.append('thead').append('tr');
+      header.append('th').attr('scope', 'col').text('id');
+      header.append('th').attr('scope', 'col').text('name');
+      header.append('th').attr('scope', 'col').text('description');
+      header.append('th').attr('scope', 'col').text('url');
+      header.append('th').attr('scope', 'col').html('<i class="fa fa-terminal" aria-hidden="true"></i> clone ').append('i').classed('fa fa-question-circle-o', true).attr('aria-hidden', 'true').attr('title', 'Run this command on the command line, in the desired folder, to clone the experiment.');
+      this.expTBody = table.append('tbody');
+      inputsDiv.classed('d-none', true);
+      confimButton.on('click', function () {
+        _this3.hideNode(_this3.errorFeedback);
+        _this3.hideNode(_this3.successFeedback);
         var newExp = {
-          name: nameIn.property("value"),
-          description: descIn.property("value")
+          name: nameIn.property('value'),
+          description: descIn.property('value')
         };
-        fetch("experiments", {
+        fetch('experiments', {
           method: 'POST',
           // *GET, POST, PUT, DELETE, etc.
           headers: {
@@ -56036,26 +56143,25 @@ var ProjectWidget = /*#__PURE__*/function (_Widget) {
           },
           body: JSON.stringify(newExp) // body data type must match "Content-Type" header
         }).then(function (response) {
-          if (response.status == 201) {
+          if (response.status === 201) {
             response.json().then(function (obj) {
               newExp.id = obj.id;
-              _thiss.addExpRow(newExp);
-              _thiss.hideNode(inputsDiv);
-              _thiss.showNode(addExpButton);
-              _thiss.showNode(_thiss.successFeedback);
+              _this3.addExpRow(newExp);
+              _this3.hideNode(inputsDiv);
+              _this3.showNode(addExpButton);
+              _this3.showNode(_this3.successFeedback);
             });
           } else {
-            _thiss.showNode(_thiss.errorFeedback);
+            _this3.showNode(_this3.errorFeedback);
           }
         });
       });
-      var _thiss = this;
-      addExpButton.on("click", function () {
-        _thiss.showNode(inputsDiv);
-        _thiss.hideNode(addExpButton);
+      addExpButton.on('click', function () {
+        _this3.showNode(inputsDiv);
+        _this3.hideNode(addExpButton);
       });
       this.experiments.forEach(function (obj) {
-        _thiss.addExpRow(obj);
+        _this3.addExpRow(obj);
       });
     }
   }], [{
@@ -56153,7 +56259,7 @@ var QueryResultWidget = /*#__PURE__*/function (_DatabaseTabWidget) {
     value: function renderTable() {
       var _this2 = this;
       this.d3node.selectAll('*').remove();
-      this.d3node.append('a').classed("toollink", true).attr('class', 'btn btn-secondary-outline').attr('title', 'Download CSV').style('margin-bottom', '1em').on('click', function () {
+      this.d3node.append('a').classed('toollink', true).attr('class', 'btn btn-secondary-outline').attr('title', 'Download CSV').style('margin-bottom', '1em').on('click', function () {
         var csv = '';
         csv += _this2.columns.map(function (col) {
           return "\"".concat(col.replace(/"/g, '""'), "\"");
@@ -56188,7 +56294,7 @@ var QueryResultWidget = /*#__PURE__*/function (_DatabaseTabWidget) {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }, 100);
-      }).append("i").classed("fa fa-download", true);
+      }).append('i').classed('fa fa-download', true);
       if (!this.columns.length || !this.rows.length) {
         this.d3node.append('div').text('No results.');
         return;
@@ -56282,14 +56388,13 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
               container = this.d3node.append('div').style('display', 'flex').style('flex-direction', 'column').style('height', '100%').style('padding', '1rem').style('gap', '1rem').style('overflow-y', 'auto').style('overflow-x', 'hidden');
               headerRow = container.append('div').style('display', 'flex').style('justify-content', 'space-between').style('align-items', 'center').style('margin-bottom', '1rem').style('flex-shrink', '0');
               headerRow.append('h4').text('SQL Query Interface').style('margin', '0').style('color', '#333');
-              headerRow.append('button').attr('id', 'execute-query-btn').attr("title", "Execute query. Use Ctrl+Enter for quick execution.").classed('btn btn-primary', true).on('click', function () {
+              headerRow.append('button').attr('id', 'execute-query-btn').attr('title', 'Execute query. Use Ctrl+Enter for quick execution.').classed('btn btn-primary', true).on('click', function () {
                 return _this4.executeQuery();
               }).html('<i class="fa fa-play" style="margin-left:4px;"></i> Execute Query');
               queryContainer = container.append('div').style('display', 'flex').style('flex-direction', 'column').style('min-height', '50%').style('flex', '1 1 0');
               queryContainer.append('label').attr('for', this.editorId).text('Enter your SQL query:').style('font-weight', 'bold').style('margin-bottom', '0.5rem');
               queryContainer.append('div').attr('id', this.editorId).style('width', '100%').style('min-height', '140px').style('max-height', '30vh').style('border', '1px solid #ccc').style('border-radius', '4px').style('font-size', '1em').style('flex', '1');
               setTimeout(function () {
-                // @ts-ignore
                 _this4.aceEditor = window.ace.edit(_this4.editorId);
                 _this4.aceEditor.setTheme('ace/theme/textmate');
                 _this4.aceEditor.session.setMode('ace/mode/sql');
@@ -56492,7 +56597,9 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
     key: "onResize",
     value: function onResize(msg) {
       var editorElement = this.node.querySelector("#".concat(this.editorId));
-      if (!editorElement) return;
+      if (!editorElement) {
+        return;
+      }
       var rect = this.node.getBoundingClientRect();
       var availableHeight = rect.height - 200;
       var minHeight = 250;
@@ -70572,13 +70679,13 @@ class HistoryGraph {
         this.maxY = 0;
         this.maxId = 0;
         this.i = 0;
-        var defaultConfig = {
+        const defaultConfig = {
             customSelectNode: (g, d) => false,
             customCtrlClick: (g, d) => false,
             customForm: (g, form) => null,
             customSize: (g) => [g.config.width, g.config.height],
             customWindowTabCommand: (trialIdSimplified, trialId, command) => false,
-            hintMessage: "Ctrl+Shift click or ⌘+Shift click to diff trials",
+            hintMessage: 'Ctrl+Shift click or ⌘+Shift click to diff trials',
             width: 200,
             height: 100,
             radius: 20,
@@ -70588,158 +70695,172 @@ class HistoryGraph {
             spacing: 17,
             margin: 50,
             fontSize: 10,
-            useTooltip: false,
+            useTooltip: false
         };
         this.config = Object.assign({}, defaultConfig, config);
         this.graphId = graphId;
         this.zoom = (0, d3_zoom_1.zoom)()
-            .on("zoom", (event) => {
+            .on('zoom', (event) => {
             return this.zoomFunction(event);
         })
-            .on("start", () => (0, d3_selection_1.select)('body').style("cursor", "move"))
-            .on("end", () => (0, d3_selection_1.select)('body').style("cursor", "auto"))
-            .wheelDelta(function () {
+            .on('start', () => (0, d3_selection_1.select)('body').style('cursor', 'move'))
+            .on('end', () => (0, d3_selection_1.select)('body').style('cursor', 'auto'))
+            .wheelDelta(() => {
             const e = event;
-            return -e.deltaY * (e.deltaMode ? 120 : 1) / 2000;
+            return (-e.deltaY * (e.deltaMode ? 120 : 1)) / 2000;
         });
         this.div = (0, d3_selection_1.select)(div);
-        let form = (0, d3_selection_1.select)(div)
-            .append("form")
-            .classed("history-toolbar", true);
+        const form = (0, d3_selection_1.select)(div)
+            .append('form')
+            .classed('history-toolbar', true);
         this.svg = (0, d3_selection_1.select)(div)
-            .append("div")
-            .append("svg")
-            .attr("width", this.config.width)
-            .attr("height", this.config.height)
+            .append('div')
+            .append('svg')
+            .attr('width', this.config.width)
+            .attr('height', this.config.height)
             .call(this.zoom)
-            .on("mouseup", () => this.svgMouseUp());
+            .on('mouseup', () => this.svgMouseUp());
         this.state = {
             selectedNode: null,
             mouseDownNode: null,
             justScale: false
         };
         // Tooltip
-        this.tooltipDiv = (0, d3_selection_1.select)("body").append("div")
-            .classed("now-tooltip now-history-tooltip", true)
-            .style("opacity", 0)
-            .style("max-width", "250px")
-            .on("mouseout", () => {
+        this.tooltipDiv = (0, d3_selection_1.select)('body')
+            .append('div')
+            .classed('now-tooltip now-history-tooltip', true)
+            .style('opacity', 0)
+            .style('max-width', '250px')
+            .on('mouseout', () => {
             this.closeTooltip();
         });
         this.createToolbar(form);
         this.createMarker('end-arrow', 'endarrow', '#000');
-        this.g = this.svg.append("g")
-            .attr("id", this._graphId())
-            .attr("transform", "translate(0,0)")
+        this.g = this.svg
+            .append('g')
+            .attr('id', this._graphId())
+            .attr('transform', 'translate(0,0)')
             .classed('HistoryGraph', true);
     }
     createToolbar(form) {
-        let formdiv = form.append("div")
-            .classed("buttons", true);
+        const formdiv = form.append('div').classed('buttons', true);
         this.config.customForm(this, formdiv);
         // Reset zoom
-        formdiv.append("a")
-            .classed("toollink", true)
-            .attr("id", "history-" + this.graphId + "-history-zoom")
-            .attr("href", "#")
-            .attr("title", "Restore zoom")
-            .on("click", () => this.restorePosition())
-            .append("i")
-            .classed("fa fa-eye", true);
+        formdiv
+            .append('a')
+            .classed('toollink', true)
+            .attr('id', 'history-' + this.graphId + '-history-zoom')
+            .attr('href', '#')
+            .attr('title', 'Restore zoom')
+            .on('click', () => this.restorePosition())
+            .append('i')
+            .classed('fa fa-eye', true);
         // Toggle Tooltips
-        let tooltipsToggle = formdiv.append("input")
-            .attr("id", "history-" + this.graphId + "-toolbar-tooltips")
-            .attr("type", "checkbox")
-            .attr("name", "history-toolbar-tooltips")
-            .attr("value", "show")
-            .property("checked", this.config.useTooltip)
-            .on("change", () => {
+        const tooltipsToggle = formdiv
+            .append('input')
+            .attr('id', 'history-' + this.graphId + '-toolbar-tooltips')
+            .attr('type', 'checkbox')
+            .attr('name', 'history-toolbar-tooltips')
+            .attr('value', 'show')
+            .property('checked', this.config.useTooltip)
+            .on('change', () => {
             this.closeTooltip();
-            this.config.useTooltip = tooltipsToggle.property("checked");
+            this.config.useTooltip = tooltipsToggle.property('checked');
         });
-        formdiv.append("label")
-            .attr("for", "history-" + this.graphId + "-toolbar-tooltips")
-            .attr("title", "Show tooltips on mouse hover")
-            .append("i")
-            .classed("fa fa-comment", true);
+        formdiv
+            .append('label')
+            .attr('for', 'history-' + this.graphId + '-toolbar-tooltips')
+            .attr('title', 'Show tooltips on mouse hover')
+            .append('i')
+            .classed('fa fa-comment', true);
         // Download SVG
-        formdiv.append("a")
-            .classed("toollink", true)
-            .attr("id", "history-" + this.graphId + "-download")
-            .attr("href", "#")
-            .attr("title", "Download graph SVG")
-            .on("click", () => {
+        formdiv
+            .append('a')
+            .classed('toollink', true)
+            .attr('id', 'history-' + this.graphId + '-download')
+            .attr('href', '#')
+            .attr('title', 'Download graph SVG')
+            .on('click', () => {
             this.download();
         })
-            .append("i")
-            .classed("fa fa-download", true);
+            .append('i')
+            .classed('fa fa-download', true);
         // Set Font Size
-        let fontToggle = formdiv.append("input")
-            .attr("id", "history-" + this.graphId + "-toolbar-fonts")
-            .attr("type", "checkbox")
-            .attr("name", "history-toolbar-fonts")
-            .attr("value", "show")
-            .property("checked", false)
-            .on("change", () => {
-            let display = fontToggle.property("checked") ? "inline-block" : "none";
-            fontSize.style("display", display);
+        const fontToggle = formdiv
+            .append('input')
+            .attr('id', 'history-' + this.graphId + '-toolbar-fonts')
+            .attr('type', 'checkbox')
+            .attr('name', 'history-toolbar-fonts')
+            .attr('value', 'show')
+            .property('checked', false)
+            .on('change', () => {
+            const display = fontToggle.property('checked')
+                ? 'inline-block'
+                : 'none';
+            fontSize.style('display', display);
         });
-        formdiv.append("label")
-            .attr("for", "history-" + this.graphId + "-toolbar-fonts")
-            .attr("title", "Set font size")
-            .append("i")
-            .classed("fa fa-font", true);
-        let fontSize = formdiv.append("input")
-            .attr("type", "number")
-            .attr("value", this.config.fontSize)
-            .style("width", "50px")
-            .style("display", "none")
-            .attr("title", "Node font size")
-            .on("change", () => {
-            this.config.fontSize = fontSize.property("value");
-            this.svg.selectAll("text.trial-id")
-                .attr("font-size", this.config.fontSize);
+        formdiv
+            .append('label')
+            .attr('for', 'history-' + this.graphId + '-toolbar-fonts')
+            .attr('title', 'Set font size')
+            .append('i')
+            .classed('fa fa-font', true);
+        const fontSize = formdiv
+            .append('input')
+            .attr('type', 'number')
+            .attr('value', this.config.fontSize)
+            .style('width', '50px')
+            .style('display', 'none')
+            .attr('title', 'Node font size')
+            .on('change', () => {
+            this.config.fontSize = fontSize.property('value');
+            this.svg
+                .selectAll('text.trial-id')
+                .attr('font-size', this.config.fontSize);
         });
         // Submit
-        formdiv.append("input")
-            .attr("type", "submit")
-            .attr("name", "prevent-enter")
-            .attr("onclick", "return false;")
-            .style("display", "none");
-        formdiv.append("div");
-        formdiv.append("div")
+        formdiv
+            .append('input')
+            .attr('type', 'submit')
+            .attr('name', 'prevent-enter')
+            .attr('onclick', 'return false;')
+            .style('display', 'none');
+        formdiv.append('div');
+        formdiv
+            .append('div')
             .text(this.config.hintMessage)
             .style('font-family', 'sans-serif')
             .style('font-size', '12px')
             .style('pointer-events', 'none');
     }
     load(data) {
-        let nodes = [], otherNodes = [], edges = [], spacing = this.config.spacing, margin = this.config.margin;
-        let spacing2 = 2 * spacing, spacing4 = 4 * spacing, start = margin, max = 0, id = 0, last = data.nodes.length - 1, tid = 0, useVersion = false;
-        let levels = [];
-        for (var i = 0; i <= last; i++) {
-            let node = data.nodes[i];
-            var previous = levels[node.level];
-            if (previous == undefined) {
+        const nodes = [], otherNodes = [], edges = [], spacing = this.config.spacing, margin = this.config.margin;
+        const spacing2 = 2 * spacing, spacing4 = 4 * spacing, start = margin, last = data.nodes.length - 1;
+        let max = 0, id = 0, tid = 0, useVersion = false;
+        const levels = [];
+        for (let i = 0; i <= last; i++) {
+            const node = data.nodes[i];
+            let previous = levels[node.level];
+            if (previous == null) {
                 previous = -1;
             }
-            var trials = node.trials;
-            if (trials == undefined) {
+            let trials = node.trials;
+            if (trials == null) {
                 trials = [];
             }
             levels[node.level] = Math.max(previous, trials.length);
         }
-        let levelsy = [];
-        var current = margin;
-        for (var i = 0; i <= levels.length; i++) {
+        const levelsy = [];
+        let current = margin;
+        for (let i = 0; i <= levels.length; i++) {
             levelsy[i] = current;
             current += spacing2 + levels[i] * spacing2;
         }
-        for (var i = 0; i <= last; i++) {
-            let node = data.nodes[i];
-            let x = start + spacing4 * id;
-            let y = levelsy[node.level];
-            var new_node = {
+        for (let i = 0; i <= last; i++) {
+            const node = data.nodes[i];
+            const x = start + spacing4 * id;
+            const y = levelsy[node.level];
+            const new_node = {
                 id: id,
                 display: node.display,
                 x: x,
@@ -70751,11 +70872,11 @@ class HistoryGraph {
                 status: node.status
             };
             nodes.push(new_node);
-            if (typeof (node.trials) != "undefined") {
+            if (typeof node.trials !== 'undefined') {
                 useVersion = true;
-                for (var j = 0; j < node.trials.length; j++) {
-                    let trialNode = node.trials[j];
-                    let ny = y + (j + 1) * spacing2 + spacing;
+                for (let j = 0; j < node.trials.length; j++) {
+                    const trialNode = node.trials[j];
+                    const ny = y + (j + 1) * spacing2 + spacing;
                     otherNodes.push({
                         id: tid,
                         display: trialNode.display,
@@ -70782,12 +70903,12 @@ class HistoryGraph {
         max += spacing2;
         this.maxY = max;
         this.maxId = Math.max(tid, id);
-        for (var i = 0; i < data.edges.length; i++) {
-            let edge = Object.assign({}, data.edges[i]);
-            edge.id = edge.source + "-" + edge.target;
+        for (let i = 0; i < data.edges.length; i++) {
+            const edge = Object.assign({}, data.edges[i]);
+            edge.id = edge.source + '-' + edge.target;
             edge.source = nodes[edge.source];
             edge.target = nodes[edge.target];
-            if (edge.source != edge.target) {
+            if (edge.source !== edge.target) {
                 edges.push(edge);
             }
         }
@@ -70807,131 +70928,126 @@ class HistoryGraph {
         return nodes;
     }
     updateWindow() {
-        let size = this.config.customSize(this);
+        const size = this.config.customSize(this);
         this.config.width = size[0];
         this.config.height = size[1];
-        this.svg
-            .attr("width", size[0])
-            .attr("height", size[1]);
+        this.svg.attr('width', size[0]).attr('height', size[1]);
     }
     update() {
-        var nodes = this.g.selectAll('g.node')
-            .data(this.nodes, (d) => d.id);
-        var edges = this.g.selectAll('g.link')
-            .data(this.edges, (d) => d.id);
-        var version = this.g.selectAll('g.version')
+        const nodes = this.g.selectAll('g.node').data(this.nodes, (d) => d.id);
+        const edges = this.g.selectAll('g.link').data(this.edges, (d) => d.id);
+        const version = this.g
+            .selectAll('g.version')
             .data(this.versionNodes, (d) => d.id);
         this.updateNodes(nodes);
         this.updateVersionNodes(version);
         this.updateLinks(edges);
     }
     restorePosition() {
-        let scale = this.config.height / this.maxY;
+        const scale = this.config.height / this.maxY;
         if (scale <= 1.0) {
             this.svg.call(this.zoom.transform, d3_zoom_1.zoomIdentity
-                .translate(this.config.width
-                - this.maxX * scale
-                - this.config.margin, 0)
+                .translate(this.config.width - this.maxX * scale - this.config.margin, 0)
                 .scale(scale));
         }
         else {
             this.svg.call(this.zoom.transform, d3_zoom_1.zoomIdentity
                 .scale(1)
-                .translate(this.config.width
-                - this.maxX
-                - this.config.margin, 0));
+                .translate(this.config.width - this.maxX - this.config.margin, 0));
         }
         this.state.justScale = false;
     }
     selectNode(node) {
         this.state.selectedNode = node;
         this.config.customSelectNode(this, node);
-        this.svg.selectAll('.node[attr-trial="' + node.title + '"] > rect')
+        this.svg
+            .selectAll('.node[attr-trial="' + node.title + '"] > rect')
             .attr('stroke', 'rgb(200, 238, 241)')
             .classed('selected', true);
     }
     selectTrial(trialId) {
-        for (var node of this.nodes) {
-            if (node.title == trialId) {
+        for (const node of this.nodes) {
+            if (node.title === trialId) {
                 this.selectNode(node);
                 return;
             }
         }
     }
     download(name) {
-        var isFileSaverSupported = false;
+        let isFileSaverSupported = false;
         try {
             isFileSaverSupported = !!new Blob();
         }
         catch (e) {
-            alert("blob not supported");
+            alert('blob not supported');
         }
-        name = (name === undefined) ? "history.svg" : name;
-        let gnode = this.g.node();
-        var bbox = gnode.getBBox();
-        var width = this.svg.attr("width"), height = this.svg.attr("height");
-        this.g.attr("transform", "translate(" + (-bbox.x + 5) + ", " + (-bbox.y + 5) + ")");
-        let svgNode = this.svg
-            .attr("title", "Trial")
-            .attr("version", 1.1)
-            .attr("width", bbox.width + 10)
-            .attr("height", bbox.height + 10)
-            .attr("xmlns", "http://www.w3.org/2000/svg")
+        name = name === undefined ? 'history.svg' : name;
+        const gnode = this.g.node();
+        const bbox = gnode.getBBox();
+        const width = this.svg.attr('width'), height = this.svg.attr('height');
+        this.g.attr('transform', 'translate(' + (-bbox.x + 5) + ', ' + (-bbox.y + 5) + ')');
+        const svgNode = this.svg
+            .attr('title', 'Trial')
+            .attr('version', 1.1)
+            .attr('width', bbox.width + 10)
+            .attr('height', bbox.height + 10)
+            .attr('xmlns', 'http://www.w3.org/2000/svg')
             .node();
-        var html = svgNode.parentNode.innerHTML;
+        let html = svgNode.parentNode.innerHTML;
         html = '<svg xmlns:xlink="http://www.w3.org/1999/xlink" ' + html.slice(4);
-        this.svg
-            .attr("width", width)
-            .attr("height", height);
-        this.g.attr("transform", this.transform);
+        this.svg.attr('width', width).attr('height', height);
+        this.g.attr('transform', this.transform);
         if (isFileSaverSupported) {
-            var blob = new Blob([html], { type: "image/svg+xml" });
+            const blob = new Blob([html], { type: 'image/svg+xml' });
             fs.saveAs(blob, name);
         }
     }
     closeTooltip() {
-        this.tooltipDiv.transition()
-            .duration(500)
-            .style("opacity", 0);
-        this.tooltipDiv.classed("hidden", true);
+        this.tooltipDiv.transition().duration(500).style('opacity', 0);
+        this.tooltipDiv.classed('hidden', true);
     }
     showTooltip(event, d) {
-        if (typeof (d.tooltip) == "undefined") {
+        if (typeof d.tooltip === 'undefined') {
             return;
         }
-        this.tooltipDiv.classed("hidden", false);
-        this.tooltipDiv.transition()
-            .duration(200)
-            .style("opacity", 0.9);
-        this.tooltipDiv.html(d.tooltip)
-            .style("left", (event.pageX - 3) + "px")
-            .style("top", (event.pageY - 28) + "px");
+        this.tooltipDiv.classed('hidden', false);
+        this.tooltipDiv.transition().duration(200).style('opacity', 0.9);
+        this.tooltipDiv
+            .html(d.tooltip)
+            .style('left', event.pageX - 3 + 'px')
+            .style('top', event.pageY - 28 + 'px');
     }
     createMarker(name, cls, fill) {
-        this.svg.append("svg:defs").selectAll("marker")
+        this.svg
+            .append('svg:defs')
+            .selectAll('marker')
             .data([name])
-            .enter().append("svg:marker")
-            .attr("id", String)
-            .attr("viewBox", "0 -5 10 10")
-            .attr("refX", 6)
-            .attr("refY", 0)
-            .attr("markerWidth", 3)
-            .attr("markerHeight", 3)
-            .attr("orient", "auto")
-            .append("svg:path")
+            .enter()
+            .append('svg:marker')
+            .attr('id', String)
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 6)
+            .attr('refY', 0)
+            .attr('markerWidth', 3)
+            .attr('markerHeight', 3)
+            .attr('orient', 'auto')
+            .append('svg:path')
             .classed(cls, true)
-            .attr("fill", fill)
-            .attr("d", "M0,-5L10,0L0,5");
+            .attr('fill', fill)
+            .attr('d', 'M0,-5L10,0L0,5');
     }
     unselectNode() {
-        this.g.selectAll('g.node').filter((cd) => {
+        this.g
+            .selectAll('g.node')
+            .filter((cd) => {
             if (this.state.selectedNode == null) {
                 return false;
             }
             return cd.id === this.state.selectedNode.id;
-        }).select('rect')
+        })
+            .select('rect')
             .classed('selected', false)
-            .attr("stroke", "#000");
+            .attr('stroke', '#000');
         this.state.selectedNode = null;
     }
     nodeMouseDown(event, d3node, d) {
@@ -70955,9 +71071,7 @@ class HistoryGraph {
             if (this.state.selectedNode) {
                 this.unselectNode();
             }
-            d3node
-                .attr('stroke', 'rgb(200, 238, 241)')
-                .classed('selected', true);
+            d3node.attr('stroke', 'rgb(200, 238, 241)').classed('selected', true);
             this.state.selectedNode = d;
             this.config.customSelectNode(this, d);
         }
@@ -70969,28 +71083,32 @@ class HistoryGraph {
         }
     }
     updateVersionNodes(nodes) {
-        var nodeEnter = nodes.enter().append("g")
-            .classed("version", true)
-            .attr("attr-trialid", (d) => d.title)
-            .attr("transform", (d) => {
-            return "translate(" + 0 + "," + 0 + ")";
+        const nodeEnter = nodes
+            .enter()
+            .append('g')
+            .classed('version', true)
+            .attr('attr-trialid', (d) => d.title)
+            .attr('transform', (d) => {
+            return 'translate(' + 0 + ',' + 0 + ')';
         });
         // Circle for new nodes
-        nodeEnter.append('rect')
-            .attr("transform", (d) => {
-            return "translate(" + d.x + "," + d.y + ")";
+        nodeEnter
+            .append('rect')
+            .attr('transform', (d) => {
+            return 'translate(' + d.x + ',' + d.y + ')';
         })
             .attr('width', (d) => 2 * d.radius)
             .attr('height', (d) => 2 * d.radius)
             .attr('rx', 0)
             .attr('ry', 0)
             //.attr('r', )
-            .attr("stroke", "#000")
-            .attr("stroke-width", "2.5px")
-            .attr("fill", "#F6FBFF")
-            .attr("stroke", "#000")
-            .attr("stroke-width", "2.5px");
-        nodeEnter.append('text')
+            .attr('stroke', '#000')
+            .attr('stroke-width', '2.5px')
+            .attr('fill', '#F6FBFF')
+            .attr('stroke', '#000')
+            .attr('stroke-width', '2.5px');
+        nodeEnter
+            .append('text')
             .classed('trial-id', true)
             .attr('font-family', 'sans-serif')
             .attr('font-size', this.config.fontSize + 'px')
@@ -71000,25 +71118,28 @@ class HistoryGraph {
             .attr('stroke', '#000')
             .attr('text-anchor', 'middle')
             //.attr('font-weight', 'bold')
-            .attr("transform", (d) => {
-            return "translate(" + d.x + "," + d.y + ")";
-        }).text((d) => d.display);
+            .attr('transform', (d) => {
+            return 'translate(' + d.x + ',' + d.y + ')';
+        })
+            .text((d) => d.display);
         nodeEnter.merge(nodes); // nodeUpdate
         nodes.exit().remove(); // nodeExit
     }
     updateNodes(nodes) {
-        let self = this;
-        var nodeEnter = nodes.enter().append("g")
-            .classed("node", true)
-            .attr("attr-trialid", (d) => d.title)
-            .attr("cursor", "pointer")
-            .attr("transform", (d) => {
-            return "translate(" + 0 + "," + 0 + ")";
+        const nodeEnter = nodes
+            .enter()
+            .append('g')
+            .classed('node', true)
+            .attr('attr-trialid', (d) => d.title)
+            .attr('cursor', 'pointer')
+            .attr('transform', (d) => {
+            return 'translate(' + 0 + ',' + 0 + ')';
         });
         // Circle for new nodes
-        nodeEnter.append('rect')
-            .attr("transform", (d) => {
-            return "translate(" + d.x + "," + d.y + ")";
+        nodeEnter
+            .append('rect')
+            .attr('transform', (d) => {
+            return 'translate(' + d.x + ',' + d.y + ')';
         })
             .attr('cursor', 'pointer')
             .attr('title', (d) => d.info.display)
@@ -71027,47 +71148,56 @@ class HistoryGraph {
             .attr('rx', (d) => 2 * d.radius)
             .attr('ry', (d) => 2 * d.radius)
             //.attr('r', )
-            .attr("stroke", "#000")
-            .attr("stroke-width", "2.5px")
-            .attr("fill", function (d) {
+            .attr('stroke', '#000')
+            .attr('stroke-width', '2.5px')
+            .attr('fill', (d) => {
             // Use the sequential node id (d.id), not parseInt(d.title): trial ids are
             // UUIDs in noWorkflow 2.x, so parseInt(title) yields 0/NaN and washes the
             // gradient toward white (hiding failed/backup trials in the summarized graph).
-            var proportion = Math.round(200 * (1.0 - (d.id / self.maxId)) + 50);
+            const proportion = Math.round(200 * (1.0 - d.id / this.maxId) + 50);
             if (d.status === 'unfinished') {
-                return d.gradient ? (0, d3_color_1.rgb)(255, proportion, proportion, 255).toString() : "rgb(238, 200, 241)";
+                return d.gradient
+                    ? (0, d3_color_1.rgb)(255, proportion, proportion, 255).toString()
+                    : 'rgb(238, 200, 241)';
             }
             if (d.status === 'finished') {
-                return d.gradient ? (0, d3_color_1.rgb)(proportion, proportion, proportion, 255).toString() : "#F6FBFF";
+                return d.gradient
+                    ? (0, d3_color_1.rgb)(proportion, proportion, proportion, 255).toString()
+                    : '#F6FBFF';
             }
             if (d.status === 'backup') {
-                return d.gradient ? (0, d3_color_1.rgb)(255, 255, proportion, 255).toString() : "rgb(241, 238, 200)";
+                return d.gradient
+                    ? (0, d3_color_1.rgb)(255, 255, proportion, 255).toString()
+                    : 'rgb(241, 238, 200)';
             }
             return '#666';
         })
-            .attr("stroke", function (d) {
-            return ((0, d3_selection_1.select)(this).classed('selected')) ? 'rgb(200, 238, 241)' : "#000";
+            .attr('stroke', function (d) {
+            return (0, d3_selection_1.select)(this).classed('selected')
+                ? 'rgb(200, 238, 241)'
+                : '#000';
         })
-            .attr("stroke-width", "2.5px")
-            .on('mousedown', function (event, d) {
-            self.nodeMouseDown(event, (0, d3_selection_1.select)(this), d);
-        }).on('click', function (event, d) {
-            self.nodeMouseUp(event, (0, d3_selection_1.select)(this), d);
-        }).on('mouseover', function (event, d) {
-            if (!self.state.mouseDownNode && self.config.useTooltip) {
-                self.closeTooltip();
-                self.showTooltip(event, d);
+            .attr('stroke-width', '2.5px')
+            .on('mousedown', (event, d) => {
+            this.nodeMouseDown(event, (0, d3_selection_1.select)(event.currentTarget), d);
+        })
+            .on('click', (event, d) => {
+            this.nodeMouseUp(event, (0, d3_selection_1.select)(event.currentTarget), d);
+        })
+            .on('mouseover', (event, d) => {
+            if (!this.state.mouseDownNode && this.config.useTooltip) {
+                this.closeTooltip();
+                this.showTooltip(event, d);
             }
-            (0, d3_selection_1.select)(this)
-                .attr('stroke', 'rgb(200, 238, 241)');
-        }).on('mouseout', function (event, d) {
-            (0, d3_selection_1.select)(this)
-                .attr("stroke", (d) => {
-                return ((0, d3_selection_1.select)(this).classed('selected')) ? 'rgb(200, 238, 241)' : "#000";
-            });
+            (0, d3_selection_1.select)(event.currentTarget).attr('stroke', 'rgb(200, 238, 241)');
         })
-            .classed("custom-menu", true);
-        nodeEnter.append('text')
+            .on('mouseout', (event) => {
+            const node = (0, d3_selection_1.select)(event.currentTarget);
+            node.attr('stroke', node.classed('selected') ? 'rgb(200, 238, 241)' : '#000');
+        })
+            .classed('custom-menu', true);
+        nodeEnter
+            .append('text')
             .classed('trial-id', true)
             .attr('font-family', 'sans-serif')
             .attr('font-size', this.config.fontSize + 'px')
@@ -71077,37 +71207,40 @@ class HistoryGraph {
             .attr('stroke', '#000')
             .attr('text-anchor', 'middle')
             //.attr('font-weight', 'bold')
-            .attr("transform", (d) => {
-            return "translate(" + d.x + "," + d.y + ")";
-        }).text((d) => d.gradient ? "" : d.display);
+            .attr('transform', (d) => {
+            return 'translate(' + d.x + ',' + d.y + ')';
+        })
+            .text((d) => (d.gradient ? '' : d.display));
         nodeEnter.merge(nodes); // nodeUpdate
         nodes.exit().remove(); // nodeExit
     }
     updateLinks(link) {
         // Enter any new links
-        let colors = (0, d3_scale_1.scaleOrdinal)(d3_scale_chromatic_1.schemeCategory10);
-        var linkEnter = link.enter().insert('path', 'g')
+        const colors = (0, d3_scale_1.scaleOrdinal)(d3_scale_chromatic_1.schemeCategory10);
+        const linkEnter = link
+            .enter()
+            .insert('path', 'g')
             .classed('link', true)
             .attr('cursor', 'crosshair')
             .attr('fill', 'none')
             .attr('stroke', '#000')
             .attr('stroke-width', '4px');
         linkEnter
-            .attr("d", (d) => {
-            var deltaX = d.target.x - d.source.x, deltaY = d.target.y - d.source.y, dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY), normX = deltaX / dist, normY = deltaY / dist, sourcePadding = this.config.radius - 5, targetPadding = this.config.radius + (d.right ? 3 : -5), sourceX = d.source.x + this.config.radius + (sourcePadding * normX), sourceY = d.source.y + this.config.radius + (sourcePadding * normY), targetX = d.target.x + this.config.radius - (targetPadding * normX), targetY = d.target.y + this.config.radius - (targetPadding * normY);
-            var step = 0;
+            .attr('d', (d) => {
+            const deltaX = d.target.x - d.source.x, deltaY = d.target.y - d.source.y, dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY), normX = deltaX / dist, normY = deltaY / dist, sourcePadding = this.config.radius - 5, targetPadding = this.config.radius + (d.right ? 3 : -5), sourceX = d.source.x + this.config.radius + sourcePadding * normX, sourceY = d.source.y + this.config.radius + sourcePadding * normY, targetX = d.target.x + this.config.radius - targetPadding * normX, targetY = d.target.y + this.config.radius - targetPadding * normY;
+            let step = 0;
             if (d.level > 0) {
                 step += this.config.moveY;
                 step += (d.level - 1) * this.config.moveY2;
             }
             return `M ${sourceX}, ${sourceY}
-          C ${(sourceX - this.config.moveX / 2)} ${sourceY}
-            ${(sourceX - this.config.moveX / 2)} ${(sourceY + 3 * step / 4)}
-            ${(sourceX - this.config.moveX)} ${(sourceY + step)}
-          L ${(sourceX - this.config.moveX)} ${(sourceY + step)}
-            ${(targetX + this.config.moveX)} ${(sourceY + step)}
-          C ${(targetX + this.config.moveX / 2)} ${(sourceY + 3 * step / 4)}
-            ${(targetX + this.config.moveX / 2)} ${sourceY}
+          C ${sourceX - this.config.moveX / 2} ${sourceY}
+            ${sourceX - this.config.moveX / 2} ${sourceY + (3 * step) / 4}
+            ${sourceX - this.config.moveX} ${sourceY + step}
+          L ${sourceX - this.config.moveX} ${sourceY + step}
+            ${targetX + this.config.moveX} ${sourceY + step}
+          C ${targetX + this.config.moveX / 2} ${sourceY + (3 * step) / 4}
+            ${targetX + this.config.moveX / 2} ${sourceY}
             ${targetX}, ${targetY}`;
         })
             .attr('marker-end', (d) => {
@@ -71125,35 +71258,35 @@ class HistoryGraph {
         this.state.justScale = true;
         this.closeTooltip();
         this.transform = event.transform;
-        this.g.attr("transform", event.transform);
+        this.g.attr('transform', event.transform);
     }
     _graphId() {
-        return "history-graph-" + this.graphId;
+        return 'history-graph-' + this.graphId;
     }
     menuOnRightClick() {
-        let rightClickMenu = document.getElementById("context-menu");
+        const rightClickMenu = document.getElementById('context-menu');
         // Set up an event handler for the documnt right click
-        document.addEventListener("contextmenu", function (event) {
-            var _a;
+        document.addEventListener('contextmenu', event => {
+            var _a, _b;
             //open right click menu
-            let target = event.target;
-            if (target && target.classList.contains("custom-menu")) {
+            const target = event.target;
+            if (target && target.classList.contains('custom-menu')) {
                 event.preventDefault();
                 if (rightClickMenu) {
-                    rightClickMenu.setAttribute("selected-trial", (_a = target.parentElement) === null || _a === void 0 ? void 0 : _a.getAttribute("attr-trialid"));
-                    rightClickMenu.setAttribute("selected-trial-simplified", target.getAttribute("title"));
+                    rightClickMenu.setAttribute('selected-trial', (_b = (_a = target.parentElement) === null || _a === void 0 ? void 0 : _a.getAttribute('attr-trialid')) !== null && _b !== void 0 ? _b : '');
+                    rightClickMenu.setAttribute('selected-trial-simplified', target.getAttribute('title'));
                     rightClickMenu.style.top = (event.pageY - 10).toString();
                     rightClickMenu.style.left = (event.pageX - 90).toString();
-                    rightClickMenu.style.display = "block";
-                    rightClickMenu.classList.add("show");
+                    rightClickMenu.style.display = 'block';
+                    rightClickMenu.classList.add('show');
                 }
             }
         });
         // close the menu
-        document.addEventListener("click", function (event) {
+        document.addEventListener('click', event => {
             if (rightClickMenu) {
-                rightClickMenu.style.display = "none";
-                rightClickMenu.classList.remove("show");
+                rightClickMenu.style.display = 'none';
+                rightClickMenu.classList.remove('show');
             }
         });
     }
@@ -71243,12 +71376,9 @@ class TrialGraph {
             this.nowVisPanel = nowVisPanel;
         }
         this.i = 0;
-        let defaultConfig = {
+        const defaultConfig = {
             customSize: function (g) {
-                return [
-                    g.config.width,
-                    g.config.height,
-                ];
+                return [g.config.width, g.config.height];
             },
             customMouseOver: (g, d) => false,
             customMouseOut: (g, d) => false,
@@ -71271,47 +71401,45 @@ class TrialGraph {
         this.config = Object.assign({}, defaultConfig, config);
         this.graphId = graphId;
         this.zoom = (0, d3_zoom_1.zoom)()
-            .on("zoom", (event) => {
+            .on('zoom', (event) => {
             return this.zoomFunction(event);
         })
-            .on("start", () => (0, d3_selection_1.select)('body').style("cursor", "move"))
-            .on("end", () => (0, d3_selection_1.select)('body').style("cursor", "auto"))
-            .wheelDelta(function () {
+            .on('start', () => (0, d3_selection_1.select)('body').style('cursor', 'move'))
+            .on('end', () => (0, d3_selection_1.select)('body').style('cursor', 'auto'))
+            .wheelDelta(() => {
             const e = event;
-            return -e.deltaY * (e.deltaMode ? 120 : 1) / 2000;
+            return (-e.deltaY * (e.deltaMode ? 120 : 1)) / 2000;
         });
         this.div = (0, d3_selection_1.select)(div);
-        this.form = this.div
-            .append("form")
-            .classed("trial-toolbar", true);
+        this.form = this.div.append('form').classed('trial-toolbar', true);
         this.svg = (0, d3_selection_1.select)(div)
-            .append("div")
-            .append("svg")
-            .attr("width", this.config.width)
-            .attr("height", this.config.height)
+            .append('div')
+            .append('svg')
+            .attr('width', this.config.width)
+            .attr('height', this.config.height)
             .call(this.zoom);
         this.createMarker('end', 'enormal', 'black');
         this.createMarker('endbefore', 'ebefore', 'red');
         this.createMarker('endafter', 'eafter', 'green');
-        this.g = this.svg.append("g")
-            .attr("id", this._graphId())
-            .attr("transform", "translate(0,0)")
+        this.g = this.svg
+            .append('g')
+            .attr('id', this._graphId())
+            .attr('transform', 'translate(0,0)')
             .classed('TrialGraph', true);
-        this.tree = (0, d3_hierarchy_1.tree)()
-            .nodeSize([
+        this.tree = (0, d3_hierarchy_1.tree)().nodeSize([
             this.config.nodeSizeX,
             this.config.nodeSizeY
         ]);
         // Tooltip
-        this.tooltipDiv = (0, d3_selection_1.select)("body").append("div")
-            .attr("class", "now-tooltip now-trial-tooltip")
-            .style("opacity", 0)
-            .on("mouseout", () => {
+        this.tooltipDiv = (0, d3_selection_1.select)('body')
+            .append('div')
+            .attr('class', 'now-tooltip now-trial-tooltip')
+            .style('opacity', 0)
+            .on('mouseout', () => {
             this.closeTooltip();
         });
         // Zoom
-        this.svg
-            .call(this.zoom.transform, d3_zoom_1.zoomIdentity.translate(this.config.left + this.config.width / 2, this.config.top));
+        this.svg.call(this.zoom.transform, d3_zoom_1.zoomIdentity.translate(this.config.left + this.config.width / 2, this.config.top));
         this.activationStorage = {};
     }
     init(data, t1, t2) {
@@ -71327,156 +71455,178 @@ class TrialGraph {
         this.totalDuration[t2] = this.maxDuration[t2] - this.minDuration[t2];
         this.maxTotalDuration = Math.max(this.totalDuration[t1], this.totalDuration[t2]);
         this.colors = data.colors;
-        if (!data.root)
+        if (!data.root) {
             return;
-        this.root = (0, d3_hierarchy_1.hierarchy)(data.root, function (d) { return d.children; });
+        }
+        this.root = (0, d3_hierarchy_1.hierarchy)(data.root, d => {
+            return d.children;
+        });
         this.root.x0 = 0;
-        this.root.y0 = (this.config.width) / 2;
+        this.root.y0 = this.config.width / 2;
         this.alledges = data.edges;
         this.update(this.root);
     }
     createToolbar(form) {
-        let self = this;
-        form = form.append("div")
-            .classed("buttons buttonsGraph", true);
+        form = form.append('div').classed('buttons buttonsGraph', true);
         this.config.customForm(this, form);
         // Reset zoom
-        form.append("a")
-            .classed("toollink", true)
-            .attr("id", "trial-" + this.graphId + "-restore-zoom")
-            .attr("href", "#")
-            .attr("title", "Restore zoom")
-            .on("click", () => this.restorePosition())
-            .append("i")
-            .classed("fa fa-eye", true);
+        form
+            .append('a')
+            .classed('toollink', true)
+            .attr('id', 'trial-' + this.graphId + '-restore-zoom')
+            .attr('href', '#')
+            .attr('title', 'Restore zoom')
+            .on('click', () => this.restorePosition())
+            .append('i')
+            .classed('fa fa-eye', true);
         // Toggle Tooltips
-        let tooltipsToggle = form.append("input")
-            .attr("id", "trial-" + this.graphId + "-toolbar-tooltips")
-            .attr("type", "checkbox")
-            .attr("name", "trial-toolbar-tooltips")
-            .attr("value", "show")
-            .property("checked", this.config.useTooltip)
-            .on("change", () => {
+        const tooltipsToggle = form
+            .append('input')
+            .attr('id', 'trial-' + this.graphId + '-toolbar-tooltips')
+            .attr('type', 'checkbox')
+            .attr('name', 'trial-toolbar-tooltips')
+            .attr('value', 'show')
+            .property('checked', this.config.useTooltip)
+            .on('change', () => {
             this.closeTooltip();
-            this.config.useTooltip = tooltipsToggle.property("checked");
+            this.config.useTooltip = tooltipsToggle.property('checked');
         });
-        form.append("label")
-            .attr("for", "trial-" + this.graphId + "-toolbar-tooltips")
-            .attr("title", "Show tooltips on mouse hover")
-            .append("i")
-            .classed("fa fa-comment", true);
+        form
+            .append('label')
+            .attr('for', 'trial-' + this.graphId + '-toolbar-tooltips')
+            .attr('title', 'Show tooltips on mouse hover')
+            .append('i')
+            .classed('fa fa-comment', true);
         // Download SVG
-        form.append("a")
-            .classed("toollink", true)
-            .attr("id", "trial-" + this.graphId + "-download")
-            .attr("href", "#")
-            .attr("title", "Download graph SVG")
-            .on("click", () => {
+        form
+            .append('a')
+            .classed('toollink', true)
+            .attr('id', 'trial-' + this.graphId + '-download')
+            .attr('href', '#')
+            .attr('title', 'Download graph SVG')
+            .on('click', () => {
             this.download();
         })
-            .append("i")
-            .classed("fa fa-download", true);
+            .append('i')
+            .classed('fa fa-download', true);
         // Set Font Size
-        let fontToggle = form.append("input")
-            .attr("id", "trial-" + this.graphId + "-toolbar-fonts")
-            .attr("type", "checkbox")
-            .attr("name", "trial-toolbar-fonts")
-            .attr("value", "show")
-            .property("checked", false)
-            .on("change", () => {
-            let display = fontToggle.property("checked") ? "inline-block" : "none";
-            fontSize.style("display", display);
-            labelFontSize.style("display", display);
+        const fontToggle = form
+            .append('input')
+            .attr('id', 'trial-' + this.graphId + '-toolbar-fonts')
+            .attr('type', 'checkbox')
+            .attr('name', 'trial-toolbar-fonts')
+            .attr('value', 'show')
+            .property('checked', false)
+            .on('change', () => {
+            const display = fontToggle.property('checked')
+                ? 'inline-block'
+                : 'none';
+            fontSize.style('display', display);
+            labelFontSize.style('display', display);
         });
-        form.append("label")
-            .attr("for", "trial-" + this.graphId + "-toolbar-fonts")
-            .attr("title", "Set font size")
-            .append("i")
-            .classed("fa fa-font", true);
-        let fontSize = form.append("input")
-            .attr("type", "number")
-            .attr("value", this.config.fontSize)
-            .style("width", "50px")
-            .style("display", "none")
-            .attr("title", "Node font size")
-            .on("change", () => {
-            this.config.fontSize = fontSize.property("value");
-            this.svg.selectAll(".node text").attr("font-size", this.config.fontSize);
+        form
+            .append('label')
+            .attr('for', 'trial-' + this.graphId + '-toolbar-fonts')
+            .attr('title', 'Set font size')
+            .append('i')
+            .classed('fa fa-font', true);
+        const fontSize = form
+            .append('input')
+            .attr('type', 'number')
+            .attr('value', this.config.fontSize)
+            .style('width', '50px')
+            .style('display', 'none')
+            .attr('title', 'Node font size')
+            .on('change', () => {
+            this.config.fontSize = fontSize.property('value');
+            this.svg
+                .selectAll('.node text')
+                .attr('font-size', this.config.fontSize);
         });
-        let labelFontSize = form.append("input")
-            .attr("type", "number")
-            .attr("value", this.config.labelFontSize)
-            .style("width", "50px")
-            .style("display", "none")
-            .attr("title", "Arrow font size")
-            .on("change", () => {
-            this.config.labelFontSize = labelFontSize.property("value");
-            this.svg.selectAll("text.label_text").attr("font-size", this.config.labelFontSize);
+        const labelFontSize = form
+            .append('input')
+            .attr('type', 'number')
+            .attr('value', this.config.labelFontSize)
+            .style('width', '50px')
+            .style('display', 'none')
+            .attr('title', 'Arrow font size')
+            .on('change', () => {
+            this.config.labelFontSize = labelFontSize.property('value');
+            this.svg
+                .selectAll('text.label_text')
+                .attr('font-size', this.config.labelFontSize);
         });
         // Set distances
-        let setDistances = function () {
-            self.config.nodeSizeX = distanceX.property("value");
-            self.config.nodeSizeY = distanceY.property("value");
-            self.wrapText();
-            self.tree
-                .nodeSize([
-                self.config.nodeSizeX,
-                self.config.nodeSizeY
-            ]);
-            self.update(self.root);
+        const setDistances = () => {
+            this.config.nodeSizeX = distanceX.property('value');
+            this.config.nodeSizeY = distanceY.property('value');
+            this.wrapText();
+            this.tree.nodeSize([this.config.nodeSizeX, this.config.nodeSizeY]);
+            this.update(this.root);
         };
         // Set Distance X
-        let distanceXToggle = form.append("input")
-            .attr("id", "trial-" + this.graphId + "-toolbar-distance-x")
-            .attr("type", "checkbox")
-            .attr("name", "trial-toolbar-distance-x")
-            .attr("value", "show")
-            .property("checked", false)
-            .on("change", () => {
-            let display = distanceXToggle.property("checked") ? "inline-block" : "none";
-            distanceX.style("display", display);
+        const distanceXToggle = form
+            .append('input')
+            .attr('id', 'trial-' + this.graphId + '-toolbar-distance-x')
+            .attr('type', 'checkbox')
+            .attr('name', 'trial-toolbar-distance-x')
+            .attr('value', 'show')
+            .property('checked', false)
+            .on('change', () => {
+            const display = distanceXToggle.property('checked')
+                ? 'inline-block'
+                : 'none';
+            distanceX.style('display', display);
         });
-        form.append("label")
-            .attr("for", "trial-" + this.graphId + "-toolbar-distance-x")
-            .attr("title", "Set horizontal distance")
-            .append("i")
-            .classed("fa fa-arrows-h", true);
-        let distanceX = form.append("input")
-            .attr("type", "number")
-            .attr("value", this.config.nodeSizeX)
-            .style("width", "65px")
-            .style("display", "none")
-            .attr("title", "Node horizontal distance")
-            .on("change", setDistances);
+        form
+            .append('label')
+            .attr('for', 'trial-' + this.graphId + '-toolbar-distance-x')
+            .attr('title', 'Set horizontal distance')
+            .append('i')
+            .classed('fa fa-arrows-h', true);
+        const distanceX = form
+            .append('input')
+            .attr('type', 'number')
+            .attr('value', this.config.nodeSizeX)
+            .style('width', '65px')
+            .style('display', 'none')
+            .attr('title', 'Node horizontal distance')
+            .on('change', setDistances);
         // Set Distance Y
-        let distanceYToggle = form.append("input")
-            .attr("id", "trial-" + this.graphId + "-toolbar-distance-y")
-            .attr("type", "checkbox")
-            .attr("name", "trial-toolbar-distance-y")
-            .attr("value", "show")
-            .property("checked", false)
-            .on("change", () => {
-            let display = distanceYToggle.property("checked") ? "inline-block" : "none";
-            distanceY.style("display", display);
+        const distanceYToggle = form
+            .append('input')
+            .attr('id', 'trial-' + this.graphId + '-toolbar-distance-y')
+            .attr('type', 'checkbox')
+            .attr('name', 'trial-toolbar-distance-y')
+            .attr('value', 'show')
+            .property('checked', false)
+            .on('change', () => {
+            const display = distanceYToggle.property('checked')
+                ? 'inline-block'
+                : 'none';
+            distanceY.style('display', display);
         });
-        form.append("label")
-            .attr("for", "trial-" + this.graphId + "-toolbar-distance-y")
-            .attr("title", "Set vertical distance")
-            .append("i")
-            .classed("fa fa-arrows-v", true);
-        let distanceY = form.append("input")
-            .attr("type", "number")
-            .attr("value", this.config.nodeSizeY)
-            .style("width", "65px")
-            .style("display", "none")
-            .attr("title", "Node vertical distance")
-            .on("change", setDistances);
+        form
+            .append('label')
+            .attr('for', 'trial-' + this.graphId + '-toolbar-distance-y')
+            .attr('title', 'Set vertical distance')
+            .append('i')
+            .classed('fa fa-arrows-v', true);
+        const distanceY = form
+            .append('input')
+            .attr('type', 'number')
+            .attr('value', this.config.nodeSizeY)
+            .style('width', '65px')
+            .style('display', 'none')
+            .attr('title', 'Node vertical distance')
+            .on('change', setDistances);
         // Submit
-        form.append("input")
-            .attr("type", "submit")
-            .attr("name", "prevent-enter")
-            .attr("onclick", "return false;")
-            .style("display", "none");
+        form
+            .append('input')
+            .attr('type', 'submit')
+            .attr('name', 'prevent-enter')
+            .attr('onclick', 'return false;')
+            .style('display', 'none');
     }
     load(data, t1, t2) {
         this.init(data, t1, t2);
@@ -71484,38 +71634,38 @@ class TrialGraph {
     }
     restorePosition() {
         this.wrapText();
-        this.svg
-            .call(this.zoom.transform, d3_zoom_1.zoomIdentity.translate(this.config.left + this.config.width / 2, this.config.top));
+        this.svg.call(this.zoom.transform, d3_zoom_1.zoomIdentity.translate(this.config.left + this.config.width / 2, this.config.top));
     }
     updateWindow() {
-        let size = this.config.customSize(this);
+        const size = this.config.customSize(this);
         this.config.width = size[0];
         this.config.height = size[1];
-        this.svg
-            .attr("width", size[0])
-            .attr("height", size[1]);
+        this.svg.attr('width', size[0]).attr('height', size[1]);
     }
     update(source) {
-        let treeData = this.tree(this.root);
+        const treeData = this.tree(this.root);
         this.nodes = treeData.descendants();
-        var node = this.g.selectAll('g.node')
-            .data(this.nodes, (d) => { return d.id || (d.id = ++this.i); });
-        let validNodes = {};
+        const node = this.g.selectAll('g.node').data(this.nodes, (d) => {
+            return d.id || (d.id = ++this.i);
+        });
+        const validNodes = {};
         this.nodes.forEach((node) => {
             validNodes[node.data.index] = node;
         });
-        var edges = this.alledges.filter((edge) => {
-            let source = validNodes[edge.source];
-            let target = validNodes[edge.target];
-            if (source == undefined || target == undefined) {
+        const edges = this.alledges
+            .filter((edge) => {
+            const source = validNodes[edge.source];
+            const target = validNodes[edge.target];
+            if (source == null || target == null) {
                 return false;
             }
             return true;
-        }).map((edge) => {
-            let source = validNodes[edge.source];
-            let target = validNodes[edge.target];
-            var copy = Object.assign({}, edge);
-            copy.id = edge.source + "-" + edge.target;
+        })
+            .map(edge => {
+            const source = validNodes[edge.source];
+            const target = validNodes[edge.target];
+            const copy = Object.assign({}, edge);
+            copy.id = edge.source + '-' + edge.target;
             copy.source = source;
             copy.target = target;
             return copy;
@@ -71524,114 +71674,173 @@ class TrialGraph {
         this.updateLinks(source, edges);
         this.updateLinkLabels(edges);
         // Store old positions for transition
-        this.nodes.forEach(function (d, i) {
+        this.nodes.forEach((d, i) => {
             d.x0 = d.x;
             d.y0 = d.y;
         });
         this.wrapText();
     }
     download(name) {
-        var isFileSaverSupported = false;
+        let isFileSaverSupported = false;
         try {
             isFileSaverSupported = !!new Blob();
         }
         catch (e) {
-            alert("blob not supported");
+            alert('blob not supported');
         }
-        name = (name === undefined) ? "trial.svg" : name;
-        let gnode = this.g.node();
-        var bbox = gnode.getBBox();
-        var width = this.svg.attr("width"), height = this.svg.attr("height");
-        this.g.attr("transform", "translate(" + (-bbox.x + 5) + ", " + (-bbox.y + 5) + ")");
-        let svgNode = this.svg
-            .attr("title", "Trial")
-            .attr("version", 1.1)
-            .attr("width", bbox.width + 10)
-            .attr("height", bbox.height + 10)
-            .attr("xmlns", "http://www.w3.org/2000/svg")
+        name = name === undefined ? 'trial.svg' : name;
+        const gnode = this.g.node();
+        const bbox = gnode.getBBox();
+        const width = this.svg.attr('width'), height = this.svg.attr('height');
+        this.g.attr('transform', 'translate(' + (-bbox.x + 5) + ', ' + (-bbox.y + 5) + ')');
+        const svgNode = this.svg
+            .attr('title', 'Trial')
+            .attr('version', 1.1)
+            .attr('width', bbox.width + 10)
+            .attr('height', bbox.height + 10)
+            .attr('xmlns', 'http://www.w3.org/2000/svg')
             .node();
-        var html = svgNode.parentNode.innerHTML;
+        let html = svgNode.parentNode.innerHTML;
         html = '<svg xmlns:xlink="http://www.w3.org/1999/xlink" ' + html.slice(4);
-        this.svg
-            .attr("width", width)
-            .attr("height", height);
-        this.g.attr("transform", this.transform);
+        this.svg.attr('width', width).attr('height', height);
+        this.g.attr('transform', this.transform);
         if (isFileSaverSupported) {
             console.log(html);
-            var blob = new Blob([html], { type: "image/svg+xml" });
+            const blob = new Blob([html], { type: 'image/svg+xml' });
             fs.saveAs(blob, name);
         }
     }
     wrapText() {
-        this.svg.selectAll(".node text:not(.nowrap)")
+        this.svg
+            .selectAll('.node text:not(.nowrap)')
             .call(utils_1.wrap, this.config.nodeSizeX);
     }
     calculateColor(d, trial_id) {
-        var proportion = Math.round(255 * (1.0 - (d.duration[trial_id] / this.maxTotalDuration)));
+        const proportion = Math.round(255 * (1.0 - d.duration[trial_id] / this.maxTotalDuration));
         //Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
         return (0, d3_color_1.rgb)(255, proportion, proportion, 255).toString();
     }
     getFunctionDiff(activations, trial_ids) {
-        let showModal = (activations[trial_ids[0]].length > 1 || activations[trial_ids[1]].length > 1);
+        const showModal = activations[trial_ids[0]].length > 1 ||
+            activations[trial_ids[1]].length > 1;
         let modal;
         let modalBody;
         let button;
         if (showModal) {
-            modal = (0, d3_selection_1.select)(document.getElementById("main"))
-                .append("div").classed("modal fade show", true)
-                .attr("id", "functionDiffModal")
-                .attr("tabindex", "-1")
-                .attr("role", "dialog")
-                .attr("aria-labelledby", "functionDiffModalLabel")
-                .style("display", "none")
-                .attr("aria-hidden", "false")
-                .style("display", "block");
-            let modalDialog = modal.append("div").classed("modal-dialog", true).attr("role", "document");
-            let modalContent = modalDialog.append("div").classed("modal-content", true);
-            let modalHeader = modalContent.append("div").classed("modal-header", true);
-            modalHeader.append("h5").classed("modal-title", true).attr("id", "functionDiffModalLabel").text("Select a function activation: ");
-            modalHeader.append("button").classed("close", true).attr("data-dismiss", "modal").attr("aria-label", "Close")
-                .append("span").attr("aria-hidden", "true").html("&times;").on("click", () => modal.remove());
-            modalBody = modalContent.append("div").classed("modal-body", true);
-            modalBody.append("p").text("This function was called multipled times. Select the activations you want to see their diff").style("font-weight", "bold");
-            button = modalContent.append("div").classed("modal-footer", true).append("button").classed("btn btn-primary", true).text("Confirm");
+            modal = (0, d3_selection_1.select)(document.getElementById('main'))
+                .append('div')
+                .classed('modal fade show', true)
+                .attr('id', 'functionDiffModal')
+                .attr('tabindex', '-1')
+                .attr('role', 'dialog')
+                .attr('aria-labelledby', 'functionDiffModalLabel')
+                .style('display', 'none')
+                .attr('aria-hidden', 'false')
+                .style('display', 'block');
+            const modalDialog = modal
+                .append('div')
+                .classed('modal-dialog', true)
+                .attr('role', 'document');
+            const modalContent = modalDialog
+                .append('div')
+                .classed('modal-content', true);
+            const modalHeader = modalContent
+                .append('div')
+                .classed('modal-header', true);
+            modalHeader
+                .append('h5')
+                .classed('modal-title', true)
+                .attr('id', 'functionDiffModalLabel')
+                .text('Select a function activation: ');
+            modalHeader
+                .append('button')
+                .classed('close', true)
+                .attr('data-dismiss', 'modal')
+                .attr('aria-label', 'Close')
+                .append('span')
+                .attr('aria-hidden', 'true')
+                .html('&times;')
+                .on('click', () => modal.remove());
+            modalBody = modalContent.append('div').classed('modal-body', true);
+            modalBody
+                .append('p')
+                .text('This function was called multipled times. Select the activations you want to see their diff')
+                .style('font-weight', 'bold');
+            button = modalContent
+                .append('div')
+                .classed('modal-footer', true)
+                .append('button')
+                .classed('btn btn-primary', true)
+                .text('Confirm');
         }
-        let compareFunctionCallsUrl = "commands/diff";
-        let windowLabel = "Diff";
+        let compareFunctionCallsUrl = 'commands/diff';
+        let windowLabel = 'Diff';
         for (let i = 0; i < trial_ids.length; i++) {
-            let trial = trial_ids[i];
+            const trial = trial_ids[i];
             if (showModal) {
-                let trialNumber = i == 0 ? "first" : "second";
-                modalBody.append("span").text("Select the " + trialNumber + " trial activation: ");
-                let select = modalBody.append("select").classed("form-select", true).attr("arial-label", "functionTrial" + trial).attr("id", "functionTrial" + trial);
-                for (let activation in activations[trial]) {
-                    fetch("/diff/getFunctionActivationArguments/" + trial + "/" + activations[trial][activation], {
+                const trialNumber = i === 0 ? 'first' : 'second';
+                modalBody
+                    .append('span')
+                    .text('Select the ' + trialNumber + ' trial activation: ');
+                const select = modalBody
+                    .append('select')
+                    .classed('form-select', true)
+                    .attr('arial-label', 'functionTrial' + trial)
+                    .attr('id', 'functionTrial' + trial);
+                for (const activation in activations[trial]) {
+                    fetch('/diff/getFunctionActivationArguments/' +
+                        trial +
+                        '/' +
+                        activations[trial][activation], {
                         method: 'GET', // *GET, POST, PUT, DELETE, etc.
                         headers: {
                             'Content-Type': 'application/json'
-                        },
-                    }).then((response) => {
-                        response.json().then((json) => {
-                            select.append("option").attr("value", activations[trial][activation]).text(activations[trial][activation] + " params: " + json.function_params.toString());
+                        }
+                    }).then(response => {
+                        response.json().then(json => {
+                            select
+                                .append('option')
+                                .attr('value', activations[trial][activation])
+                                .text(activations[trial][activation] +
+                                ' params: ' +
+                                json.function_params.toString());
                         });
                     });
                 }
-                modalBody.append("br");
+                modalBody.append('br');
             }
             else {
-                if (compareFunctionCallsUrl.length > 0)
-                    compareFunctionCallsUrl += "/";
-                compareFunctionCallsUrl += trial + "/";
+                if (compareFunctionCallsUrl.length > 0) {
+                    compareFunctionCallsUrl += '/';
+                }
+                compareFunctionCallsUrl += trial + '/';
                 compareFunctionCallsUrl += activations[trial];
-                windowLabel += " trial " + trial + " activation_id " + activations[trial];
+                windowLabel +=
+                    ' trial ' + trial + ' activation_id ' + activations[trial];
             }
         }
         if (showModal) {
-            button === null || button === void 0 ? void 0 : button.on("click", () => {
-                let firstTrialActivation = document.getElementById("functionTrial" + trial_ids[0]).selectedOptions[0].value;
-                let secondTrialActivation = document.getElementById("functionTrial" + trial_ids[1]).selectedOptions[0].value;
-                compareFunctionCallsUrl += "/" + trial_ids[0] + "/" + firstTrialActivation + "/" + trial_ids[1] + "/" + secondTrialActivation;
-                windowLabel += " trial " + trial_ids[0] + " activation_id " + firstTrialActivation + " trial " + trial_ids[1] + " activation_id " + secondTrialActivation;
+            button === null || button === void 0 ? void 0 : button.on('click', () => {
+                const firstTrialActivation = (document.getElementById('functionTrial' + trial_ids[0])).selectedOptions[0].value;
+                const secondTrialActivation = (document.getElementById('functionTrial' + trial_ids[1])).selectedOptions[0].value;
+                compareFunctionCallsUrl +=
+                    '/' +
+                        trial_ids[0] +
+                        '/' +
+                        firstTrialActivation +
+                        '/' +
+                        trial_ids[1] +
+                        '/' +
+                        secondTrialActivation;
+                windowLabel +=
+                    ' trial ' +
+                        trial_ids[0] +
+                        ' activation_id ' +
+                        firstTrialActivation +
+                        ' trial ' +
+                        trial_ids[1] +
+                        ' activation_id ' +
+                        secondTrialActivation;
                 makeRequest(this.showDiffFunction, this.nowVisPanel);
                 modal.remove();
             });
@@ -71644,97 +71853,117 @@ class TrialGraph {
                 method: 'GET', // *GET, POST, PUT, DELETE, etc.
                 headers: {
                     'Content-Type': 'application/json'
-                },
-            }).then((response) => {
-                response.json().then((json) => {
-                    if (showDiffFunction)
+                }
+            }).then(response => {
+                response.json().then(json => {
+                    if (showDiffFunction) {
                         showDiffFunction(json, windowLabel, nowVisPanel);
+                    }
                 });
             });
         }
     }
     closeTooltip() {
-        this.tooltipDiv.transition()
-            .duration(500)
-            .style("opacity", 0);
-        this.tooltipDiv.classed("hidden", true);
+        this.tooltipDiv.transition().duration(500).style('opacity', 0);
+        this.tooltipDiv.classed('hidden', true);
     }
     showTooltip(event, d, trial_id) {
-        var self = this;
-        this.tooltipDiv.classed("hidden", false);
-        this.tooltipDiv.transition()
-            .duration(200)
-            .style("opacity", 0.9);
+        this.tooltipDiv.classed('hidden', false);
+        this.tooltipDiv.transition().duration(200).style('opacity', 0.9);
         if (this.config.queryTooltip) {
-            var string = d.tooltip[trial_id];
-            var regexp = (/T(.*) - (\d*)<br>Line \d*?<br>/g);
-            var match = regexp.exec(string);
-            this.tooltipDiv.html("")
-                .style("left", (event.pageX - 3) + "px")
-                .style("top", (event.pageY - 28) + "px");
+            const string = d.tooltip[trial_id];
+            const regexp = /T(.*) - (\d*)<br>Line \d*?<br>/g;
+            let match = regexp.exec(string);
+            this.tooltipDiv
+                .html('')
+                .style('left', event.pageX - 3 + 'px')
+                .style('top', event.pageY - 28 + 'px');
             while (match != null) {
-                var div = document.createElement("div");
+                const div = document.createElement('div');
                 //var div2 = document.createElement("div");
                 this.tooltipDiv.append(() => div);
                 //this.tooltipDiv.append(() => div2);
-                var aid = match[2];
-                if (aid in self.activationStorage) {
+                const aid = match[2];
+                if (aid in this.activationStorage) {
                     this.updateTooltipDiv(aid, div);
                 }
                 else {
-                    self.config.customLoadTooltip(self, div, match[0], match[1], match[2]);
+                    this.config.customLoadTooltip(this, div, match[0], match[1], match[2]);
                 }
                 match = regexp.exec(string);
             }
         }
         else {
-            this.tooltipDiv.html(d.tooltip[trial_id])
-                .style("left", (event.pageX - 3) + "px")
-                .style("top", (event.pageY - 28) + "px");
+            this.tooltipDiv
+                .html(d.tooltip[trial_id])
+                .style('left', event.pageX - 3 + 'px')
+                .style('top', event.pageY - 28 + 'px');
         }
     }
     updateTooltipDiv(activationId, div) {
-        var data = this.activationStorage[activationId];
-        var title = data.id + " - " + data.name;
-        if (data.hash != "") {
-            title = '<a href="/trials/files/' + data.hash + '/' + data.name + '">' + title + "</a>";
+        const data = this.activationStorage[activationId];
+        let title = data.id + ' - ' + data.name;
+        if (data.hash !== '') {
+            title =
+                '<a href="/trials/files/' +
+                    data.hash +
+                    '/' +
+                    data.name +
+                    '">' +
+                    title +
+                    '</a>';
         }
-        var result = [
-            '<span class="attr"> <span style="font-weight: bold;">' + title + '</span></span>',
-            '<span class="attr"> <span style="font-weight: bold;"> Line: </span> <span class="line">' + data.line + "</span></span>",
-            '<span class="attr"> <span style="font-weight: bold;"> Start: </span> <span class="start">' + data.start + "</span></span>",
-            '<span class="attr"> <span style="font-weight: bold;"> Finish: </span> <span class="finish">' + data.finish + "</span></span>",
-            '<span class="attr"> <span style="font-weight: bold;"> Duration: </span> <span class="duration">' + data.duration + "ns</span></span>",
-            '<span class="attr"> <span style="font-weight: bold;"> Return: </span> <span class="return">' + data.return_value + "</span></span>",
+        const result = [
+            '<span class="attr"> <span style="font-weight: bold;">' +
+                title +
+                '</span></span>',
+            '<span class="attr"> <span style="font-weight: bold;"> Line: </span> <span class="line">' +
+                data.line +
+                '</span></span>',
+            '<span class="attr"> <span style="font-weight: bold;"> Start: </span> <span class="start">' +
+                data.start +
+                '</span></span>',
+            '<span class="attr"> <span style="font-weight: bold;"> Finish: </span> <span class="finish">' +
+                data.finish +
+                '</span></span>',
+            '<span class="attr"> <span style="font-weight: bold;"> Duration: </span> <span class="duration">' +
+                data.duration +
+                'ns</span></span>',
+            '<span class="attr"> <span style="font-weight: bold;"> Return: </span> <span class="return">' +
+                data.return_value +
+                '</span></span>'
         ];
         // ToDo: parameters and globals
-        div.outerHTML = result.join("<br>") + "<br><br>";
+        div.outerHTML = result.join('<br>') + '<br><br>';
     }
     createMarker(name, cls, fill) {
-        this.svg.append("svg:defs").selectAll("marker")
+        this.svg
+            .append('svg:defs')
+            .selectAll('marker')
             .data([name])
-            .enter().append("svg:marker")
-            .attr("id", this.graphId + "-" + name)
-            .attr("viewBox", "0 -5 10 10")
-            .attr("refX", 10)
-            .attr("refY", 0)
-            .attr("markerWidth", 6)
-            .attr("markerHeight", 6)
-            .attr("orient", "auto")
-            .append("svg:path")
+            .enter()
+            .append('svg:marker')
+            .attr('id', this.graphId + '-' + name)
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 10)
+            .attr('refY', 0)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('svg:path')
             .classed(cls, true)
-            .attr("fill", fill)
-            .attr("d", "M0,-5L10,0L0,5");
+            .attr('fill', fill)
+            .attr('d', 'M0,-5L10,0L0,5');
     }
     defaultNodeStroke(d) {
-        let color = this.colors[d.data.trial_ids[0]];
-        if (d.data.trial_ids.length > 1 || color == 0) {
-            return "#000";
+        const color = this.colors[d.data.trial_ids[0]];
+        if (d.data.trial_ids.length > 1 || color === 0) {
+            return '#000';
         }
-        if (color == 1) {
-            return "red";
+        if (color === 1) {
+            return 'red';
         }
-        return "green";
+        return 'green';
     }
     nodeClick(d) {
         if (d.children) {
@@ -71748,41 +71977,43 @@ class TrialGraph {
         this.update(d);
     }
     updateNodes(source, node) {
-        let self = this;
-        var nodeEnter = node.enter().append('g')
-            .attr("id", (d) => {
-            return "node-" + this.graphId + "-" + d.data.index;
+        const nodeEnter = node
+            .enter()
+            .append('g')
+            .attr('id', (d) => {
+            return 'node-' + this.graphId + '-' + d.data.index;
         })
             .attr('class', 'node')
-            .attr("cursor", "pointer")
+            .attr('cursor', 'pointer')
             .attr('transform', (d) => {
-            return "translate(" + source.x + "," + source.y + ")";
+            return 'translate(' + source.x + ',' + source.y + ')';
         })
             .on('click', (event, d) => {
-            let activations = d.data.activations;
+            const activations = d.data.activations;
             if (event.ctrlKey && Object.keys(activations).length > 1) {
-                self.getFunctionDiff(activations, d.data.trial_ids);
+                this.getFunctionDiff(activations, d.data.trial_ids);
             }
             else {
                 this.nodeClick(d);
             }
         })
-            .on('mouseover', function (event, d) {
-            if (self.config.useTooltip) {
-                self.closeTooltip();
+            .on('mouseover', (event, d) => {
+            if (this.config.useTooltip) {
+                this.closeTooltip();
                 if ((0, d3_selection_1.pointers)(event)[0][0] < 10) {
-                    self.showTooltip(event, d.data, self.t1);
+                    this.showTooltip(event, d.data, this.t1);
                 }
                 else {
-                    self.showTooltip(event, d.data, self.t2);
+                    this.showTooltip(event, d.data, this.t2);
                 }
             }
-            self.config.customMouseOver(self, d);
+            this.config.customMouseOver(this, d);
             return false;
-        }).on('mouseout', function (event, d) {
-            self.config.customMouseOut(self, d);
+        })
+            .on('mouseout', (event, d) => {
+            this.config.customMouseOut(this, d);
         });
-        /* nodeEnter.attr("activations_ids", (d:VisibleTrialNode)=>{
+        /* nodeEnter.attr("activations_ids", (d:IVisibleTrialNode)=>{
           let activations = d.data.activations;
           let attrValue = "";
           for(let trial in activations){
@@ -71793,138 +72024,152 @@ class TrialGraph {
           return attrValue;
         }); */
         // Circle for new nodes
-        nodeEnter.append('rect')
+        nodeEnter
+            .append('rect')
             .attr('class', 'node')
             .attr('rx', 1e-6)
             .attr('ry', 1e-6)
             .attr('width', 1e-6)
             .attr('height', 1e-6)
-            .attr("stroke", (d) => this.defaultNodeStroke(d))
-            .attr("stroke-width", "3px")
-            .attr("fill", (d) => {
-            if (d.data.trial_ids.length == 1) {
+            .attr('stroke', (d) => this.defaultNodeStroke(d))
+            .attr('stroke-width', '3px')
+            .attr('fill', (d) => {
+            if (d.data.trial_ids.length === 1) {
                 return this.calculateColor(d.data, this.t1);
             }
-            var grad = this.svg.append("svg:defs")
-                .append("linearGradient")
-                .attr("id", "grad-" + this.graphId + "-" + d.data.index)
-                .attr("x1", "100%")
-                .attr("x2", "0%")
-                .attr("y1", "0%")
-                .attr("y2", "0%");
-            grad.append("stop")
-                .attr("offset", "50%")
-                .attr("stop-color", this.calculateColor(d.data, this.t2));
-            grad.append("stop")
-                .attr("offset", "50%")
-                .attr("stop-color", this.calculateColor(d.data, this.t1));
-            return "url(#grad-" + this.graphId + "-" + d.data.index + ")";
+            const grad = this.svg
+                .append('svg:defs')
+                .append('linearGradient')
+                .attr('id', 'grad-' + this.graphId + '-' + d.data.index)
+                .attr('x1', '100%')
+                .attr('x2', '0%')
+                .attr('y1', '0%')
+                .attr('y2', '0%');
+            grad
+                .append('stop')
+                .attr('offset', '50%')
+                .attr('stop-color', this.calculateColor(d.data, this.t2));
+            grad
+                .append('stop')
+                .attr('offset', '50%')
+                .attr('stop-color', this.calculateColor(d.data, this.t1));
+            return 'url(#grad-' + this.graphId + '-' + d.data.index + ')';
         });
         // Text for new nodes
-        nodeEnter.append('text')
-            .attr("dy", ".35em")
-            .attr("font-family", "sans-serif")
-            .attr("font-size", this.config.fontSize + "px")
-            .attr("pointer-events", "none")
-            .attr("fill", "#000")
-            .attr("y", 24)
-            .attr("x", 10)
-            .attr("text-anchor", "middle")
+        nodeEnter
+            .append('text')
+            .attr('dy', '.35em')
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', this.config.fontSize + 'px')
+            .attr('pointer-events', 'none')
+            .attr('fill', '#000')
+            .attr('y', 24)
+            .attr('x', 10)
+            .attr('text-anchor', 'middle')
             .each(function (d) {
             const textLabel = (0, d3_selection_1.select)(this);
             const name = d.data.name.split('<br>');
             if (name.length > 1) {
-                textLabel.append("tspan")
-                    .attr("x", "10")
-                    .attr("dy", ".35em")
-                    .attr("font-weight", "bold")
+                textLabel
+                    .append('tspan')
+                    .attr('x', '10')
+                    .attr('dy', '.35em')
+                    .attr('font-weight', 'bold')
                     .text(name[0]);
-                textLabel.append("tspan")
-                    .attr("x", "10")
-                    .attr("dy", "1em")
+                textLabel
+                    .append('tspan')
+                    .attr('x', '10')
+                    .attr('dy', '1em')
                     .text(name[1]);
-                textLabel.attr("class", "nowrap");
+                textLabel.attr('class', 'nowrap');
             }
             else {
                 return textLabel.text(d.data.name);
             }
         });
-        nodeEnter.append("path")
-            .attr("stroke", "#000")
-            .attr("d", function (d) {
+        nodeEnter
+            .append('path')
+            .attr('stroke', '#000')
+            .attr('d', (d) => {
             if (d.data.trial_ids.length > 1) {
-                return "M10," + 0 +
-                    "L10," + 20;
+                return 'M10,' + 0 + 'L10,' + 20;
             }
-            return "M0,0L0,0";
+            return 'M0,0L0,0';
         });
         // Update
-        var nodeUpdate = nodeEnter.merge(node);
+        const nodeUpdate = nodeEnter.merge(node);
         // Transition to proper position
-        nodeUpdate.transition()
+        nodeUpdate
+            .transition()
             .duration(this.config.duration)
-            .attr("transform", (d) => {
-            let color = this.colors[d.data.trial_ids[0]];
+            .attr('transform', (d) => {
+            const color = this.colors[d.data.trial_ids[0]];
             d.dy = 0;
-            if (color == 1) {
+            if (color === 1) {
                 d.dy = -40;
             }
-            else if (color == 2) {
+            else if (color === 2) {
                 d.dy = 40;
             }
-            return "translate(" + (d.x - 10) + "," + (d.y + d.dy - 10) + ")";
+            return 'translate(' + (d.x - 10) + ',' + (d.y + d.dy - 10) + ')';
         });
         // Update the node attributes and style
-        nodeUpdate.select('rect.node')
+        nodeUpdate
+            .select('rect.node')
             .attr('width', 20)
             .attr('height', 20)
             .attr('rx', 20)
             .attr('ry', 20)
-            .attr("rx", (d) => {
+            .attr('rx', (d) => {
             return d._children ? 0 : 20;
         })
-            .attr("ry", (d) => {
+            .attr('ry', (d) => {
             return d._children ? 0 : 20;
         })
             .attr('cursor', 'pointer');
         // Remove exiting nodes
-        var nodeExit = node.exit().transition()
+        const nodeExit = node
+            .exit()
+            .transition()
             .duration(this.config.duration)
-            .attr("transform", function (d) {
-            return "translate(" + source.x + "," + source.y + ")";
+            .attr('transform', (d) => {
+            return 'translate(' + source.x + ',' + source.y + ')';
         })
             .remove();
         // Reduce node rects size to 0 on exit
-        nodeExit.select('rect')
+        nodeExit
+            .select('rect')
             .attr('rx', 1e-6)
             .attr('ry', 1e-6)
             .attr('width', 1e-6)
             .attr('height', 1e-6);
         // Reduce opacity of labels on exit
-        nodeExit.select('text')
-            .style('fill-opacity', 1e-6);
+        nodeExit.select('text').style('fill-opacity', 1e-6);
     }
     updateLinks(source, edges) {
-        var link = this.g.selectAll('path.link')
+        const link = this.g
+            .selectAll('path.link')
             .data(edges, (d) => d.id);
         // Enter any new links at the parent's previous position.
-        var linkEnter = link.enter().insert('path', "g")
-            .attr("class", "link")
-            .attr("id", (d, i) => {
-            return "pathId-" + this.graphId + "-" + d.id;
+        const linkEnter = link
+            .enter()
+            .insert('path', 'g')
+            .attr('class', 'link')
+            .attr('id', (d, i) => {
+            return 'pathId-' + this.graphId + '-' + d.id;
         })
-            .attr("fill", "none")
-            .attr("stroke-width", "1.5px")
+            .attr('fill', 'none')
+            .attr('stroke-width', '1.5px')
             .attr('d', (d) => {
-            var o = { y: source.y0, x: source.x0 };
-            if (d.source.dy == undefined) {
+            const o = { y: source.y0, x: source.x0 };
+            if (d.source.dy == null) {
                 d.source.dy = 0;
             }
-            if (d.target.dy == undefined) {
+            if (d.target.dy == null) {
                 d.target.dy = 0;
             }
-            let ox = source.x0 || 0, oy = source.y0 || 0, x1 = d.source.x, y1 = d.source.y + d.source.dy, x2 = d.target.x, y2 = d.target.y + d.target.dy, dx = x2 - x1, dy = y2 - y1;
-            if (d.type === 'initial' || d.type === 'call' || d.type == 'return') {
+            const ox = source.x0 || 0, oy = source.y0 || 0, x1 = d.source.x, y1 = d.source.y + d.source.dy, x2 = d.target.x, y2 = d.target.y + d.target.dy, dx = x2 - x1, dy = y2 - y1;
+            if (d.type === 'initial' || d.type === 'call' || d.type === 'return') {
                 // Initial
                 return (0, utils_1.diagonal)(o, o);
             }
@@ -71938,26 +72183,29 @@ class TrialGraph {
             //return diagonal(d.source, d.target);
             return (0, utils_1.diagonal)(o, o);
         })
-            .attr("marker-end", (d) => {
+            .attr('marker-end', (d) => {
             let count = 0;
-            for (let trial_id in d.count) {
-                if (trial_id == this.t1.toString()) {
+            for (const trial_id in d.count) {
+                if (trial_id === this.t1.toString()) {
                     count += 1;
                 }
-                if (trial_id == this.t2.toString()) {
+                if (trial_id === this.t2.toString()) {
                     count += 2;
                 }
             }
-            if (count == 0 || count == 3) { // Single trial or diff
-                return "url(#" + this.graphId + "-end)";
+            if (count === 0 || count === 3) {
+                // Single trial or diff
+                return 'url(#' + this.graphId + '-end)';
             }
-            if (count == 1) { // First trial
-                return "url(#" + this.graphId + "-endbefore)";
+            if (count === 1) {
+                // First trial
+                return 'url(#' + this.graphId + '-endbefore)';
             }
-            if (count == 2) { // Second trial
-                return "url(#" + this.graphId + "-endafter)";
+            if (count === 2) {
+                // Second trial
+                return 'url(#' + this.graphId + '-endafter)';
             }
-            return "";
+            return '';
         })
             .attr('stroke', (d) => {
             if (d.type === 'sequence') {
@@ -71972,24 +72220,27 @@ class TrialGraph {
             return 'none';
         });
         // UPDATE
-        var linkUpdate = linkEnter.merge(link);
+        const linkUpdate = linkEnter.merge(link);
         // Transition back to the parent element position
-        linkUpdate.transition()
+        linkUpdate
+            .transition()
             .duration(this.config.duration)
             .attr('d', (d) => {
-            if (d.source.dy == undefined) {
+            if (d.source.dy == null) {
                 d.source.dy = 0;
             }
-            if (d.target.dy == undefined) {
+            if (d.target.dy == null) {
                 d.target.dy = 0;
             }
-            let sd = d.source.data, td = d.target.data, x1 = d.source.x, y1 = d.source.y + d.source.dy, x2 = d.target.x, y2 = d.target.y + d.target.dy, dx = x2 - x1, dy = y2 - y1, theta = Math.atan(dx / dy), phi = Math.atan(dy / dx), r = 10 + 2, sin_theta = r * Math.sin(theta), cos_theta = r * Math.cos(theta), sin_phi = r * Math.sin(phi), cos_phi = r * Math.cos(phi), m1 = (y2 > y1) ? 1 : -1, m2 = (x2 > x1) ? -1 : 1;
+            const sd = d.source.data, td = d.target.data;
+            let x1 = d.source.x, y1 = d.source.y + d.source.dy, x2 = d.target.x, y2 = d.target.y + d.target.dy;
+            const dx = x2 - x1, dy = y2 - y1, theta = Math.atan(dx / dy), phi = Math.atan(dy / dx), r = 10 + 2, sin_theta = r * Math.sin(theta), cos_theta = r * Math.cos(theta), sin_phi = r * Math.sin(phi), cos_phi = r * Math.cos(phi), m1 = y2 > y1 ? 1 : -1, m2 = x2 > x1 ? -1 : 1;
             if (d.type === 'initial') {
                 // Initial
-                return `M ${(x2 - 20)},${(y2 - 20)}
-            L ${(x2 - r / 2.0)},${(y2 - r / 2.0)}`;
+                return `M ${x2 - 20},${y2 - 20}
+            L ${x2 - r / 2.0},${y2 - r / 2.0}`;
             }
-            else if (d.type === 'call' || d.type == 'return') {
+            else if (d.type === 'call' || d.type === 'return') {
                 // Call/Return
                 x1 += m1 * sin_theta;
                 x2 += m2 * cos_phi;
@@ -72015,15 +72266,15 @@ class TrialGraph {
               -45,1,1
               ${x2 + 5},${y2 + 8}`;
             }
-            else if (sd.parent_index == td.parent_index) {
+            else if (sd.parent_index === td.parent_index) {
                 // Same caller
-                if (dy === 0 && sd.children_index == td.children_index - 1) {
+                if (dy === 0 && sd.children_index === td.children_index - 1) {
                     // Immediate sequence
                     return `M ${x1}, ${y1}
-              L ${(x2 + m2 * cos_phi)}, ${y2}`;
+              L ${x2 + m2 * cos_phi}, ${y2}`;
                 }
                 else {
-                    let sign = -1;
+                    let sign;
                     if (y1 < y2) {
                         x1 += m1 * sin_theta;
                         y1 += m1 * cos_theta;
@@ -72063,41 +72314,45 @@ class TrialGraph {
               ${x2} ${y2}`;
         });
         // Remove any exiting links
-        link.exit() //.transition()
-            .attr('d', function (d) {
+        link
+            .exit() //.transition()
+            .attr('d', (d) => {
             return (0, utils_1.diagonal)(d.source, d.target);
         })
             .remove(); // linkExit
     }
     updateLinkLabels(edges) {
-        var labelPath = this.g.selectAll(".label_text")
+        const labelPath = this.g
+            .selectAll('.label_text')
             .data(edges, (d) => d.id);
-        var labelEnter = labelPath.enter().append("text")
-            .attr("class", "label_text")
-            .attr("font-family", "sans-serif")
-            .attr("font-size", this.config.labelFontSize + "px")
-            .attr("pointer-events", "none")
-            .attr("fill", "#000")
-            .attr("text-anchor", "middle")
-            .attr("dx", (d) => {
-            if (d.source.x == d.target.x) {
+        const labelEnter = labelPath
+            .enter()
+            .append('text')
+            .attr('class', 'label_text')
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', this.config.labelFontSize + 'px')
+            .attr('pointer-events', 'none')
+            .attr('fill', '#000')
+            .attr('text-anchor', 'middle')
+            .attr('dx', (d) => {
+            if (d.source.x === d.target.x) {
                 return 29;
             }
             return (Math.abs(d.source.x - d.target.x) - 10) / 2;
         })
-            .attr("dy", -3)
-            .attr("id", (d, i) => {
-            return "pathlabel-" + this.graphId + "-" + d.id;
+            .attr('dy', -3)
+            .attr('id', (d, i) => {
+            return 'pathlabel-' + this.graphId + '-' + d.id;
         })
-            .append("textPath")
-            .attr("xlink:href", (d, i) => {
-            return "#pathId-" + this.graphId + "-" + d.id;
+            .append('textPath')
+            .attr('xlink:href', (d, i) => {
+            return '#pathId-' + this.graphId + '-' + d.id;
         })
             .text((d) => {
             if (d.type === 'initial') {
                 return '';
             }
-            if (this.t1 == this.t2 || !d.count[this.t2]) {
+            if (this.t1 === this.t2 || !d.count[this.t2]) {
                 return d.count[this.t1].toString();
             }
             else if (!d.count[this.t1]) {
@@ -72111,10 +72366,10 @@ class TrialGraph {
     zoomFunction(event) {
         this.closeTooltip();
         this.transform = event.transform;
-        this.g.attr("transform", event.transform);
+        this.g.attr('transform', event.transform);
     }
     _graphId() {
-        return "trial-graph-" + this.graphId;
+        return 'trial-graph-' + this.graphId;
     }
 }
 exports.TrialGraph = TrialGraph;
@@ -72176,19 +72431,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.diagonal = diagonal;
 /**
-  * Create diagonal line between two nodes
-  */
+ * Create diagonal line between two nodes
+ */
 function diagonal(s, d) {
-    if (s.dy == undefined) {
+    if (s.dy == null) {
         s.dy = 0;
     }
-    if (d.dy == undefined) {
+    if (d.dy == null) {
         d.dy = 0;
     }
-    let path = `M ${s.x} ${(s.y + s.dy)}
-          C ${(s.x + d.x) / 2} ${(s.y + s.dy)},
-            ${(s.x + d.x) / 2} ${(d.y + d.dy)},
-            ${d.x} ${(d.y + d.dy)}`;
+    const path = `M ${s.x} ${s.y + s.dy}
+          C ${(s.x + d.x) / 2} ${s.y + s.dy},
+            ${(s.x + d.x) / 2} ${d.y + d.dy},
+            ${d.x} ${d.y + d.dy}`;
     return path;
 }
 
@@ -72237,10 +72492,11 @@ __exportStar(__webpack_require__(/*! ./web */ "../utils/lib/web.js"), exports);
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.makeid = makeid;
 function makeid() {
-    var text = "";
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for (var i = 0; i < 5; i++)
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 5; i++) {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
     return text;
 }
 
@@ -72260,16 +72516,27 @@ exports.wrap = wrap;
 const d3_selection_1 = __webpack_require__(/*! d3-selection */ "../../node_modules/d3-selection/src/index.js");
 function wrap(text, width) {
     text.each(function () {
-        var text = (0, d3_selection_1.select)(this), words = text.text().split(/(?=_)/).reverse(), word, line = [], lineNumber = 0, lineHeight = 1.1, // ems
-        y = text.attr("y"), dy = parseFloat(text.attr("dy")), tspan = text.text(null).append("tspan").attr("x", 10).attr("y", y).attr("dy", dy + "em");
-        while (word = words.pop()) {
+        const text = (0, d3_selection_1.select)(this), words = text.text().split(/(?=_)/).reverse(), lineHeight = 1.1, // ems
+        y = text.attr('y'), dy = parseFloat(text.attr('dy'));
+        let word, line = [], lineNumber = 0, tspan = text
+            .text(null)
+            .append('tspan')
+            .attr('x', 10)
+            .attr('y', y)
+            .attr('dy', dy + 'em');
+        while ((word = words.pop())) {
             line.push(word);
-            tspan.text(line.join(""));
+            tspan.text(line.join(''));
             if (tspan.node().getComputedTextLength() > width) {
                 line.pop();
-                tspan.text(line.join(""));
+                tspan.text(line.join(''));
                 line = [word];
-                tspan = text.append("tspan").attr("x", 10).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+                tspan = text
+                    .append('tspan')
+                    .attr('x', 10)
+                    .attr('y', y)
+                    .attr('dy', ++lineNumber * lineHeight + dy + 'em')
+                    .text(word);
             }
         }
     });
@@ -72290,27 +72557,28 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.json = json;
 const d3_fetch_1 = __webpack_require__(/*! d3-fetch */ "../../node_modules/d3-fetch/src/index.js");
 function json(innertext, sub, url, fn) {
-    let i = document.createElement('i');
-    i.classList.add("loading");
-    i.classList.add("fa");
-    i.classList.add("fa-spinner");
-    i.classList.add("fa-pulse");
-    sub.innerHTML = "";
+    const i = document.createElement('i');
+    i.classList.add('loading');
+    i.classList.add('fa');
+    i.classList.add('fa-spinner');
+    i.classList.add('fa-pulse');
+    sub.innerHTML = '';
     sub.appendChild(i);
     sub.onclick = function () {
         json(innertext, sub, url, fn);
     };
-    (0, d3_fetch_1.json)(url).then(function (data) {
-        sub.onclick = function () {
-        };
+    (0, d3_fetch_1.json)(url)
+        .then((data) => {
+        sub.onclick = function () { };
         fn(data);
-    }).catch(function (error) {
-        i.classList.remove("fa-spinner");
-        i.classList.remove("fa-pulse");
-        i.classList.add("fa-refresh");
-        i.classList.add("connection-error");
-        let text = document.createElement('span');
-        text.classList.add("error-text");
+    })
+        .catch(error => {
+        i.classList.remove('fa-spinner');
+        i.classList.remove('fa-pulse');
+        i.classList.add('fa-refresh');
+        i.classList.add('connection-error');
+        const text = document.createElement('span');
+        text.classList.add('error-text');
         text.innerHTML = innertext;
         i.appendChild(text);
     });
@@ -74192,50 +74460,50 @@ __webpack_require__.r(__webpack_exports__);
 var ___CSS_LOADER_EXPORT___ = _nowvis_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_nowvis_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
 ___CSS_LOADER_EXPORT___.push([module.id, `.history-toolbar {
-    float: left;
-    overflow: none;
-    z-index: 3;
-    position: absolute;
+  float: left;
+  z-index: 3;
+  position: absolute;
 }
 
 .history-toolbar .buttons {
-    height: 30px;
-    display: inline-block;
-    margin-left: 8px;
+  height: 30px;
+  display: inline-block;
+  margin-left: 8px;
 }
 
 .history-toolbar .buttons > input {
-    height: 30px;
+  height: 30px;
 }
 
-.history-toolbar .buttons > input[type=checkbox] {
-    display: none
+.history-toolbar .buttons > input[type='checkbox'] {
+  display: none;
 }
 
-.history-toolbar .buttons > label, .history-toolbar > div > a {
-    margin: 8px 8px 8px 0;
+.history-toolbar .buttons > label,
+.history-toolbar > div > a {
+  margin: 8px 8px 8px 0;
 }
 
-.history-toolbar .buttons > input[type=checkbox] + label {
-    display:inline-block;
-    color: black;
-    cursor: pointer;
+.history-toolbar .buttons > input[type='checkbox'] + label {
+  display: inline-block;
+  color: black;
+  cursor: pointer;
 }
 
-.history-toolbar .buttons > input[type=checkbox]:checked + label {
-    color: blue;
+.history-toolbar .buttons > input[type='checkbox']:checked + label {
+  color: blue;
 }
 
 .history-toolbar .buttons > a.toollink,
 .history-toolbar .buttons > a.toollink:link,
 .history-toolbar .buttons > a.toollink:visited {
-    color: black;
+  color: black;
 }
 
-.history-toolbar .buttons > a.toollink:active  {
-    color: blue;
+.history-toolbar .buttons > a.toollink:active {
+  color: blue;
 }
-`, "",{"version":3,"sources":["webpack://./../history/style/index.css"],"names":[],"mappings":"AAAA;IACI,WAAW;IACX,cAAc;IACd,UAAU;IACV,kBAAkB;AACtB;;AAEA;IACI,YAAY;IACZ,qBAAqB;IACrB,gBAAgB;AACpB;;AAEA;IACI,YAAY;AAChB;;AAEA;IACI;AACJ;;AAEA;IACI,qBAAqB;AACzB;;AAEA;IACI,oBAAoB;IACpB,YAAY;IACZ,eAAe;AACnB;;AAEA;IACI,WAAW;AACf;;AAEA;;;IAGI,YAAY;AAChB;;AAEA;IACI,WAAW;AACf","sourcesContent":[".history-toolbar {\n    float: left;\n    overflow: none;\n    z-index: 3;\n    position: absolute;\n}\n\n.history-toolbar .buttons {\n    height: 30px;\n    display: inline-block;\n    margin-left: 8px;\n}\n\n.history-toolbar .buttons > input {\n    height: 30px;\n}\n\n.history-toolbar .buttons > input[type=checkbox] {\n    display: none\n}\n\n.history-toolbar .buttons > label, .history-toolbar > div > a {\n    margin: 8px 8px 8px 0;\n}\n\n.history-toolbar .buttons > input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.history-toolbar .buttons > input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.history-toolbar .buttons > a.toollink,\n.history-toolbar .buttons > a.toollink:link,\n.history-toolbar .buttons > a.toollink:visited {\n    color: black;\n}\n\n.history-toolbar .buttons > a.toollink:active  {\n    color: blue;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./../history/style/index.css"],"names":[],"mappings":"AAAA;EACE,WAAW;EACX,UAAU;EACV,kBAAkB;AACpB;;AAEA;EACE,YAAY;EACZ,qBAAqB;EACrB,gBAAgB;AAClB;;AAEA;EACE,YAAY;AACd;;AAEA;EACE,aAAa;AACf;;AAEA;;EAEE,qBAAqB;AACvB;;AAEA;EACE,qBAAqB;EACrB,YAAY;EACZ,eAAe;AACjB;;AAEA;EACE,WAAW;AACb;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".history-toolbar {\n  float: left;\n  z-index: 3;\n  position: absolute;\n}\n\n.history-toolbar .buttons {\n  height: 30px;\n  display: inline-block;\n  margin-left: 8px;\n}\n\n.history-toolbar .buttons > input {\n  height: 30px;\n}\n\n.history-toolbar .buttons > input[type='checkbox'] {\n  display: none;\n}\n\n.history-toolbar .buttons > label,\n.history-toolbar > div > a {\n  margin: 8px 8px 8px 0;\n}\n\n.history-toolbar .buttons > input[type='checkbox'] + label {\n  display: inline-block;\n  color: black;\n  cursor: pointer;\n}\n\n.history-toolbar .buttons > input[type='checkbox']:checked + label {\n  color: blue;\n}\n\n.history-toolbar .buttons > a.toollink,\n.history-toolbar .buttons > a.toollink:link,\n.history-toolbar .buttons > a.toollink:visited {\n  color: black;\n}\n\n.history-toolbar .buttons > a.toollink:active {\n  color: blue;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74263,36 +74531,36 @@ __webpack_require__.r(__webpack_exports__);
 var ___CSS_LOADER_EXPORT___ = _nowvis_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_nowvis_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
 ___CSS_LOADER_EXPORT___.push([module.id, `.trial-toolbar {
-    margin: 5px;
-    float: left;
-    overflow: none;
-    width: 375px;
-    height: 30px;
-    z-index: 3;
-    position: absolute;
+  margin: 5px;
+  float: left;
+  width: 375px;
+  height: 30px;
+  z-index: 3;
+  position: absolute;
 }
 
 .trial-toolbar input {
-    height: 30px;
+  height: 30px;
 }
 
-.trial-toolbar input[type=checkbox] {
-    display: none
+.trial-toolbar input[type='checkbox'] {
+  display: none;
 }
 
-.trial-toolbar label, .trial-toolbar a {
-    margin-right: 8px;
-    margin-top: 8px;
+.trial-toolbar label,
+.trial-toolbar a {
+  margin-right: 8px;
+  margin-top: 8px;
 }
 
-.trial-toolbar input[type=checkbox] + label {
-    display:inline-block;
-    color: black;
-    cursor: pointer;
+.trial-toolbar input[type='checkbox'] + label {
+  display: inline-block;
+  color: black;
+  cursor: pointer;
 }
 
-.trial-toolbar input[type=checkbox]:checked + label {
-    color: blue;
+.trial-toolbar input[type='checkbox']:checked + label {
+  color: blue;
 }
 
 .trial-toolbar a.toollink,
@@ -74301,10 +74569,10 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.trial-toolbar {
   color: black;
 }
 
-.trial-toolbar a.toollink:active  {
+.trial-toolbar a.toollink:active {
   color: blue;
 }
-`, "",{"version":3,"sources":["webpack://./../trial/style/index.css"],"names":[],"mappings":"AAAA;IACI,WAAW;IACX,WAAW;IACX,cAAc;IACd,YAAY;IACZ,YAAY;IACZ,UAAU;IACV,kBAAkB;AACtB;;AAEA;IACI,YAAY;AAChB;;AAEA;IACI;AACJ;;AAEA;IACI,iBAAiB;IACjB,eAAe;AACnB;;AAEA;IACI,oBAAoB;IACpB,YAAY;IACZ,eAAe;AACnB;;AAEA;IACI,WAAW;AACf;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".trial-toolbar {\n    margin: 5px;\n    float: left;\n    overflow: none;\n    width: 375px;\n    height: 30px;\n    z-index: 3;\n    position: absolute;\n}\n\n.trial-toolbar input {\n    height: 30px;\n}\n\n.trial-toolbar input[type=checkbox] {\n    display: none\n}\n\n.trial-toolbar label, .trial-toolbar a {\n    margin-right: 8px;\n    margin-top: 8px;\n}\n\n.trial-toolbar input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.trial-toolbar input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active  {\n  color: blue;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./../trial/style/index.css"],"names":[],"mappings":"AAAA;EACE,WAAW;EACX,WAAW;EACX,YAAY;EACZ,YAAY;EACZ,UAAU;EACV,kBAAkB;AACpB;;AAEA;EACE,YAAY;AACd;;AAEA;EACE,aAAa;AACf;;AAEA;;EAEE,iBAAiB;EACjB,eAAe;AACjB;;AAEA;EACE,qBAAqB;EACrB,YAAY;EACZ,eAAe;AACjB;;AAEA;EACE,WAAW;AACb;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".trial-toolbar {\n  margin: 5px;\n  float: left;\n  width: 375px;\n  height: 30px;\n  z-index: 3;\n  position: absolute;\n}\n\n.trial-toolbar input {\n  height: 30px;\n}\n\n.trial-toolbar input[type='checkbox'] {\n  display: none;\n}\n\n.trial-toolbar label,\n.trial-toolbar a {\n  margin-right: 8px;\n  margin-top: 8px;\n}\n\n.trial-toolbar input[type='checkbox'] + label {\n  display: inline-block;\n  color: black;\n  cursor: pointer;\n}\n\n.trial-toolbar input[type='checkbox']:checked + label {\n  color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active {\n  color: blue;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74332,24 +74600,25 @@ __webpack_require__.r(__webpack_exports__);
 var ___CSS_LOADER_EXPORT___ = _nowvis_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_nowvis_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
 ___CSS_LOADER_EXPORT___.push([module.id, `div.now-tooltip {
-    position: absolute;
-    left: 1px;
-    right: 1px;
-    max-height: 200px;
-    max-width: 400px;
-    overflow: auto;
-    padding: 5px;
-    padding-bottom: 10px;
-    font: 12px sans-serif;
-    background: #DDD;
-    border: 0px;
-    border-radius: 8px;
-    z-index: 2000;
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  max-height: 200px;
+  max-width: 400px;
+  overflow: auto;
+  padding: 5px;
+  padding-bottom: 10px;
+  font: 12px sans-serif;
+  background: #ddd;
+  border: 0;
+  border-radius: 8px;
+  z-index: 2000;
 }
 
 .now-tooltip.hidden {
-    display: none;
-}`, "",{"version":3,"sources":["webpack://./../utils/style/shared.css"],"names":[],"mappings":"AAAA;IACI,kBAAkB;IAClB,SAAS;IACT,UAAU;IACV,iBAAiB;IACjB,gBAAgB;IAChB,cAAc;IACd,YAAY;IACZ,oBAAoB;IACpB,qBAAqB;IACrB,gBAAgB;IAChB,WAAW;IACX,kBAAkB;IAClB,aAAa;AACjB;;AAEA;IACI,aAAa;AACjB","sourcesContent":["div.now-tooltip {\n    position: absolute;\n    left: 1px;\n    right: 1px;\n    max-height: 200px;\n    max-width: 400px;\n    overflow: auto;\n    padding: 5px;\n    padding-bottom: 10px;\n    font: 12px sans-serif;\n    background: #DDD;\n    border: 0px;\n    border-radius: 8px;\n    z-index: 2000;\n}\n\n.now-tooltip.hidden {\n    display: none;\n}"],"sourceRoot":""}]);
+  display: none;
+}
+`, "",{"version":3,"sources":["webpack://./../utils/style/shared.css"],"names":[],"mappings":"AAAA;EACE,kBAAkB;EAClB,SAAS;EACT,UAAU;EACV,iBAAiB;EACjB,gBAAgB;EAChB,cAAc;EACd,YAAY;EACZ,oBAAoB;EACpB,qBAAqB;EACrB,gBAAgB;EAChB,SAAS;EACT,kBAAkB;EAClB,aAAa;AACf;;AAEA;EACE,aAAa;AACf","sourcesContent":["div.now-tooltip {\n  position: absolute;\n  left: 1px;\n  right: 1px;\n  max-height: 200px;\n  max-width: 400px;\n  overflow: auto;\n  padding: 5px;\n  padding-bottom: 10px;\n  font: 12px sans-serif;\n  background: #ddd;\n  border: 0;\n  border-radius: 8px;\n  z-index: 2000;\n}\n\n.now-tooltip.hidden {\n  display: none;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74434,38 +74703,35 @@ ___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_history_style_ind
 ___CSS_LOADER_EXPORT___.push([module.id, `.history-content,
 .history-content .sub-content,
 .history-content .sub-content > div {
-    overflow: hidden !important;
+  overflow: hidden !important;
 }
 
 .history-content .filter .internal {
-    margin: 4px 8px;
+  margin: 4px 8px;
 }
 
-.history-content .filter {
+.history-content .filter input,
+.history-content .filter label {
+  vertical-align: top;
+  display: inline-block;
 }
-
-.history-content .filter input, .history-content .filter label {
-    vertical-align: top;
-    display: inline-block;
-}
-
 
 .history-content .graph-attr {
-	display: inline-block;
-	margin-right: 5px;
+  display: inline-block;
+  margin-right: 5px;
 }
 
-.history-content .graph-attr input, .history-content .graph-attr label {
-    vertical-align: middle;
-    display: inline-block;
+.history-content .graph-attr input,
+.history-content .graph-attr label {
+  vertical-align: middle;
+  display: inline-block;
 }
 
 .history-content .select-style {
-    width: 170px;
-    margin-right: 5px;
+  width: 170px;
+  margin-right: 5px;
 }
-
-`, "",{"version":3,"sources":["webpack://./style/history.css"],"names":[],"mappings":"AAEA;;;IAGI,2BAA2B;AAC/B;;AAEA;IACI,eAAe;AACnB;;AAEA;AACA;;AAEA;IACI,mBAAmB;IACnB,qBAAqB;AACzB;;;AAGA;CACC,qBAAqB;CACrB,iBAAiB;AAClB;;AAEA;IACI,sBAAsB;IACtB,qBAAqB;AACzB;;AAEA;IACI,YAAY;IACZ,iBAAiB;AACrB","sourcesContent":["@import '~@noworkflow/history/style/index.css';\n\n.history-content,\n.history-content .sub-content,\n.history-content .sub-content > div {\n    overflow: hidden !important;\n}\n\n.history-content .filter .internal {\n    margin: 4px 8px;\n}\n\n.history-content .filter {\n}\n\n.history-content .filter input, .history-content .filter label {\n    vertical-align: top;\n    display: inline-block;\n}\n\n\n.history-content .graph-attr {\n\tdisplay: inline-block;\n\tmargin-right: 5px;\n}\n\n.history-content .graph-attr input, .history-content .graph-attr label {\n    vertical-align: middle;\n    display: inline-block;\n}\n\n.history-content .select-style {\n    width: 170px;\n    margin-right: 5px;\n}\n\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./style/history.css"],"names":[],"mappings":"AAEA;;;EAGE,2BAA2B;AAC7B;;AAEA;EACE,eAAe;AACjB;;AAEA;;EAEE,mBAAmB;EACnB,qBAAqB;AACvB;;AAEA;EACE,qBAAqB;EACrB,iBAAiB;AACnB;;AAEA;;EAEE,sBAAsB;EACtB,qBAAqB;AACvB;;AAEA;EACE,YAAY;EACZ,iBAAiB;AACnB","sourcesContent":["@import '~@noworkflow/history/style/index.css';\n\n.history-content,\n.history-content .sub-content,\n.history-content .sub-content > div {\n  overflow: hidden !important;\n}\n\n.history-content .filter .internal {\n  margin: 4px 8px;\n}\n\n.history-content .filter input,\n.history-content .filter label {\n  vertical-align: top;\n  display: inline-block;\n}\n\n.history-content .graph-attr {\n  display: inline-block;\n  margin-right: 5px;\n}\n\n.history-content .graph-attr input,\n.history-content .graph-attr label {\n  vertical-align: middle;\n  display: inline-block;\n}\n\n.history-content .select-style {\n  width: 170px;\n  margin-right: 5px;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74511,7 +74777,7 @@ ___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_history_css__WEBP
 ___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_trial_css__WEBPACK_IMPORTED_MODULE_7__["default"]);
 // Module
 ___CSS_LOADER_EXPORT___.push([module.id, `body {
-  font-family: "Verdana", "Geneva", "sans-serif";
+  font-family: Verdana, Geneva, sans-serif;
 }
 
 .loading {
@@ -74522,84 +74788,104 @@ ___CSS_LOADER_EXPORT___.push([module.id, `body {
 
 a.link-button {
   text-decoration: none;
-  display:inline-block;
+  display: inline-block;
   padding: 4px 0;
- /*padding: 4px 12px;*/
+
+  /* padding: 4px 12px; */
   margin-bottom: 0;
   font-size: 14px;
   width: 100px;
   line-height: 15px;
   color: #333;
   text-align: center;
-  text-shadow: 0 1px 1px rgba(255,255,255,0.75);
+  text-shadow: 0 1px 1px rgb(255 255 255 / 75%);
   vertical-align: middle;
   cursor: pointer;
   background-color: #f5f5f5;
-  background-image: -moz-linear-gradient(top,#fff,#e6e6e6);
-  background-image: -webkit-gradient(linear,0 0,0 100%,from(#fff),to(#e6e6e6));
-  background-image: -webkit-linear-gradient(top,#fff,#e6e6e6);
-  background-image: -o-linear-gradient(top,#fff,#e6e6e6);
-  background-image: linear-gradient(to bottom,#fff,#e6e6e6);
+  background-image: -moz-linear-gradient(top, #fff, #e6e6e6);
+  background-image: -webkit-gradient(
+    linear,
+    0 0,
+    0 100%,
+    from(#fff),
+    to(#e6e6e6)
+  );
+  background-image: -webkit-linear-gradient(top, #fff, #e6e6e6);
+  background-image: -o-linear-gradient(top, #fff, #e6e6e6);
+  background-image: linear-gradient(to bottom, #fff, #e6e6e6);
   background-repeat: repeat-x;
   border: 1px solid #ccc;
   border-color: #e6e6e6 #e6e6e6 #bfbfbf;
-  border-color: rgba(0,0,0,0.1) rgba(0,0,0,0.1) rgba(0,0,0,0.25);
+  border-color: rgb(0 0 0 / 10%) rgb(0 0 0 / 10%) rgb(0 0 0 / 25%);
   border-bottom-color: #b3b3b3;
-  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffffff',endColorstr='#ffe6e6e6',GradientType=0);
-  filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
-  -webkit-box-shadow: inset 0 1px 0 rgba(255,255,255,0.2),0 1px 2px rgba(0,0,0,0.05);
-  -moz-box-shadow: inset 0 1px 0 rgba(255,255,255,0.2),0 1px 2px rgba(0,0,0,0.05);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2),0 1px 2px rgba(0,0,0,0.05);
+  -webkit-box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 20%),
+    0 1px 2px rgb(0 0 0 / 5%);
+  -moz-box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 20%),
+    0 1px 2px rgb(0 0 0 / 5%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 20%),
+    0 1px 2px rgb(0 0 0 / 5%);
 }
 
 a.link-button:active {
   background-image: none;
   outline: 0;
-  -webkit-box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);
-  -moz-box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);
-  background-color:#e0e0e0;
+  -webkit-box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 15%),
+    0 1px 2px rgb(0 0 0 / 5%);
+  -moz-box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 15%),
+    0 1px 2px rgb(0 0 0 / 5%);
+  box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 15%),
+    0 1px 2px rgb(0 0 0 / 5%);
+  background-color: #e0e0e0;
 }
 
 .hide-toolbar {
-    overflow: hidden;
-    max-height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-    -moz-transition-duration: 0.3s;
-    -webkit-transition-duration: 0.3s;
-    -o-transition-duration: 0.3s;
-    transition-duration: 0.3s;
-    -moz-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
-    -webkit-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
-    -o-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
-    transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+  overflow: hidden;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  -moz-transition-duration: 0.3s;
+  -webkit-transition-duration: 0.3s;
+  -o-transition-duration: 0.3s;
+  transition-duration: 0.3s;
+  -moz-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+  -webkit-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+  -o-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+  transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
 }
 
 .show-toolbar {
-    -moz-transition-duration: 0.3s;
-    -webkit-transition-duration: 0.3s;
-    -o-transition-duration: 0.3s;
-    transition-duration: 0.3s;
-    -moz-transition-timing-function: ease-in;
-    -webkit-transition-timing-function: ease-in;
-    -o-transition-timing-function: ease-in;
-    transition-timing-function: ease-in;
-    /*max-height: 1000px;
-    overflow: hidden;*/
+  -moz-transition-duration: 0.3s;
+  -webkit-transition-duration: 0.3s;
+  -o-transition-duration: 0.3s;
+  transition-duration: 0.3s;
+  -moz-transition-timing-function: ease-in;
+  -webkit-transition-timing-function: ease-in;
+  -o-transition-timing-function: ease-in;
+  transition-timing-function: ease-in;
+
+  /* max-height: 1000px;
+    overflow: hidden; */
 }
 
 .visible {
   border-bottom: 1px solid black;
 }
 
-.info-filter input, .info-filter select {
+.info-filter input,
+.info-filter select {
   display: block;
   width: 250px;
   margin: 7px 0;
-}`, "",{"version":3,"sources":["webpack://./style/index.css"],"names":[],"mappings":"AAQA;EACE,8CAA8C;AAChD;;AAEA;EACE,eAAe;AACjB;;AAEA,gBAAgB;;AAEhB;EACE,qBAAqB;EACrB,oBAAoB;EACpB,cAAc;CACf,qBAAqB;EACpB,gBAAgB;EAChB,eAAe;EACf,YAAY;EACZ,iBAAiB;EACjB,WAAW;EACX,kBAAkB;EAClB,6CAA6C;EAC7C,sBAAsB;EACtB,eAAe;EACf,yBAAyB;EACzB,wDAAwD;EACxD,4EAA4E;EAC5E,2DAA2D;EAC3D,sDAAsD;EACtD,yDAAyD;EACzD,2BAA2B;EAC3B,sBAAsB;EACtB,qCAAqC;EACrC,8DAA8D;EAC9D,4BAA4B;EAC5B,oHAAoH;EACpH,iEAAiE;EACjE,kFAAkF;EAClF,+EAA+E;EAC/E,0EAA0E;AAC5E;;AAEA;EACE,sBAAsB;EACtB,UAAU;EACV,+EAA+E;EAC/E,4EAA4E;EAC5E,uEAAuE;EACvE,wBAAwB;AAC1B;;AAEA;IACI,gBAAgB;IAChB,aAAa;IACb,cAAc;IACd,iBAAiB;IACjB,aAAa;IACb,gBAAgB;IAChB,8BAA8B;IAC9B,iCAAiC;IACjC,4BAA4B;IAC5B,yBAAyB;IACzB,2DAA2D;IAC3D,8DAA8D;IAC9D,yDAAyD;IACzD,sDAAsD;AAC1D;;AAEA;IACI,8BAA8B;IAC9B,iCAAiC;IACjC,4BAA4B;IAC5B,yBAAyB;IACzB,wCAAwC;IACxC,2CAA2C;IAC3C,sCAAsC;IACtC,mCAAmC;IACnC;sBACkB;AACtB;;AAEA;EACE,8BAA8B;AAChC;;AAEA;EACE,cAAc;EACd,YAAY;EACZ,aAAa;AACf","sourcesContent":["@import '~@noworkflow/utils/style/shared.css';\n@import '~@noworkflow/history/style/index.css';\n@import '~@noworkflow/trial/style/index.css';\n@import './panel.css';\n@import './history.css';\n@import './trial.css';\n\n\nbody {\n  font-family: \"Verdana\", \"Geneva\", \"sans-serif\";\n}\n\n.loading {\n  font-size: 40px;\n}\n\n/* Link Button */\n\na.link-button {\n  text-decoration: none;\n  display:inline-block;\n  padding: 4px 0;\n /*padding: 4px 12px;*/\n  margin-bottom: 0;\n  font-size: 14px;\n  width: 100px;\n  line-height: 15px;\n  color: #333;\n  text-align: center;\n  text-shadow: 0 1px 1px rgba(255,255,255,0.75);\n  vertical-align: middle;\n  cursor: pointer;\n  background-color: #f5f5f5;\n  background-image: -moz-linear-gradient(top,#fff,#e6e6e6);\n  background-image: -webkit-gradient(linear,0 0,0 100%,from(#fff),to(#e6e6e6));\n  background-image: -webkit-linear-gradient(top,#fff,#e6e6e6);\n  background-image: -o-linear-gradient(top,#fff,#e6e6e6);\n  background-image: linear-gradient(to bottom,#fff,#e6e6e6);\n  background-repeat: repeat-x;\n  border: 1px solid #ccc;\n  border-color: #e6e6e6 #e6e6e6 #bfbfbf;\n  border-color: rgba(0,0,0,0.1) rgba(0,0,0,0.1) rgba(0,0,0,0.25);\n  border-bottom-color: #b3b3b3;\n  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffffff',endColorstr='#ffe6e6e6',GradientType=0);\n  filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);\n  -webkit-box-shadow: inset 0 1px 0 rgba(255,255,255,0.2),0 1px 2px rgba(0,0,0,0.05);\n  -moz-box-shadow: inset 0 1px 0 rgba(255,255,255,0.2),0 1px 2px rgba(0,0,0,0.05);\n  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2),0 1px 2px rgba(0,0,0,0.05);\n}\n\na.link-button:active {\n  background-image: none;\n  outline: 0;\n  -webkit-box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);\n  -moz-box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);\n  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);\n  background-color:#e0e0e0;\n}\n\n.hide-toolbar {\n    overflow: hidden;\n    max-height: 0;\n    padding-top: 0;\n    padding-bottom: 0;\n    margin-top: 0;\n    margin-bottom: 0;\n    -moz-transition-duration: 0.3s;\n    -webkit-transition-duration: 0.3s;\n    -o-transition-duration: 0.3s;\n    transition-duration: 0.3s;\n    -moz-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n    -webkit-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n    -o-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n    transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n}\n\n.show-toolbar {\n    -moz-transition-duration: 0.3s;\n    -webkit-transition-duration: 0.3s;\n    -o-transition-duration: 0.3s;\n    transition-duration: 0.3s;\n    -moz-transition-timing-function: ease-in;\n    -webkit-transition-timing-function: ease-in;\n    -o-transition-timing-function: ease-in;\n    transition-timing-function: ease-in;\n    /*max-height: 1000px;\n    overflow: hidden;*/\n}\n\n.visible {\n  border-bottom: 1px solid black;\n}\n\n.info-filter input, .info-filter select {\n  display: block;\n  width: 250px;\n  margin: 7px 0;\n}"],"sourceRoot":""}]);
+}
+`, "",{"version":3,"sources":["webpack://./style/index.css"],"names":[],"mappings":"AAOA;EACE,wCAAwC;AAC1C;;AAEA;EACE,eAAe;AACjB;;AAEA,gBAAgB;;AAEhB;EACE,qBAAqB;EACrB,qBAAqB;EACrB,cAAc;;EAEd,uBAAuB;EACvB,gBAAgB;EAChB,eAAe;EACf,YAAY;EACZ,iBAAiB;EACjB,WAAW;EACX,kBAAkB;EAClB,6CAA6C;EAC7C,sBAAsB;EACtB,eAAe;EACf,yBAAyB;EACzB,0DAA0D;EAC1D;;;;;;GAMC;EACD,6DAA6D;EAC7D,wDAAwD;EACxD,2DAA2D;EAC3D,2BAA2B;EAC3B,sBAAsB;EACtB,qCAAqC;EACrC,gEAAgE;EAChE,4BAA4B;EAC5B;;6BAE2B;EAC3B;;6BAE2B;EAC3B;;6BAE2B;AAC7B;;AAEA;EACE,sBAAsB;EACtB,UAAU;EACV;;6BAE2B;EAC3B;;6BAE2B;EAC3B;;6BAE2B;EAC3B,yBAAyB;AAC3B;;AAEA;EACE,gBAAgB;EAChB,aAAa;EACb,cAAc;EACd,iBAAiB;EACjB,aAAa;EACb,gBAAgB;EAChB,8BAA8B;EAC9B,iCAAiC;EACjC,4BAA4B;EAC5B,yBAAyB;EACzB,2DAA2D;EAC3D,8DAA8D;EAC9D,yDAAyD;EACzD,sDAAsD;AACxD;;AAEA;EACE,8BAA8B;EAC9B,iCAAiC;EACjC,4BAA4B;EAC5B,yBAAyB;EACzB,wCAAwC;EACxC,2CAA2C;EAC3C,sCAAsC;EACtC,mCAAmC;;EAEnC;uBACqB;AACvB;;AAEA;EACE,8BAA8B;AAChC;;AAEA;;EAEE,cAAc;EACd,YAAY;EACZ,aAAa;AACf","sourcesContent":["@import '~@noworkflow/utils/style/shared.css';\n@import '~@noworkflow/history/style/index.css';\n@import '~@noworkflow/trial/style/index.css';\n@import './panel.css';\n@import './history.css';\n@import './trial.css';\n\nbody {\n  font-family: Verdana, Geneva, sans-serif;\n}\n\n.loading {\n  font-size: 40px;\n}\n\n/* Link Button */\n\na.link-button {\n  text-decoration: none;\n  display: inline-block;\n  padding: 4px 0;\n\n  /* padding: 4px 12px; */\n  margin-bottom: 0;\n  font-size: 14px;\n  width: 100px;\n  line-height: 15px;\n  color: #333;\n  text-align: center;\n  text-shadow: 0 1px 1px rgb(255 255 255 / 75%);\n  vertical-align: middle;\n  cursor: pointer;\n  background-color: #f5f5f5;\n  background-image: -moz-linear-gradient(top, #fff, #e6e6e6);\n  background-image: -webkit-gradient(\n    linear,\n    0 0,\n    0 100%,\n    from(#fff),\n    to(#e6e6e6)\n  );\n  background-image: -webkit-linear-gradient(top, #fff, #e6e6e6);\n  background-image: -o-linear-gradient(top, #fff, #e6e6e6);\n  background-image: linear-gradient(to bottom, #fff, #e6e6e6);\n  background-repeat: repeat-x;\n  border: 1px solid #ccc;\n  border-color: #e6e6e6 #e6e6e6 #bfbfbf;\n  border-color: rgb(0 0 0 / 10%) rgb(0 0 0 / 10%) rgb(0 0 0 / 25%);\n  border-bottom-color: #b3b3b3;\n  -webkit-box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  -moz-box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n}\n\na.link-button:active {\n  background-image: none;\n  outline: 0;\n  -webkit-box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  -moz-box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  background-color: #e0e0e0;\n}\n\n.hide-toolbar {\n  overflow: hidden;\n  max-height: 0;\n  padding-top: 0;\n  padding-bottom: 0;\n  margin-top: 0;\n  margin-bottom: 0;\n  -moz-transition-duration: 0.3s;\n  -webkit-transition-duration: 0.3s;\n  -o-transition-duration: 0.3s;\n  transition-duration: 0.3s;\n  -moz-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  -webkit-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  -o-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n}\n\n.show-toolbar {\n  -moz-transition-duration: 0.3s;\n  -webkit-transition-duration: 0.3s;\n  -o-transition-duration: 0.3s;\n  transition-duration: 0.3s;\n  -moz-transition-timing-function: ease-in;\n  -webkit-transition-timing-function: ease-in;\n  -o-transition-timing-function: ease-in;\n  transition-timing-function: ease-in;\n\n  /* max-height: 1000px;\n    overflow: hidden; */\n}\n\n.visible {\n  border-bottom: 1px solid black;\n}\n\n.info-filter input,\n.info-filter select {\n  display: block;\n  width: 250px;\n  margin: 7px 0;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74629,8 +74915,7 @@ __webpack_require__.r(__webpack_exports__);
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
 ___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_node_modules_lumino_default_theme_style_index_css__WEBPACK_IMPORTED_MODULE_2__["default"]);
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, `
-.p-TabBar {
+___CSS_LOADER_EXPORT___.push([module.id, `.p-TabBar {
   min-height: 24px;
   max-height: 24px;
 }
@@ -74639,16 +74924,18 @@ ___CSS_LOADER_EXPORT___.push([module.id, `
   min-width: 0;
   min-height: 0;
   align-items: flex-end;
-  border-bottom: 1px solid #C0C0C0;
+  border-bottom: 1px solid #c0c0c0;
 }
 
-
 .p-TabBar-tab {
-  padding: 0px 10px;
-  background: #E5E5E5;
-  border: 1px solid #C0C0C0;
+  padding: 0 10px;
+  background: #e5e5e5;
+  border: 1px solid #c0c0c0;
   border-bottom: none;
-  font: 12px Helvetica, Arial, sans-serif;
+  font:
+    12px Helvetica,
+    Arial,
+    sans-serif;
   flex: 0 1 180px;
   min-height: 20px;
   max-height: 20px;
@@ -74657,28 +74944,20 @@ ___CSS_LOADER_EXPORT___.push([module.id, `
   line-height: 20px;
 }
 
-
 .p-TabBar-tab.p-mod-current {
   background: white;
-}
-
-
-.p-TabBar-tab:hover:not(.p-mod-current) {
-  background: #F0F0F0;
-}
-
-
-.p-TabBar-tab:first-child {
-  margin-left: 0;
-}
-
-
-.p-TabBar-tab.p-mod-current {
   min-height: 23px;
   max-height: 23px;
   transform: translateY(1px);
 }
 
+.p-TabBar-tab:first-child {
+  margin-left: 0;
+}
+
+.p-TabBar-tab:hover:not(.p-mod-current) {
+  background: #f0f0f0;
+}
 
 .p-TabBar-tabIcon,
 .p-TabBar-tabLabel,
@@ -74686,29 +74965,26 @@ ___CSS_LOADER_EXPORT___.push([module.id, `
   display: inline-block;
 }
 
-
 .p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon {
   margin-left: 4px;
 }
 
-
-.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon:before {
+.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon::before {
   content: '\\f00d';
-  font-family: FontAwesome;
+  font-family: FontAwesome, sans-serif;
 }
-
 
 .p-TabBar-tab.p-mod-drag-image {
   min-height: 23px;
   max-height: 23px;
   min-width: 125px;
   border: none;
-  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 1px 1px 2px rgb(0 0 0 / 30%);
   transform: translateX(-40%) translateY(-58%);
 }
 
 .p-DockPanel-overlay {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgb(255 255 255 / 60%);
   border: 1px dashed black;
   transition-property: top, left, right, bottom;
   transition-duration: 150ms;
@@ -74721,10 +74997,10 @@ ___CSS_LOADER_EXPORT___.push([module.id, `
   display: flex;
   flex-direction: column;
   padding: 8px;
-  border: 1px solid #C0C0C0;
+  border: 1px solid #c0c0c0;
   border-top: none;
   background: white;
-  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 1px 1px 2px rgb(0 0 0 / 20%);
 }
 
 .content > div {
@@ -74736,20 +75012,15 @@ body {
   display: flex;
   flex-direction: column;
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   margin: 0;
   padding: 0;
   overflow: hidden;
-
 }
 
 #main {
   flex: 1 1 auto;
 }
-
 
 .side-info {
   margin: 5px;
@@ -74761,7 +75032,7 @@ body {
 }
 
 .side-info .main h3 {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
 }
 
 .side-info .attr {
@@ -74787,7 +75058,7 @@ body {
 }
 
 .side-info .show-all {
-  color: rgb(50, 38, 41);
+  color: rgb(50 38 41);
   float: right;
   margin-right: 10px;
 }
@@ -74828,8 +75099,8 @@ body {
 }
 
 .hash {
-    font-size: 12px;
-    color: #666;
+  font-size: 12px;
+  color: #666;
 }
 
 .dbefore {
@@ -74843,13 +75114,13 @@ body {
 .dbefore::before {
   color: red !important;
   content: ' - ';
-  font-family: "Courier New", Courier, monospace;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .dafter::before {
   color: green !important;
   content: ' + ';
-  font-family: "Courier New", Courier, monospace;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .libefore {
@@ -74870,7 +75141,8 @@ body {
   font-size: 15px;
   margin-left: 3px;
   vertical-align: middle;
-}`, "",{"version":3,"sources":["webpack://./style/panel.css"],"names":[],"mappings":";AAIA;EACE,gBAAgB;EAChB,gBAAgB;AAClB;;AAEA;EACE,YAAY;EACZ,aAAa;EACb,qBAAqB;EACrB,gCAAgC;AAClC;;;AAGA;EACE,iBAAiB;EACjB,mBAAmB;EACnB,yBAAyB;EACzB,mBAAmB;EACnB,uCAAuC;EACvC,eAAe;EACf,gBAAgB;EAChB,gBAAgB;EAChB,eAAe;EACf,iBAAiB;EACjB,iBAAiB;AACnB;;;AAGA;EACE,iBAAiB;AACnB;;;AAGA;EACE,mBAAmB;AACrB;;;AAGA;EACE,cAAc;AAChB;;;AAGA;EACE,gBAAgB;EAChB,gBAAgB;EAChB,0BAA0B;AAC5B;;;AAGA;;;EAGE,qBAAqB;AACvB;;;AAGA;EACE,gBAAgB;AAClB;;;AAGA;EACE,gBAAgB;EAChB,wBAAwB;AAC1B;;;AAGA;EACE,gBAAgB;EAChB,gBAAgB;EAChB,gBAAgB;EAChB,YAAY;EACZ,0CAA0C;EAC1C,4CAA4C;AAC9C;;AAEA;EACE,oCAAoC;EACpC,wBAAwB;EACxB,6CAA6C;EAC7C,0BAA0B;EAC1B,gCAAgC;AAClC;;AAEA;EACE,eAAe;EACf,gBAAgB;EAChB,aAAa;EACb,sBAAsB;EACtB,YAAY;EACZ,yBAAyB;EACzB,gBAAgB;EAChB,iBAAiB;EACjB,0CAA0C;AAC5C;;AAEA;EACE,cAAc;EACd,cAAc;AAChB;;AAEA;EACE,aAAa;EACb,sBAAsB;EACtB,kBAAkB;EAClB,MAAM;EACN,OAAO;EACP,QAAQ;EACR,SAAS;EACT,SAAS;EACT,UAAU;EACV,gBAAgB;;AAElB;;AAEA;EACE,cAAc;AAChB;;;AAGA;EACE,WAAW;EACX,eAAe;AACjB;;AAEA;EACE,SAAS;AACX;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,cAAc;EACd,aAAa;AACf;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,gBAAgB;EAChB,cAAc;AAChB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,sBAAsB;EACtB,YAAY;EACZ,kBAAkB;AACpB;;AAEA;;;EAGE,UAAU;EACV,SAAS;EACT,qBAAqB;AACvB;;AAEA;;EAEE,4BAA4B;EAC5B,eAAe;EACf,gBAAgB;AAClB;;AAEA;EACE,WAAW;EACX,gBAAgB;AAClB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;;;EAGE,YAAY;EACZ,iBAAiB;AACnB;;AAEA;EACE,WAAW;AACb;;AAEA;IACI,eAAe;IACf,WAAW;AACf;;AAEA;EACE,qBAAqB;AACvB;;AAEA;EACE,uBAAuB;AACzB;;AAEA;EACE,qBAAqB;EACrB,cAAc;EACd,8CAA8C;AAChD;;AAEA;EACE,uBAAuB;EACvB,cAAc;EACd,8CAA8C;AAChD;;AAEA;EACE,qCAAqC;EACrC,qBAAqB;AACvB;;AAEA;EACE,uCAAuC;EACvC,uBAAuB;AACzB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,eAAe;EACf,gBAAgB;EAChB,sBAAsB;AACxB","sourcesContent":["\n@import '~@lumino/default-theme/style/index.css';\n\n\n.p-TabBar {\n  min-height: 24px;\n  max-height: 24px;\n}\n\n.p-TabBar-content {\n  min-width: 0;\n  min-height: 0;\n  align-items: flex-end;\n  border-bottom: 1px solid #C0C0C0;\n}\n\n\n.p-TabBar-tab {\n  padding: 0px 10px;\n  background: #E5E5E5;\n  border: 1px solid #C0C0C0;\n  border-bottom: none;\n  font: 12px Helvetica, Arial, sans-serif;\n  flex: 0 1 180px;\n  min-height: 20px;\n  max-height: 20px;\n  min-width: 35px;\n  margin-left: -1px;\n  line-height: 20px;\n}\n\n\n.p-TabBar-tab.p-mod-current {\n  background: white;\n}\n\n\n.p-TabBar-tab:hover:not(.p-mod-current) {\n  background: #F0F0F0;\n}\n\n\n.p-TabBar-tab:first-child {\n  margin-left: 0;\n}\n\n\n.p-TabBar-tab.p-mod-current {\n  min-height: 23px;\n  max-height: 23px;\n  transform: translateY(1px);\n}\n\n\n.p-TabBar-tabIcon,\n.p-TabBar-tabLabel,\n.p-TabBar-tabCloseIcon {\n  display: inline-block;\n}\n\n\n.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon {\n  margin-left: 4px;\n}\n\n\n.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon:before {\n  content: '\\f00d';\n  font-family: FontAwesome;\n}\n\n\n.p-TabBar-tab.p-mod-drag-image {\n  min-height: 23px;\n  max-height: 23px;\n  min-width: 125px;\n  border: none;\n  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);\n  transform: translateX(-40%) translateY(-58%);\n}\n\n.p-DockPanel-overlay {\n  background: rgba(255, 255, 255, 0.6);\n  border: 1px dashed black;\n  transition-property: top, left, right, bottom;\n  transition-duration: 150ms;\n  transition-timing-function: ease;\n}\n\n.content {\n  min-width: 50px;\n  min-height: 50px;\n  display: flex;\n  flex-direction: column;\n  padding: 8px;\n  border: 1px solid #C0C0C0;\n  border-top: none;\n  background: white;\n  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);\n}\n\n.content > div {\n  flex: 1 1 auto;\n  overflow: auto;\n}\n\nbody {\n  display: flex;\n  flex-direction: column;\n  position: absolute;\n  top: 0;\n  left: 0;\n  right: 0;\n  bottom: 0;\n  margin: 0;\n  padding: 0;\n  overflow: hidden;\n\n}\n\n#main {\n  flex: 1 1 auto;\n}\n\n\n.side-info {\n  margin: 5px;\n  font-size: 14px;\n}\n\n.side-info .main h1 {\n  margin: 0;\n}\n\n.side-info .main h3 {\n  margin: 0 0 8px 0;\n}\n\n.side-info .attr {\n  display: block;\n  margin: 3px 0;\n}\n\n.side-info .desc {\n  font-weight: bold;\n}\n\n.side-info .fold {\n  margin-top: 15px;\n  font-size: 2em;\n}\n\n.side-info .fold:hover {\n  cursor: pointer;\n}\n\n.side-info .fold span {\n  padding-left: 7px;\n}\n\n.side-info .show-all {\n  color: rgb(50, 38, 41);\n  float: right;\n  margin-right: 10px;\n}\n\n.side-info ul.mod-list,\n.side-info ul.env-list,\n.side-info ul.fac-list {\n  padding: 0;\n  margin: 0;\n  list-style-type: none;\n}\n\n.side-info ul.mod-list li,\n.side-info ul.fac-list li {\n  border-left: 3px solid black;\n  margin: 6px 4px;\n  padding: 1px 3px;\n}\n\n.side-info ul.env-list li {\n  margin: 3px;\n  font-size: 0.8em;\n}\n\n.side-info ul.env-list li .key {\n  font-weight: bold;\n}\n\n.side-info ul.mod-list li .version,\n.side-info ul.fac-list li .mode,\n.side-info ul.fac-list li .buffering {\n  float: right;\n  margin-left: 20px;\n}\n\n.side-info .clear {\n  clear: both;\n}\n\n.hash {\n    font-size: 12px;\n    color: #666;\n}\n\n.dbefore {\n  color: red !important;\n}\n\n.dafter {\n  color: green !important;\n}\n\n.dbefore::before {\n  color: red !important;\n  content: ' - ';\n  font-family: \"Courier New\", Courier, monospace;\n}\n\n.dafter::before {\n  color: green !important;\n  content: ' + ';\n  font-family: \"Courier New\", Courier, monospace;\n}\n\n.libefore {\n  border-left: 3px solid red !important;\n  color: red !important;\n}\n\n.liafter {\n  border-left: 3px solid green !important;\n  color: green !important;\n}\n\n.connection-error:hover {\n  cursor: pointer;\n}\n\n.error-text {\n  font-size: 15px;\n  margin-left: 3px;\n  vertical-align: middle;\n}"],"sourceRoot":""}]);
+}
+`, "",{"version":3,"sources":["webpack://./style/panel.css"],"names":[],"mappings":"AAEA;EACE,gBAAgB;EAChB,gBAAgB;AAClB;;AAEA;EACE,YAAY;EACZ,aAAa;EACb,qBAAqB;EACrB,gCAAgC;AAClC;;AAEA;EACE,eAAe;EACf,mBAAmB;EACnB,yBAAyB;EACzB,mBAAmB;EACnB;;;cAGY;EACZ,eAAe;EACf,gBAAgB;EAChB,gBAAgB;EAChB,eAAe;EACf,iBAAiB;EACjB,iBAAiB;AACnB;;AAEA;EACE,iBAAiB;EACjB,gBAAgB;EAChB,gBAAgB;EAChB,0BAA0B;AAC5B;;AAEA;EACE,cAAc;AAChB;;AAEA;EACE,mBAAmB;AACrB;;AAEA;;;EAGE,qBAAqB;AACvB;;AAEA;EACE,gBAAgB;AAClB;;AAEA;EACE,gBAAgB;EAChB,oCAAoC;AACtC;;AAEA;EACE,gBAAgB;EAChB,gBAAgB;EAChB,gBAAgB;EAChB,YAAY;EACZ,wCAAwC;EACxC,4CAA4C;AAC9C;;AAEA;EACE,kCAAkC;EAClC,wBAAwB;EACxB,6CAA6C;EAC7C,0BAA0B;EAC1B,gCAAgC;AAClC;;AAEA;EACE,eAAe;EACf,gBAAgB;EAChB,aAAa;EACb,sBAAsB;EACtB,YAAY;EACZ,yBAAyB;EACzB,gBAAgB;EAChB,iBAAiB;EACjB,wCAAwC;AAC1C;;AAEA;EACE,cAAc;EACd,cAAc;AAChB;;AAEA;EACE,aAAa;EACb,sBAAsB;EACtB,kBAAkB;EAClB,QAAQ;EACR,SAAS;EACT,UAAU;EACV,gBAAgB;AAClB;;AAEA;EACE,cAAc;AAChB;;AAEA;EACE,WAAW;EACX,eAAe;AACjB;;AAEA;EACE,SAAS;AACX;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,cAAc;EACd,aAAa;AACf;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,gBAAgB;EAChB,cAAc;AAChB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,oBAAoB;EACpB,YAAY;EACZ,kBAAkB;AACpB;;AAEA;;;EAGE,UAAU;EACV,SAAS;EACT,qBAAqB;AACvB;;AAEA;;EAEE,4BAA4B;EAC5B,eAAe;EACf,gBAAgB;AAClB;;AAEA;EACE,WAAW;EACX,gBAAgB;AAClB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;;;EAGE,YAAY;EACZ,iBAAiB;AACnB;;AAEA;EACE,WAAW;AACb;;AAEA;EACE,eAAe;EACf,WAAW;AACb;;AAEA;EACE,qBAAqB;AACvB;;AAEA;EACE,uBAAuB;AACzB;;AAEA;EACE,qBAAqB;EACrB,cAAc;EACd,8CAA8C;AAChD;;AAEA;EACE,uBAAuB;EACvB,cAAc;EACd,8CAA8C;AAChD;;AAEA;EACE,qCAAqC;EACrC,qBAAqB;AACvB;;AAEA;EACE,uCAAuC;EACvC,uBAAuB;AACzB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,eAAe;EACf,gBAAgB;EAChB,sBAAsB;AACxB","sourcesContent":["@import '~@lumino/default-theme/style/index.css';\n\n.p-TabBar {\n  min-height: 24px;\n  max-height: 24px;\n}\n\n.p-TabBar-content {\n  min-width: 0;\n  min-height: 0;\n  align-items: flex-end;\n  border-bottom: 1px solid #c0c0c0;\n}\n\n.p-TabBar-tab {\n  padding: 0 10px;\n  background: #e5e5e5;\n  border: 1px solid #c0c0c0;\n  border-bottom: none;\n  font:\n    12px Helvetica,\n    Arial,\n    sans-serif;\n  flex: 0 1 180px;\n  min-height: 20px;\n  max-height: 20px;\n  min-width: 35px;\n  margin-left: -1px;\n  line-height: 20px;\n}\n\n.p-TabBar-tab.p-mod-current {\n  background: white;\n  min-height: 23px;\n  max-height: 23px;\n  transform: translateY(1px);\n}\n\n.p-TabBar-tab:first-child {\n  margin-left: 0;\n}\n\n.p-TabBar-tab:hover:not(.p-mod-current) {\n  background: #f0f0f0;\n}\n\n.p-TabBar-tabIcon,\n.p-TabBar-tabLabel,\n.p-TabBar-tabCloseIcon {\n  display: inline-block;\n}\n\n.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon {\n  margin-left: 4px;\n}\n\n.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon::before {\n  content: '\\f00d';\n  font-family: FontAwesome, sans-serif;\n}\n\n.p-TabBar-tab.p-mod-drag-image {\n  min-height: 23px;\n  max-height: 23px;\n  min-width: 125px;\n  border: none;\n  box-shadow: 1px 1px 2px rgb(0 0 0 / 30%);\n  transform: translateX(-40%) translateY(-58%);\n}\n\n.p-DockPanel-overlay {\n  background: rgb(255 255 255 / 60%);\n  border: 1px dashed black;\n  transition-property: top, left, right, bottom;\n  transition-duration: 150ms;\n  transition-timing-function: ease;\n}\n\n.content {\n  min-width: 50px;\n  min-height: 50px;\n  display: flex;\n  flex-direction: column;\n  padding: 8px;\n  border: 1px solid #c0c0c0;\n  border-top: none;\n  background: white;\n  box-shadow: 1px 1px 2px rgb(0 0 0 / 20%);\n}\n\n.content > div {\n  flex: 1 1 auto;\n  overflow: auto;\n}\n\nbody {\n  display: flex;\n  flex-direction: column;\n  position: absolute;\n  inset: 0;\n  margin: 0;\n  padding: 0;\n  overflow: hidden;\n}\n\n#main {\n  flex: 1 1 auto;\n}\n\n.side-info {\n  margin: 5px;\n  font-size: 14px;\n}\n\n.side-info .main h1 {\n  margin: 0;\n}\n\n.side-info .main h3 {\n  margin: 0 0 8px;\n}\n\n.side-info .attr {\n  display: block;\n  margin: 3px 0;\n}\n\n.side-info .desc {\n  font-weight: bold;\n}\n\n.side-info .fold {\n  margin-top: 15px;\n  font-size: 2em;\n}\n\n.side-info .fold:hover {\n  cursor: pointer;\n}\n\n.side-info .fold span {\n  padding-left: 7px;\n}\n\n.side-info .show-all {\n  color: rgb(50 38 41);\n  float: right;\n  margin-right: 10px;\n}\n\n.side-info ul.mod-list,\n.side-info ul.env-list,\n.side-info ul.fac-list {\n  padding: 0;\n  margin: 0;\n  list-style-type: none;\n}\n\n.side-info ul.mod-list li,\n.side-info ul.fac-list li {\n  border-left: 3px solid black;\n  margin: 6px 4px;\n  padding: 1px 3px;\n}\n\n.side-info ul.env-list li {\n  margin: 3px;\n  font-size: 0.8em;\n}\n\n.side-info ul.env-list li .key {\n  font-weight: bold;\n}\n\n.side-info ul.mod-list li .version,\n.side-info ul.fac-list li .mode,\n.side-info ul.fac-list li .buffering {\n  float: right;\n  margin-left: 20px;\n}\n\n.side-info .clear {\n  clear: both;\n}\n\n.hash {\n  font-size: 12px;\n  color: #666;\n}\n\n.dbefore {\n  color: red !important;\n}\n\n.dafter {\n  color: green !important;\n}\n\n.dbefore::before {\n  color: red !important;\n  content: ' - ';\n  font-family: 'Courier New', Courier, monospace;\n}\n\n.dafter::before {\n  color: green !important;\n  content: ' + ';\n  font-family: 'Courier New', Courier, monospace;\n}\n\n.libefore {\n  border-left: 3px solid red !important;\n  color: red !important;\n}\n\n.liafter {\n  border-left: 3px solid green !important;\n  color: green !important;\n}\n\n.connection-error:hover {\n  cursor: pointer;\n}\n\n.error-text {\n  font-size: 15px;\n  margin-left: 3px;\n  vertical-align: middle;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74900,39 +75172,40 @@ var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBP
 ___CSS_LOADER_EXPORT___.push([module.id, `.trial-content,
 .trial-content .sub-content,
 .trial-content .sub-content > div {
-    overflow: hidden !important;
+  overflow: hidden !important;
 }
 
 .trial-content .graphselector .graph-attr:first-child label {
-    margin-right: 17px;
+  margin-right: 17px;
 }
 
 .trial-content .graphselector {
-    width: 100%;
-    padding-left: 8px;
+  width: 100%;
+  padding-left: 8px;
 }
 
 .trial-content .graphselector .use-cache {
-    margin-top: 10px;
-    margin-left: 0px;
+  margin-top: 10px;
+  margin-left: 0;
 }
 
 .trial-content .graphselector a.link-button {
-    margin-top: 10px;
-    width: 273px;
+  margin-top: 10px;
+  width: 273px;
 }
 
 .trial-content .toggle-label {
-    margin-right: 5px;
+  margin-right: 5px;
 }
 
 .graphselector > div:first-child {
-    margin-top: 8px;
+  margin-top: 8px;
 }
 
 .graphselector > a:last-child {
-    margin-bottom: 8px;
-}`, "",{"version":3,"sources":["webpack://./style/trial.css"],"names":[],"mappings":"AAAA;;;IAGI,2BAA2B;AAC/B;;AAEA;IACI,kBAAkB;AACtB;;AAEA;IACI,WAAW;IACX,iBAAiB;AACrB;;AAEA;IACI,gBAAgB;IAChB,gBAAgB;AACpB;;AAEA;IACI,gBAAgB;IAChB,YAAY;AAChB;;AAEA;IACI,iBAAiB;AACrB;;AAEA;IACI,eAAe;AACnB;;AAEA;IACI,kBAAkB;AACtB","sourcesContent":[".trial-content,\n.trial-content .sub-content,\n.trial-content .sub-content > div {\n    overflow: hidden !important;\n}\n\n.trial-content .graphselector .graph-attr:first-child label {\n    margin-right: 17px;\n}\n\n.trial-content .graphselector {\n    width: 100%;\n    padding-left: 8px;\n}\n\n.trial-content .graphselector .use-cache {\n    margin-top: 10px;\n    margin-left: 0px;\n}\n\n.trial-content .graphselector a.link-button {\n    margin-top: 10px;\n    width: 273px;\n}\n\n.trial-content .toggle-label {\n    margin-right: 5px;\n}\n\n.graphselector > div:first-child {\n    margin-top: 8px;\n}\n\n.graphselector > a:last-child {\n    margin-bottom: 8px;\n}"],"sourceRoot":""}]);
+  margin-bottom: 8px;
+}
+`, "",{"version":3,"sources":["webpack://./style/trial.css"],"names":[],"mappings":"AAAA;;;EAGE,2BAA2B;AAC7B;;AAEA;EACE,kBAAkB;AACpB;;AAEA;EACE,WAAW;EACX,iBAAiB;AACnB;;AAEA;EACE,gBAAgB;EAChB,cAAc;AAChB;;AAEA;EACE,gBAAgB;EAChB,YAAY;AACd;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,kBAAkB;AACpB","sourcesContent":[".trial-content,\n.trial-content .sub-content,\n.trial-content .sub-content > div {\n  overflow: hidden !important;\n}\n\n.trial-content .graphselector .graph-attr:first-child label {\n  margin-right: 17px;\n}\n\n.trial-content .graphselector {\n  width: 100%;\n  padding-left: 8px;\n}\n\n.trial-content .graphselector .use-cache {\n  margin-top: 10px;\n  margin-left: 0;\n}\n\n.trial-content .graphselector a.link-button {\n  margin-top: 10px;\n  width: 273px;\n}\n\n.trial-content .toggle-label {\n  margin-right: 5px;\n}\n\n.graphselector > div:first-child {\n  margin-top: 8px;\n}\n\n.graphselector > a:last-child {\n  margin-bottom: 8px;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -92377,14 +92650,16 @@ __webpack_require__.r(__webpack_exports__);
 
 function main() {
   // ToDo: parse URL to open specific graphs
-  var experimentsIn = document.getElementById("experimentsIn").value;
-  var selectedExp = document.getElementById("selectedExperiment").value;
-  var server = document.getElementById("server").value;
+  var experimentsIn = document.getElementById('experimentsIn').value;
+  var selectedExp = document.getElementById('selectedExperiment').value;
+  var server = document.getElementById('server').value;
   var experiments = [];
-  if (experimentsIn) experiments = JSON.parse(experimentsIn);
+  if (experimentsIn) {
+    experiments = JSON.parse(experimentsIn);
+  }
   var mainpanel = new _nowpanel__WEBPACK_IMPORTED_MODULE_2__.NowVisPanel();
   mainpanel.id = 'main';
-  if (server == "True") {
+  if (server === 'True') {
     var projectWidget = new _project_widget__WEBPACK_IMPORTED_MODULE_4__.ProjectWidget(experiments);
     var groupWidget = new _group_widget__WEBPACK_IMPORTED_MODULE_5__.GroupWidget();
     var databaseWidget = new _database_widget__WEBPACK_IMPORTED_MODULE_8__.DatabaseWidget(mainpanel);
@@ -92394,12 +92669,12 @@ function main() {
   } else {
     var config = new _config_widget__WEBPACK_IMPORTED_MODULE_3__.ConfigWidget();
     var annotationn = new _annotation_widget__WEBPACK_IMPORTED_MODULE_7__.AnnontationWidget(selectedExp);
-    var history = new _graph_history_graph__WEBPACK_IMPORTED_MODULE_6__.HistoryWidget(config, "History", "History", selectedExp, annotationn);
-    var databaseWidget = new _database_widget__WEBPACK_IMPORTED_MODULE_8__.DatabaseWidget(mainpanel);
+    var history = new _graph_history_graph__WEBPACK_IMPORTED_MODULE_6__.HistoryWidget(config, 'History', 'History', selectedExp, annotationn);
+    var _databaseWidget = new _database_widget__WEBPACK_IMPORTED_MODULE_8__.DatabaseWidget(mainpanel);
     mainpanel.addMainWidget(history);
     mainpanel.addMainWidget(config);
     mainpanel.addMainWidget(annotationn);
-    mainpanel.addMainWidget(databaseWidget);
+    mainpanel.addMainWidget(_databaseWidget);
     history.load();
   }
   _lumino_widgets__WEBPACK_IMPORTED_MODULE_1__.Widget.attach(mainpanel, document.body);

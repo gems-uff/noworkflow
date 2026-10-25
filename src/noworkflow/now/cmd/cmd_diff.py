@@ -15,9 +15,10 @@ from sqlalchemy import or_, true
 
 from ..models.cleaning.merge import lcs
 from ..models.diff import Diff as DiffModel
+from ..models.diff import in_diff_order, unified_text_diff
 from ..models.graphs.diff_graph import CONFIG
 from ..models.prov.export import OPERATIONS
-from ..persistence import persistence_config, relational
+from ..persistence import content, persistence_config, relational
 from ..persistence.models import Activation, CodeComponent, Dependency, Evaluation
 from ..utils.cross_version import zip_longest
 from ..utils.io import print_msg
@@ -40,8 +41,14 @@ def print_diff_trials(diff, skip=None):
     print()
 
 
-def print_replaced_attributes(replaced, ignore=("id",), extra=tuple(), names=None):
-    """Print attributes diff"""
+def print_replaced_attributes(
+    replaced, ignore=("id",), extra=tuple(), names=None, details=None
+):
+    """Print attributes diff
+
+    ``details(removed, added)``, when given, returns lines printed after
+    the attributes of each pair.
+    """
     names = names or {}
     for removed, added in replaced:
         print("  Name: {}".format(removed.name))
@@ -57,8 +64,98 @@ def print_replaced_attributes(replaced, ignore=("id",), extra=tuple(), names=Non
                         added_attr or "<None>",
                     )
                 )
+        if details is not None:
+            output.extend(details(removed, added))
         print("\n".join(output))
         print()
+
+
+def stored_content(content_hash):
+    """The bytes the content database keeps under ``content_hash``, None
+    for no hash (no file), or the error that kept them from being read"""
+    if content_hash is None:
+        return None
+    try:
+        return content.get(content_hash)
+    except (OSError, KeyError, ValueError) as error:
+        return error
+
+
+def content_diff(label1, label2):
+    """``details`` for ``print_replaced_attributes``: the unified diff of
+    the contents of two replaced file accesses (``--content``)
+
+    A read keeps one content, before and after the access, and gets one
+    diff; a write gets a diff of the contents before it and one of the
+    contents after it, for the moments whose hashes differ. ``label1``
+    and ``label2`` name the trials in the headers. A side with no file
+    gets a line instead of the whole content of the other, and a change
+    already shown for another access (a file one process writes and
+    another reads) a line that points to it.
+    """
+    shown = {}
+
+    def details(removed, added):
+        name = removed.name
+        before = (removed.content_hash_before, added.content_hash_before)
+        after = (removed.content_hash_after, added.content_hash_after)
+        if before == after:
+            moments = [(None, before)]
+        else:
+            moments = [("before", before), ("after", after)]
+        lines = []
+        for moment, hashes in moments:
+            hash1, hash2 = hashes
+            if hash1 == hash2:
+                continue
+            content_moment = " " + moment if moment else ""
+            if hash1 is None or hash2 is None:
+                lines.append(
+                    "No file{} the access in trial {}".format(
+                        content_moment or " at",
+                        label1 if hash1 is None else label2,
+                    )
+                )
+                continue
+            if hashes in shown:
+                lines.append(
+                    "Content{} changed as shown above for {}".format(
+                        content_moment, shown[hashes]
+                    )
+                )
+                continue
+            data1, data2 = stored_content(hash1), stored_content(hash2)
+            missing = [
+                content_hash
+                for content_hash, data in ((hash1, data1), (hash2, data2))
+                if isinstance(data, Exception)
+            ]
+            if missing:
+                lines.append(
+                    "Content not found in the content database: {}".format(
+                        ", ".join(missing)
+                    )
+                )
+                continue
+            suffix = ", {}".format(moment) if moment else ""
+            diff = unified_text_diff(
+                name,
+                "trial {}{}".format(label1, suffix),
+                data1,
+                "trial {}{}".format(label2, suffix),
+                data2,
+            )
+            if diff is None:
+                diff = [
+                    "Binary content{} differs ({} vs {})".format(
+                        content_moment, hash1, hash2
+                    )
+                ]
+            shown[hashes] = name
+            lines.extend(diff)
+        return lines
+
+    return details
 
 
 def print_replaced_environment(replaced):
@@ -136,6 +233,12 @@ class Diff(Command):
             action="store_true",
             help="compare read/write access to files",
         )
+        add_arg(
+            "--content",
+            action="store_true",
+            help="with -f or -fa: print the unified diff of the content of "
+            "each replaced file access",
+        )
         add_arg("-a", "--activations", action="store_true", help="compare activations")
         add_arg("-d", "--definition", action="store_true", help="compare definitions")
         add_arg("-t", "--hide-timestamps", action="store_true", help="hide timestamps")
@@ -163,6 +266,14 @@ class Diff(Command):
         add_arg("--content-engine", type=str, help="set the content database engine")
 
     def execute(self, args):
+        if args.content and not (args.file_accesses or args.function_activations):
+            # A usage error, before anything is printed or read
+            self.parser.error(
+                "argument --content: requires -f/--file-accesses or "
+                "-fa/--function-activations"
+            )
+        if args.content and args.brief:
+            self.parser.error("argument --content: not allowed with argument --brief")
         if args.function_activations and len(args.function_activations) >= 2:
             # A usage error, before anything is printed or read
             try:
@@ -228,7 +339,7 @@ class Diff(Command):
         print_diff_trials(diff, skip=skip_in_trial)
 
         if args.modules:
-            (added, removed, replaced) = diff.modules
+            (added, removed, replaced) = in_diff_order(*diff.modules)
             if args.brief:
                 print_msg("Brief modules diff", True)
                 print_brief(added, removed, replaced)
@@ -242,11 +353,15 @@ class Diff(Command):
                 print()
 
                 print_msg("{} modules replaced:".format(len(replaced)), True)
-                print_replaced_attributes(replaced)
+                print_replaced_attributes(
+                    replaced,
+                    ignore=("id", "trial_id", "code_block_id", "transformed"),
+                    extra=("code_hash",),
+                )
             print()
 
         if args.environment:
-            (added, removed, replaced) = diff.environment
+            (added, removed, replaced) = in_diff_order(*diff.environment)
             if args.brief:
                 print_msg("Brief environment attributes diff", True)
                 print_brief(added, removed, replaced)
@@ -382,6 +497,7 @@ class Diff(Command):
         )
 
     def print_file_accesses(self, args, access_extra, added, removed, replaced):
+        added, removed, replaced = in_diff_order(added, removed, replaced)
         if args.brief:
             print_msg("Brief file access diff", True)
             print_brief(added, removed, replaced)
@@ -401,8 +517,11 @@ class Diff(Command):
             print_replaced_attributes(
                 replaced,
                 extra=access_extra,
-                ignore=("id", "trial_id", "function_activation_id"),
+                ignore=("id", "trial_id", "activation_id", "checkpoint"),
                 names={"stack": "Function"},
+                details=(
+                    content_diff(args.trial1, args.trial2) if args.content else None
+                ),
             )
 
     def get_diff_function_info(
@@ -613,7 +732,6 @@ class Diff(Command):
         new_set = set()
         for file in old_set:
             if isinstance(file, tuple):
-                print(file)
                 if (
                     file[0].activation_id == activation_id1
                     and file[1].activation_id == activation_id2

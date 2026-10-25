@@ -10,7 +10,7 @@ def run_simulation(data_a, data_b):
     return data
 
 def csv_read(f):
-    reader = csv.reader(open(f, 'rU'), delimiter=':')
+    reader = csv.reader(open(f, newline=''), delimiter=':')
     data = []
     for row in reader:
         data.append(row)

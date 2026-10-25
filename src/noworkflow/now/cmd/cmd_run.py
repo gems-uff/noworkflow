@@ -11,6 +11,7 @@ import os
 import sys
 
 from ..collection.metadata import Metascript
+from ..collection.prov_execution.external import EXECUTABLE_CAP
 from ..persistence import content
 from ..persistence.models import Argument, Tag, Trial
 from ..utils import io, metaprofiler
@@ -25,6 +26,22 @@ def non_negative(string):
             "{} is not a non-negative integer value".format(string)
         )
     return value
+
+
+SIZE_SUFFIXES = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3}
+
+
+def size(string):
+    """Check if argument is a size in bytes, with an optional K, M or G
+    suffix (powers of 1024)"""
+    text = string.strip().upper()
+    suffix = text[-1:] if text[-1:] in SIZE_SUFFIXES else ""
+    digits = text[: len(text) - len(suffix)]
+    if not digits.isdigit():
+        raise argparse.ArgumentTypeError(
+            "{!r} is not a size in bytes (such as 1000, 512K, 64M or 1G)".format(string)
+        )
+    return int(digits) * SIZE_SUFFIXES[suffix]
 
 
 class ScriptArgs(argparse.Action):  # pylint: disable=too-few-public-methods
@@ -117,6 +134,15 @@ class Run(Command):
             help="bypass module dependencies analysis, assuming that no "
             "module changes occurred since last execution",
         )
+        add_arg(
+            "--executable-cap",
+            type=size,
+            default=EXECUTABLE_CAP,
+            metavar="SIZE",
+            help="R|size above which the program a process runs is not\n"
+            "stored, only its hash (default: 16M). SIZE is in bytes,\n"
+            "with an optional K, M or G suffix; 0 stores no program",
+        )
 
         # Execution
         if not self.is_ipython:
@@ -176,6 +202,18 @@ class Run(Command):
             action="store_true",
             help="capture only activation-level provenance "
             "(activations, arguments, returns and file accesses)",
+        )
+        add_arg(
+            "--external-tracer",
+            choices=["none", "argv", "strace"],
+            default="argv",
+            help="R|how the processes the script starts are recorded "
+            "(default: argv).\n"
+            "argv records the files their command lines name, with\n"
+            "their content before and after, and the files they create\n"
+            "in the project; none records nothing of them; strace\n"
+            "(Linux) also sees the files they open on their own\n"
+            "(not available yet: falls back to argv)",
         )
 
         # Other

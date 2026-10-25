@@ -106,10 +106,12 @@ Collection options, from the cheapest to the most complete:
 |---|---|
 | `-cg` | coarse-grained: activations, arguments, returns and file accesses only (no variables, no dependencies) |
 | `-e relevant` / `-e none` | collect the values of activations, arguments and tagged evaluations only / no values |
-| `-d N` | limit the depth of collected activations. **It can change what the script computes** (#243): on a script that ran fine, `-d 1` made it fail with `IndexError`. Prefer `-cg`. |
+| `-d N` | limit the depth of collected activations: the first call past the limit is recorded as a black box (its arguments and its result), and nothing it does or calls is. The script computes what it computes without noWorkflow. |
 | `-b` | reuse the module dependencies of the previous trial (faster; fails without a previous trial) |
+| `--executable-cap SIZE` | the size above which the program a process runs (and a `ctypes` library) is stored as its hash only, which `now restore` cannot put back (default `16M`; bytes or a `K`, `M`, `G` suffix; `0` stores none) |
 | `-c main\|package\|all` | which functions count for `-d` |
 | `-r repr\|jsonpickle\|jsonpickle_content\|simple` | how values are serialized |
+| `--external-tracer none\|argv\|strace` | what is recorded of the processes the script starts (`subprocess`, `os.system`, `os.popen`, `os.posix_spawn`). `argv` (default): the files their command lines name, with their content before and after, and the files they create in the project, as file accesses of the call that started the process, and the program each one runs as a module (`now show -m`); `none`: nothing; `strace`: also the files they open on their own (Linux; not available yet, falls back to `argv` with a warning, #206) |
 | `-s MS` / `-S CALLS` | save partial provenance every MS milliseconds / CALLS calls |
 | `--name NAME` | the name of the trial's script in the history; separates or groups branches |
 | `--message TEXT` | a note stored with the trial (`now show -p` shows it) |
@@ -145,7 +147,7 @@ command line changes.
 ```bash
 now show 2             # id, sequence key, status, script, code hash, start, finish, duration
 now show -f 2          # files read and written, mode, content hash before and after, the call chain that opened each
-now show -m 2          # the local modules the script imported, with path and code hash
+now show -m 2          # the modules the script imported, the programs its processes ran and the libraries it loaded through ctypes, with path, code hash and version
 now show -d 2          # the code blocks (script, functions) with parameters and calls
 now show -a 2          # the activation tree: every call with parameters, return value and time
 now show -p 2          # the options of the run, the message and the script's argv
@@ -158,7 +160,8 @@ now show -e 2          # the environment — sensitive, see above
 now diff 1 2                 # what changed in the trial itself: times, command, parent
 now diff 1 2 -f --brief      # a table of files added, removed and changed
 now diff 1 2 -f              # per file: content hashes before and after
-now diff 1 2 -m              # modules added, removed and replaced
+now diff 1 2 -f --content    # ... and the unified diff of each changed file
+now diff 1 2 -m              # modules added, removed and replaced, with their code hash
 now diff 1 2 -a              # the tree edit distance between the two activation trees
 now diff 1 2 -t              # hide the timestamps
 ```
@@ -173,15 +176,17 @@ sqlite3 -readonly .noworkflow/db.sqlite "SELECT t.sequence_key, a.id, a.name
 now diff 1 2 -fa 40 40       # add `op` or `all` after the ids to include more kinds of variable
 ```
 
-`-fa` also prints a tuple per replaced file access before its report
-(#248); ids that are not integers or name no function are a usage error
-(exit 2).
+Ids that are not integers or name no function are a usage error (exit
+2), and so is `--content` without `-f` or `-fa`, or with `--brief`. Two
+accesses to one file in a trial (a write and a read back) are paired with
+the accesses of the same mode in the other trial, in the order they
+happened; each section lists its blocks by name.
 
 ### 5. Export: `now export`
 
 ```bash
 now export prolog 2 > trial2.pl          # Prolog facts; `now schema prolog` documents each predicate
-now export prov 2 > trial2.provn         # PROV-N
+now export prov 2 > trial2.provn         # PROV-N; each file access is an entity of its activation
 now export dataflow 2 | dot -Tpng -o dataflow.png
 now export prospective 2 | dot -Tsvg -o structure.svg   # the static structure of the script
 now export ast -d 2 | dot -Tpng -o ast.png               # the script's AST
@@ -218,12 +223,14 @@ working files differ from the last trial, it first records a backup trial
 `now restore <backup>` undoes the restore. The next `now run` becomes a
 child of the restored trial, so the history branches. `-f` restores one
 file without creating a backup or changing the history; `-i` picks which
-access (timestamp, access number or content hash).
+access (timestamp, access number or content hash). Without `-i`, `-f`
+restores the file as the trial first had it, or, for a file the trial
+created, what the trial wrote into it; a version in which the file did not
+exist never deletes a `-t` target. A program the trial launched comes back
+executable; any other file comes back with the default mode.
 
-Known defects: `-f` onto an existing target with the default access can
-delete the target (#246); a binary local module crashes the restore (#183);
-the executable bit is lost (#205); `--dir` from another directory writes
-into the current one (#245).
+Known defects: a binary local module crashes the restore (#183); `--dir`
+from another directory writes into the current one (#245).
 
 ### 7. History: `now history`
 
@@ -277,11 +284,13 @@ now pull --url http://host:5000/experiments/<id>
 - `now schema` creates an empty `.noworkflow/` in the current directory
   when there is none (#253).
 - `now gc` fails with `TypeError` on the default content store (#224).
-- `now import` (#247), `now pull` (#247) and `now push` (#312) fail today.
-  The server side of push and pull is `now vis --force true`, whose page
-  creates the experiment and its URL.
-- `now clean` needs a trial recorded by the noWorkflow Jupyter kernel, and
-  that kernel fails to start today (#315).
+- The server side of push and pull is `now vis --force true` in an empty
+  directory, whose page creates the experiment and its URL. `now pull` into
+  an empty directory creates the store; `now restore` then puts a pulled
+  trial's files back.
+- `now clean` needs a trial recorded by the noWorkflow Jupyter kernel
+  (`now kernel`, then the "noWorkflow 3" kernel in Jupyter); on a script
+  or a `%%now_run` trial it says the trial is not a notebook trial.
 
 ## Jupyter
 
@@ -289,8 +298,8 @@ now pull --url http://host:5000/experiments/<id>
 %load_ext noworkflow
 nip = %now_ip                          # the module noworkflow.now.ipython
 
-%now_run simulation.py data1.dat data2.dat   # records a trial (needs `now` on the PATH of the notebook server)
-trial = nip.Trial()                    # the last trial; nip.Trial(2) by sequence key, tag or id
+trial = %now_run simulation.py data1.dat data2.dat   # records and returns a trial (needs `now` on the PATH of the notebook server)
+last = nip.Trial()                     # the last trial; nip.Trial(2) by sequence key, tag or id
 history = nip.History()
 diff = nip.Diff(1, 2)
 ```
@@ -302,11 +311,15 @@ SELECT sequence_key, script, status FROM trial
 
 - With the `noworkflow_labextension` package, `trial`, `history` and `diff`
   display as graphs in Jupyter Lab and Notebook 7+.
-- `%now_run` records the trial but returns `None` and prints "Failed
-  invalid literal for int()" (#313); take the trial from `nip.Trial()`.
-  `%%now_run` does the same with the cell's code, and
-  `%%now_run --interactive`, which shares variables with the notebook,
-  fails with `ModuleNotFoundError` (#313).
+- `%now_run` and `%%now_run` (the cell's code) return the trial they
+  recorded; `%%now_run --interactive` runs the cell in the notebook's
+  namespace, so it shares its variables. With `--bg`, or when `now` is
+  not found, they return `None`: load the trial with `nip.Trial()` once
+  the run ends.
+- After `%now_run --dir OTHER`, the notebook is connected to OTHER's store
+  (`nip.Trial()`, `%now_sql` and the rest read it) until a `%now_run`
+  runs elsewhere; a trial kept from another store then raises a
+  `RuntimeError` naming its store instead of reading this one.
 - `%%now_sql` fails without `--result` (#314); with it, the variable holds
   the rows.
 - `src = %now_restore 1` restores trial 1's files and returns its script.
@@ -325,7 +338,8 @@ now diff 1 3 -f --brief
 ```
 
 **Find out why a result changed between two runs.** `now diff A B -f
---brief` says which inputs changed content; `now diff A B -m` which modules;
+--brief` says which inputs changed content, and `-f --content` how;
+`now diff A B -m` which modules and programs;
 `now diff A B` whether the command line changed; then `-fa` on the function
 that computes the result shows its arguments and output side by side.
 
@@ -361,8 +375,19 @@ swipl -q -g "consult('trial2.pl'), forall(access(_, _, N, M, _, H, _, _), (write
   print their failure on stdout and exit 0 (#256).
 - Interrupting a run with Ctrl-C leaves the trial unfinished, without a
   finish time (#251).
-- Only Python is traced: external processes the script starts, and the
-  files they touch, are not recorded (#202).
+- Only Python is traced inside: of a process the script starts, noWorkflow
+  records the call boundary (the command line, the exit status in the
+  call's value) and the files named on the command line or created in
+  the project, never what happens inside the program. A file the process
+  modifies without naming it is not seen, a file it rewrites with the same
+  content is recorded as a read, and the children of `os.fork` and
+  `multiprocessing` are not recorded at all. The program a process runs
+  is a module of the trial, with the hash of the executable (and its
+  bytes up to `--executable-cap`, 16 MB by default); it has a
+  version only when it is an interpreter or a compiler (`Rscript`,
+  `python`, `gcc`, `java`...), which noWorkflow runs once with
+  `--version`. Through a shell, the programs of the line's commands are
+  recorded, not the shell.
 - Fine-grained collection slows the script down considerably; `-cg` or
   `-e relevant` reduce the cost.
 - Inside `now run`, `open` and `__builtins__` are not the standard ones: the

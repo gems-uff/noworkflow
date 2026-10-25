@@ -39,7 +39,7 @@ class PlainEngine(ContentDatabaseEngine):
         """Return attributes for the do_put operation"""
         return (self.content_path, content)
 
-    def put(self, content, filename):  # pylint: disable=method-hidden
+    def put(self, content, filename="generic"):  # pylint: disable=method-hidden
         """Put content in the content database"""
         return self.do_put(*self.put_attr(content, filename))
 

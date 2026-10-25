@@ -72,7 +72,7 @@ class Pull(Command):
         import requests
 
         response = requests.get(url, headers=headers)
-        content.put(response.content, None)
+        content.put(response.content)
 
     def importFiles(self, url):
         filesUrl = self.url + "/collab/files"

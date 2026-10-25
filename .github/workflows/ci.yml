@@ -137,19 +137,48 @@ jobs:
       # rules.pl, the demos and bundle.js reach it only through package-data
       # globs; if a glob or the build backend drops them, `now --version`,
       # `now export prolog -r`, `now demo` and `now vis` break on install
-      # while the suite, which runs from the source tree, stays green.
+      # while the suite, which runs from the source tree, stays green. The
+      # same goes for a package directory without __init__.py, which imports
+      # from the source tree and is left out of both distributions
+      # (namespaces = false): the kernel's was, and `now kernel` installed
+      # a kernel that could not start (#341).
       - name: Build the package
+        id: build
         if: ${{ !cancelled() && github.event_name != 'schedule' }}
         run: |
           uv build
           contents=$(unzip -Z1 dist/*.whl)
           for file in noworkflow/resources/version.txt noworkflow/resources/rules.pl \
-              noworkflow/resources/demo/1/steps.txt noworkflow/now/vis/static/dist/bundle.js; do
+              noworkflow/resources/demo/1/steps.txt noworkflow/now/vis/static/dist/bundle.js \
+              noworkflow/kernel/__init__.py noworkflow/kernel/__main__.py; do
             if ! grep -qxF "$file" <<<"$contents"; then
               echo "::error::$file is missing from the wheel"
               exit 1
             fi
           done
+          sdist=$(tar -tzf dist/*.tar.gz)
+          for file in src/noworkflow/kernel/__init__.py src/noworkflow/kernel/__main__.py; do
+            if ! grep -qE "^[^/]+/$file\$" <<<"$sdist"; then
+              echo "::error::$file is missing from the sdist"
+              exit 1
+            fi
+          done
+
+      # The kernel that `now kernel` installs runs `python -m
+      # noworkflow.kernel` with the interpreter of that `now`, so only an
+      # install of the wheel shows that it starts for a user (#341). The
+      # wheel goes into a fresh environment, its dependencies resolved as
+      # pip would for a user (not uv.lock); the check after the install
+      # refuses a kernel imported from anywhere else; then the kernel's
+      # tests start it through jupyter_client, with NOW_E2E_CMD on the
+      # `now` of that environment (e2e/test_kernel.py).
+      - name: Start the kernel from the wheel
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.sync.outcome == 'success' }}
+        run: |
+          uv venv "$RUNNER_TEMP/wheel"
+          uv pip install --python "$RUNNER_TEMP/wheel/bin/python" dist/*.whl
+          "$RUNNER_TEMP/wheel/bin/python" -I -c 'import sys, noworkflow.kernel as k; sys.exit(not k.__file__.startswith(sys.prefix))'
+          NOW_E2E_CMD="$RUNNER_TEMP/wheel/bin/now" uv run --no-sync pytest -p no:randomly src/noworkflow/tests/e2e/test_kernel.py
 
   test:
     if: github.event_name != 'schedule'
@@ -176,16 +205,16 @@ jobs:
         # and counted by the paper-example, vis-browser and engines jobs.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 2949 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 2949 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 2949 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 2949 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 3264 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 3264 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 3264 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 3264 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 2977, reference: true }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 3292, reference: true }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -308,11 +337,12 @@ jobs:
           name: coverage-report-python
           path: coverage.xml
 
-  # Publishes the reference leg's report to the repository's code quality view.
-  # No threshold: the rule is "test count >= floor" (see min-tests), not a
-  # percentage. A job of its own, with the only write permission of the
-  # workflow, so the test legs keep read-only tokens. No checkout: the action
-  # needs only the report. The `if` mirrors the one on the artifact upload: a
+  # Publishes the reference leg's report to the repository's code quality view
+  # and to qlty.sh. No threshold: the rule is "test count >= floor" (see
+  # min-tests), not a percentage. A job of its own, with the only write
+  # permission of the workflow, so the test legs keep read-only tokens. The
+  # checkout is for qlty, which reads the commit from git and refuses to
+  # upload without a repository. The `if` mirrors the one on the artifact upload: a
   # fork PR has no artifact, and `!cancelled()` plus the result check keep the
   # job from running (or being skipped by implication) after a red or skipped
   # `test`.
@@ -325,6 +355,11 @@ jobs:
       code-quality: write
       pull-requests: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
       - name: Download the Cobertura report
         uses: actions/download-artifact@v8
         with:
@@ -339,6 +374,18 @@ jobs:
           language: Python
           label: code-coverage/pytest-cov
           fail-on-error: false
+
+      # The coverage badge of the README: GitHub's coverage has no badge, so
+      # qlty.sh receives the same report. A report too, not a gate:
+      # skip-errors keeps a failed upload (an outage, or the
+      # QLTY_COVERAGE_TOKEN secret missing) from turning the job red.
+      - name: Upload coverage to qlty
+        uses: qltysh/qlty-action/coverage@ebcd284bf32e36a030afe15f1e136c7be08b9506 # v2.5.0
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: coverage.xml
+          format: cobertura
+          skip-errors: true
 
   # bundle.js is committed, because `pip install noworkflow` must serve `now
   # vis` without Node. Nothing forced whoever changed src/frontend to rebuild
@@ -375,6 +422,12 @@ jobs:
       - name: Type-check the lab extension
         run: npx lerna run build:lib --scope=@noworkflow/labextension
 
+      # stylelint, prettier and eslint of every package of the workspace (the
+      # vis, the shared packages and the Jupyter extension), as src/frontend
+      # configures them. `npm run lint` fixes what they can.
+      - name: Lint the frontend
+        run: npm run lint:check
+
       - name: Committed bundle matches the sources
         run: |
           bundle=../noworkflow/now/vis/static/dist/bundle.js
@@ -393,18 +446,20 @@ jobs:
       # runs whatever the bundle comparison said.
       - name: Type-check the vis (baseline)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: bash ../../.github/scripts/tsc-baseline.sh 4
+        run: bash ../../.github/scripts/tsc-baseline.sh 1
 
   # The running example of the noWorkflow 2 paper (#257), replayed from
-  # src/noworkflow/tests/e2e/corpus/paper_example: a red here means the tool
-  # no longer produces what the paper shows, and is triaged as "The paper's
-  # running example" in AGENTS.md says, never by editing the expectation. A
-  # job of its own because it needs the `paper` dependency group
-  # (scikit-learn, imbalanced-learn, pandas), which the matrix legs do not
-  # sync, and SWI-Prolog for the paper's Prolog query. Blocking: it is in the
-  # needs of ci-ok. It runs on the reference platform (the Python of the
-  # reference leg, which moves with it), where its goldens and the claims
-  # that depend on noWorkflow's numbering are recorded.
+  # src/noworkflow/tests/e2e/corpus/paper_example, and the case study of its
+  # "Beyond Python" section (#459), replayed from corpus/beyond_python: a red
+  # here means the tool no longer produces what the paper shows, and is
+  # triaged as "The paper's running example" in AGENTS.md says, never by
+  # editing the expectation. A job of its own because it needs the `paper`
+  # dependency group (scikit-learn, imbalanced-learn, pandas), which the
+  # matrix legs do not sync, SWI-Prolog for the paper's Prolog query, and R
+  # for the case study's model (the C compiler is on the runner image).
+  # Blocking: it is in the needs of ci-ok. It runs on the reference platform
+  # (the Python of the reference leg, which moves with it), where its goldens
+  # and the claims that depend on noWorkflow's numbering are recorded.
   paper-example:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -418,30 +473,37 @@ jobs:
           python-version: "3.15"
           enable-cache: true
 
-      - name: Install SWI-Prolog
+      # r-base-core: Rscript for the case study's model.R (base R, no
+      # package); NOW_RSCRIPT=require below fails its tests instead of
+      # skipping them when Rscript or cc is missing.
+      - name: Install SWI-Prolog and R
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox r-base-core
 
       - name: Install dependencies
         run: uv sync --locked --group paper
 
-      - name: Run the paper example
+      - name: Run the paper example and the case study
         env:
           GOLDEN: require
           GOLDEN_ACTUAL_DIR: ${{ runner.temp }}/golden-actual
+          NOW_RSCRIPT: require
         run: |
           set -o pipefail
           uv run --no-sync pytest -m paper | tee pytest.log
 
-      # min-tests: every test of the module, none skipped here (the group,
-      # swipl and the reference platform are all present).
+      # min-tests: every test of the two modules; none skipped here (the
+      # group, swipl, Rscript, cc and the reference platform are all
+      # present) but the strace variant of the case study, which skips
+      # until #206 installs strace, and its two claims under rdtLite, which
+      # no leg installs; a skip counts.
       - name: Record the test count
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh pytest.log 41 \
+          bash .github/scripts/pytest-summary.sh pytest.log 146 \
             "paper example (ubuntu-latest, 3.15)" \
-            'uv sync --locked --group paper && GOLDEN=require uv run --no-sync pytest -m paper'
+            'uv sync --locked --group paper && GOLDEN=require NOW_RSCRIPT=require uv run --no-sync pytest -m paper'
 
       - name: Upload the outputs that differ from the goldens
         if: failure()
@@ -496,7 +558,7 @@ jobs:
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh pytest.log 11 \
+          bash .github/scripts/pytest-summary.sh pytest.log 16 \
             "vis in a browser (ubuntu-latest, 3.15)" \
             'uv sync --locked --group browser && NOW_BROWSER=require uv run --no-sync pytest -m browser'
 

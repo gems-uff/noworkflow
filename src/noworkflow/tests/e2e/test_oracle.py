@@ -53,10 +53,15 @@ or the null device the harness gives), and are waited for without one
 scripts that need what Windows lacks (``os.fork()``, ``preexec_fn``,
 ``os.posix_spawn``) are skipped there with the reason (``case`` takes
 ``marks``). Each theme also runs under coarse granularity (``-cg``, ids
-``<theme>-cg``), and ``modules.py`` also with ``-c package``
-(``modules-package``), so that the local package is rewritten too; that
-case also requires the package's classes among the trial's code
-components, since the main script alone records evaluations.
+``<theme>-cg``), under the depth limits that the noWorkflow 2 paper's
+evaluation measures (``-d 2``, ``-d 3``, ``-cg -d 2``, ``-cg -d 3``, ids
+``<theme>-d2`` and so on, #467), and ``modules.py`` also with ``-c
+package`` (``modules-package``), so that the local package is rewritten
+too; that case also requires the package's classes among the trial's
+code components, since the main script alone records evaluations. A
+depth limit only reduces what is collected (#243), so a case under one
+carries no defect of its own; a coarse-grained limit carries the theme's
+``-cg`` defects.
 
 Both runs use the harness's synthetic environment (UTF-8 mode, a fixed
 hash seed, terminal width and no colors), so the oracle compares what
@@ -528,6 +533,18 @@ MODULE_ON_ANOTHER_DRIVE = Defect(
     systems=("win32",),
     condition=STDLIB_ON_ANOTHER_DRIVE,
 )
+TEMPORARY_FILE_READ_AT_STORE = Defect(
+    "#407: the final sweep of Collector.store (collector.py) reopens by "
+    "name every write-mode access whose content_hash_after is unset and "
+    "whose name os.path.isfile accepts, with no error handling; on "
+    "Windows a file of tempfile is delete-on-close (O_TEMPORARY) and "
+    "still exists under its name while open, so the second open is "
+    "denied, the store fails after the script ran and `now run` exits "
+    "with 1 (measured on every Windows leg of pre-release.yml and on "
+    "main without #202; the script runs and stores on Linux and macOS)",
+    signature="PermissionError: [Errno 13] Permission denied",
+    systems=("win32",),
+)
 YIELD_IN_CALL_ARGUMENT = Defect(
     "#311: Collector.call (collector.py) pushes a "
     "FutureActivation on "
@@ -783,6 +800,25 @@ COARSE_DEFECTS = {
 # trial only when -c package rewrites the package.
 PACKAGE_CLASSES = ("Circle", "Square")
 
+# The depth limits of the paper's evaluation (#467), fine- and
+# coarse-grained, with the suffix of their ids. A depth limit only reduces
+# what is collected (#243), so a case under one carries no defect of its
+# own; under -cg -d 2 and -cg -d 3 the themes of COARSE_DEFECTS stop in
+# the transformer as under -cg (depth_defects).
+DEPTH_LIMITS = (
+    (("-d", "2"), "-d2"),
+    (("-d", "3"), "-d3"),
+    (("-cg", "-d", "2"), "-cg-d2"),
+    (("-cg", "-d", "3"), "-cg-d3"),
+)
+
+
+def depth_defects(script, flags):
+    """The known defects of a theme under a depth limit: those of -cg when
+    the limit is coarse-grained, none otherwise"""
+    return COARSE_DEFECTS.get(script, ()) if "-cg" in flags else ()
+
+
 CASES = (
     [
         case(script, *args, marks=THEME_MARKS.get(script, ()))
@@ -797,6 +833,18 @@ CASES = (
             defects=COARSE_DEFECTS.get(script, ()),
             marks=THEME_MARKS.get(script, ()),
         )
+        for script, args in ALL_THEMES
+    ]
+    + [
+        case(
+            script,
+            *args,
+            flags=flags,
+            suffix=suffix,
+            defects=depth_defects(script, flags),
+            marks=THEME_MARKS.get(script, ()),
+        )
+        for flags, suffix in DEPTH_LIMITS
         for script, args in ALL_THEMES
     ]
     + [case("modules.py", flags=("-c", "package"), suffix="-package")]
@@ -864,6 +912,10 @@ CASES = (
         case("distribution_finder.py", defects=(DISTRIBUTION_LOOKUP,)),
         case("duplicate_distributions.py", defects=(DISTRIBUTIONS_LISTED_TWICE,)),
         case("setuptools_vendor_path.py"),
+        case(
+            "directories_and_temporary_files.py",
+            defects=(TEMPORARY_FILE_READ_AT_STORE,),
+        ),
     ]
 )
 
@@ -910,7 +962,7 @@ def test_oracle_script_runs_like_plain_python(project, script, args, flags, defe
             pytrace=False,
         )
     assert_same_outcome(plain, traced, defects)
-    assert_traced(project)
+    assert_traced(project, " ".join(("run", *flags, script, *args)))
     if "package" in flags:
         assert_package_rewritten(project)
 

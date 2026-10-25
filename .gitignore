@@ -65,8 +65,9 @@ node_modules/
 # Optional npm cache directory
 .npm
 
-# Optional eslint cache
+# Optional eslint and stylelint caches
 .eslintcache
+.stylelintcache
 
 # Optional REPL history
 .node_repl_history

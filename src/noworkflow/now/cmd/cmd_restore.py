@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import argparse
 import os
+import stat
 import sys
 import time
 from datetime import datetime
@@ -15,6 +16,7 @@ from datetime import datetime
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
+from ..collection.prov_execution.external import is_placeholder
 from ..persistence import content, persistence_config
 from ..persistence.models import (
     Argument,
@@ -59,8 +61,10 @@ class Restore(Command):
             type=str,
             help="R|FORMAT: [-h] [-i ID] [-t TARGET] [path] \n"
             "Restore a file from trial. Without <ID>, it restores \n"
-            "the first access to file. <ID> can be either the \n"
-            "timestamp, the number of access, or the code hash \n"
+            "the first version of the file in the trial (for a \n"
+            "file the trial created, the content it wrote first). \n"
+            "<ID> can be either the timestamp, the number of \n"
+            "access, or the code hash \n"
             "<TARGET> specifies the target path (default to path)",
         )
         add_arg(
@@ -143,8 +147,12 @@ class Restore(Command):
             metascript.message or "Backup Trial {}".format(metascript.trial_id)
         )
 
-    def restore(self, path, code_hash, trial_id, mode="normal"):
-        """Restore file with <code_hash> from <trial_id>"""
+    def restore(self, path, code_hash, trial_id, mode="normal", executable=False):
+        """Restore file with <code_hash> from <trial_id>
+
+        ``executable``: the file is a program the trial launched, which
+        gets the executable bit when it is written (#205)
+        """
         new_code_hash = file_hash(path)
         if code_hash == new_code_hash:
             return False
@@ -154,12 +162,24 @@ class Restore(Command):
             return True
         elif code_hash is not None:
             load_file = content.get(code_hash)
+            if is_placeholder(load_file):
+                # An executable above the cap of #203: its bytes were never
+                # stored, and the placeholder must not replace them
+                msg = "Unable to restore file {}".format(path)
+                if trial_id:
+                    msg += " from trial {}".format(trial_id)
+                msg += ": the executable was too large to store. Skipping it"
+                print_error(msg)
+                self.failed = True
+                return False
             try:
                 parent = os.path.dirname(path)
                 if parent:
                     os.makedirs(parent, exist_ok=True)
                 with open(path, "wb") as fil:
                     fil.write(load_file)
+                if executable:
+                    make_executable(path)
                 msg = "File {}".format(path)
                 if trial_id:
                     msg += " from trial {}".format(trial_id)
@@ -223,8 +243,15 @@ class Restore(Command):
             if not match:
                 self.create_backup(metascript, new_files, args)
 
+            programs = launched_programs(trial)
             for path, info in viewitems(restore_files):
-                self.restore(path, info["code_hash"], trial.id, mode=info["type"])
+                self.restore(
+                    path,
+                    info["code_hash"],
+                    trial.id,
+                    mode=info["type"],
+                    executable=real_path(path) in programs,
+                )
 
             trial.create_head()
             content.close()
@@ -238,7 +265,7 @@ class Restore(Command):
             parser.add_argument(
                 "-i",
                 "--id",
-                default="1",
+                default=None,
                 type=str,
                 help="time ([X|]YYYY-MM-DD HH:MM:SS.ffffff), number of "
                 "access or hash. The optional X in the time, indicates "
@@ -246,7 +273,9 @@ class Restore(Command):
                 "access: X = B means before the access, X = A means "
                 "after. Example: 'A|2016-02-27 00:00' will query the "
                 "file accessed at midnight, and get its content after "
-                "the access",
+                "the access. Without it, the first version of the file "
+                "in the trial: the content before its first access, or, "
+                "for a file the trial created, the content after it",
             )
             parser.add_argument(
                 "-t", "--target", type=str, help="target path (default to path)"
@@ -258,9 +287,21 @@ class Restore(Command):
             if not restore:
                 print_error("File version not found!")
                 self.failed = True
+            elif restore[1] is None and parsed.target:
+                # A version without content (the file did not exist) would
+                # delete the target, a file the trial never saw (#246)
+                print_error(
+                    "File {} did not exist at that point of the trial: "
+                    "{} left as it is".format(parsed.path, parsed.target)
+                )
+                self.failed = True
             else:
                 path = parsed.target or parsed.path
-                if not self.restore(path, restore[1], None):
+                executable = real_path(parsed.path) in launched_programs(trial)
+                if (
+                    not self.restore(path, restore[1], None, executable=executable)
+                    and not self.failed
+                ):
                     print_msg("File has not changed!", self.print_msg)
             content.close()
         return 1 if self.failed else 0
@@ -272,6 +313,11 @@ class Restore(Command):
                 tid = tid.decode("utf-8")
             path = path.decode("utf-8")
             fid = fid.decode("utf-8")
+
+        if fid is None:
+            if tid:
+                return first_version(Trial(tid), path)
+            fid = "1"
 
         splitted = fid.split("|")
         _time = time_str(splitted[-1])
@@ -299,6 +345,62 @@ class Restore(Command):
             for i, result in enumerate(trial.iterate_accesses(path)):
                 if fid == i + 1:
                     return path, result[1]["code_hash"]
+
+
+def first_version(trial, path):
+    """The version ``-f`` restores without ``-i``: the first one the trial
+    has of ``path``, its script, a local module or the content before its
+    first access; for a file the trial created, whose first access has no
+    content before, the content after that access (#246). None when the
+    trial never saw the file"""
+    versions = trial.iterate_accesses(path)
+    first = next(versions, None)
+    if first is None:
+        return None
+    info = first[1]
+    if info["type"] == "access" and info["code_hash"] is None:
+        # iterate_accesses yields each access before, then after
+        after = next(versions, None)
+        if after is not None:
+            return path, after[1]["code_hash"]
+    return path, info["code_hash"]
+
+
+def launched_programs(trial):
+    """The real paths of the programs the trial launched (and of the
+    libraries it loaded through ``ctypes``) that lie in the project
+
+    #203 records them in the module table, named as the command line names
+    them, beside the modules the script imports; an imported module is
+    named after its file (``helper`` for ``helper.py``, ``_dbm`` for
+    ``_dbm.cpython-315-darwin.so``, ``pkg`` for ``pkg/__init__.py``), and
+    anything else is a program. The store records no file mode: these are
+    the files ``restore`` makes executable (#205).
+    """
+    programs = set()
+    # pylint: disable=not-an-iterable
+    for module in trial.local_modules:
+        stem, dot, _ = os.path.basename(module.path).partition(".")
+        imported = dot and stem in (module.name.rpartition(".")[2], "__init__")
+        if not imported:
+            programs.add(real_path(module.path))
+    return programs
+
+
+def real_path(path):
+    """The real path of a project file, for comparisons"""
+    return os.path.normcase(
+        os.path.realpath(os.path.join(persistence_config.base_path, path))
+    )
+
+
+def make_executable(path):
+    """``chmod +x``: execute permission wherever there is read permission;
+    Windows has no executable bit"""
+    if os.name == "nt":
+        return
+    mode = stat.S_IMODE(os.stat(path).st_mode)
+    os.chmod(path, mode | (mode & 0o444) >> 2)
 
 
 def time_str(arg):

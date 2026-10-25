@@ -190,7 +190,6 @@ extend-exclude = [
     "src/noworkflow/tests/e2e/corpus",
     "tests/",
     "Examples",
-    "history",
     "docs",
     "src/frontend",
 ]

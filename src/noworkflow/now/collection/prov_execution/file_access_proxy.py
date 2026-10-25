@@ -33,7 +33,7 @@ class FileAccessProxy(object):
         file_access = self._fa
         # The file is no longer open for the never-closed fallback in store().
         self._collector.open_write_files.pop(file_access, None)
-        if file_access.content_hash_after is None and os.path.exists(file_access.name):
+        if file_access.content_hash_after is None and os.path.isfile(file_access.name):
             with content.std_open(file_access.name, "rb") as fil:
                 file_access.content_hash_after = content.put(
                     fil.read(), file_access.name

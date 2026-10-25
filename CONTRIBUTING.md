@@ -128,7 +128,12 @@ once it is integrated and nothing is left to do.
   same commit; the `frontend` job rebuilds it and fails on a difference.
 - **The docs, when the interface changes.** A new or renamed command or
   option is also changed in `README.md` and, once it exists, in
-  `skills/noworkflow/SKILL.md`.
+  `skills/noworkflow/SKILL.md`. `src/noworkflow/tests/e2e/test_readme.py`
+  holds the README to the tool (its command lines, the options and values
+  it names, what it says about installing, the output it shows, its
+  links), and `test_beyond_python.py` the excerpts of
+  `Examples/glue_pipeline/README.md`: a change that turns one of them red
+  updates the README in the same pull request.
 - **No real data.** A provenance store records the whole environment of the
   machine (every environment variable, user name, hostname). Do not paste a
   real `now show -e`, a real Prolog export or a real `.noworkflow/` into the
@@ -198,6 +203,14 @@ Optional, each for one purpose:
 - **Google Chrome**, for the tests of the vis in a browser (with the
   `browser` dependency group); they skip without it. The `vis-browser` job
   of CI installs it. See [The vis in a browser](#the-vis-in-a-browser).
+- **R (`Rscript`) and a C compiler (`cc`)**, for the tests of the case
+  study of the paper's "Beyond Python" section
+  (`src/noworkflow/tests/e2e/test_beyond_python.py`, see [The paper's
+  running example](#the-papers-running-example)); they skip without them.
+  Base R is enough (`r-base-core` on Debian and Ubuntu, `brew install r`
+  on macOS); the C compiler is the system's. Two of those tests also need
+  the rdtLite package in R (`install.packages("rdtLite")`) and skip
+  without it.
 - **[issuefinder](https://github.com/gems-uff/issuefinder)**, cloned next to
   the checkout (`../issuefinder`), to search the existing issues before
   opening one: it finds an issue written with other words or in the other
@@ -356,7 +369,7 @@ them on the reference platform, with SWI-Prolog for the Prolog query:
 
 ```bash
 uv sync --locked --group paper                           # scikit-learn, imbalanced-learn, pandas
-uv run pytest -m paper                                   # about a minute; the replay runs once
+uv run pytest -m paper                                   # minutes: the replay runs once, the mirrors once per configuration
 GOLDEN=require .github/reference-leg/run.sh -m paper     # as the job runs it, goldens included
 ```
 
@@ -367,6 +380,16 @@ triaged as "The paper's running example" in `AGENTS.md` says: the change
 regressed, or the paper and its package must follow it; the expectation is
 never edited to make the test pass. To replay on the real dataset, see the
 README in `src/noworkflow/tests/e2e/corpus/paper_example/`.
+
+`src/noworkflow/tests/e2e/test_beyond_python.py` does the same for the
+case study of the paper's "Beyond Python" section (a Python wrapper that
+launches an R script and a C program, three trials), from
+`src/noworkflow/tests/e2e/corpus/beyond_python/`. Its tests carry the same
+`paper` mark and run in the same job, which installs R; locally they need
+`Rscript` and `cc` on the PATH and skip without them, and
+`NOW_RSCRIPT=require` fails instead of skipping, as the job sets. The
+claims that wait for #206 and #207 are `_desired` twins marked
+`xfail(strict=True)`: see "The paper's running example" in `AGENTS.md`.
 
 ### The vis in a browser
 
@@ -447,6 +470,16 @@ bash .github/scripts/tsc-baseline.sh "$(sed -n 's/.*tsc-baseline.sh \([0-9]*\).*
 
 When a change removes errors, lower the number in the `frontend` job of
 `.github/workflows/ci.yml` to the new count in the same commit.
+
+The same job lints every package of the workspace (the vis, the shared
+packages and the Jupyter extension) with stylelint, prettier and eslint.
+The three are declared in `src/frontend/package.json` and configured next
+to it (`eslint.config.js`, `.prettierrc.json`, `.stylelintrc.json`). From
+`src/frontend`, `npm run lint:check` is what the job runs, and `npm run
+lint` fixes what the three can fix; `--workspace=@noworkflow/nowvis` (or
+another package) limits either to one package. What the tools cannot fix
+is fixed by hand, with the behaviour kept: `===` only where both operands
+already have the same type, a conversion written out otherwise.
 
 `npm run build` builds every package, the Jupyter extension included, and
 that one calls `jupyter labextension build`. It fails with

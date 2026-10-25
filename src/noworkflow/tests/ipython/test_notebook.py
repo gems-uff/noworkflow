@@ -5,7 +5,7 @@
 
 A ``%%now_run`` cell runs ``now run`` on the cell's code, as a process,
 into the project's store: that is the trial a notebook user gets without
-the noWorkflow kernel (which does not start today, #315). It is a script
+the noWorkflow kernel (``e2e/test_kernel.py`` runs that one). It is a script
 trial: its code is one component of type ``script``, never ``cell``, so
 ``now clean`` finds no notebook in it. ``now export ipynb`` writes a
 notebook for it all the same, and that notebook runs in the shell that

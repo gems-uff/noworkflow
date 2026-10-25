@@ -17,6 +17,7 @@ from ..persistence.lightweight import (
     MemberLW,
     ModuleLW,
     ObjectStore,
+    StageTagsLW,
     TrialLW,
     UserLW,
 )
@@ -55,7 +56,7 @@ def import_bundle(bundle, experiment=None):
     env_store = ObjectStore(EnvironmentAttrLW)
     evaluation_store = ObjectStore(EvaluationLW)
     fileAccess_store = ObjectStore(FileAccessLW)
-    stageTags_store = ObjectStore(StageTags)
+    stageTags_store = ObjectStore(StageTagsLW)
     member_store = ObjectStore(MemberLW)
     module_store = ObjectStore(ModuleLW)
     user_store = ObjectStore(UserLW)
@@ -92,6 +93,12 @@ def import_bundle(bundle, experiment=None):
     user_store.do_store()
 
     for x in bundle.trials:
+        if x.status == "backup":
+            # Tagged as now restore tags the backup trial it creates: X.0.0
+            Tag.create_automatic_tag(
+                x.id, None, None, experiment_id=experiment, is_backup_trial=True
+            )
+            continue
         main_block = [
             c for c in bundle.codeBlocks if c.trial_id == x.id and x.main_id == c.id
         ]
@@ -103,7 +110,13 @@ def import_bundle(bundle, experiment=None):
         )
 
 
-def export_bundle(trialIds, usersIds=()):
+def export_bundle(trialIds, usersIds=None):
+    """The rows of the trials ``trialIds`` as a ``BundleLW``
+
+    ``usersIds`` names the users the bundle carries; by default, the users
+    of those trials, so that a pull or an import brings them with the
+    trials.
+    """
     # Load dependencies
     trialsToImport = [t for t in Trial.all() if t.id in trialIds]
     actsToImport = Activation.load_by_trials(trialIds)
@@ -117,6 +130,9 @@ def export_bundle(trialIds, usersIds=()):
     fileAccessToImport = FileAccess.load_by_trials(trialIds)
     memberToImport = Member.load_by_trials(trialIds)
     moduleToImport = Module.load_by_trials(trialIds)
+    stageTagsToImport = StageTags.load_by_trials(trialIds)
+    if usersIds is None:
+        usersIds = {t.user_id for t in trialsToImport}
     usersToImport = [u for u in User.all() if u.id in usersIds]
 
     bundle = BundleLW()
@@ -224,6 +240,9 @@ def export_bundle(trialIds, usersIds=()):
             for x in evaluationToImport
         ]
     )
+    for evaluation, x in zip(bundle.evaluations, evaluationToImport):
+        evaluation.member_container_activation_id = x.member_container_activation_id
+        evaluation.member_container_id = x.member_container_id
     bundle.fileAccesses.extend(
         [
             FileAccessLW(
@@ -269,6 +288,14 @@ def export_bundle(trialIds, usersIds=()):
                 x.fullpath,
             )
             for x in moduleToImport
+        ]
+    )
+    bundle.stageTags.extend(
+        [
+            StageTagsLW(
+                x.id, x.trial_id, x.name, x.tag_name, activation_id=x.activation_id
+            )
+            for x in stageTagsToImport
         ]
     )
     bundle.users.extend([UserLW(x.id, x.userLogin) for x in usersToImport])

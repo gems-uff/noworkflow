@@ -22,15 +22,14 @@ magics change for the whole process is set or saved here, and undone:
 - the persistence layer may open the project's store on disk
   (``real_stores``): the in-memory stores the suite uses come back, and
   every engine and session the magics made is closed;
-- ``%load_ext noworkflow`` leaves its names in IPython's table of pending
-  magics (``IPython.core.magic.magics``), and the next magics class
-  decorated after it takes them and cannot be created, for the rest of
-  the process (#384). So every magics class that a shell,
-  a magic or an in-process collection would define while the names are
-  pending is defined first (``warm_up``): IPython's lazily loaded ones and
-  those of ``IPython.terminal``, which a collection imports. The table is
-  put back afterwards, and a magics class that took the names all the
-  same is repaired and reported, as a collection left behind is;
+- IPython's table of pending magics (``IPython.core.magic.magics``): a
+  ``line_magic`` or ``cell_magic`` marker applied outside a class body
+  records its name there, and the next magics class decorated in the
+  process takes it and cannot be created, for the rest of the process.
+  ``%load_ext noworkflow`` did that until #384; the table is put back
+  after each shell, and a magics class that took a pending name is
+  repaired and reported, as a collection left behind is, so that a
+  regression fails the test that caused it instead of a later one;
 - what the magics change for the process: ``dotmagic.LOADED`` (``%%dot``
   registers once per process), the ``DEFAULT`` of every model class
   (``%now_set_default``; the modules that define model classes are
@@ -39,10 +38,13 @@ magics change for the whole process is set or saved here, and undone:
   ``%%script`` event-loop thread, ``sys.modules['__main__']``, the
   builtins ``__IPYTHON__`` and ``display``, the prompts and the last
   exception in ``sys``;
-- what IPython imports on the first cell and the first traceback, and
-  what the magic imports when it builds the trial of an ``--interactive``
-  cell, is imported when the shell starts (``warm_up``), so that a
-  collection that leaves its import finder installed never loads it.
+- what IPython imports on the first cell and the first traceback, the
+  magics classes it loads lazily and those of ``IPython.terminal``, which
+  an in-process collection imports, and what the magic imports when it
+  builds the trial of an ``--interactive`` cell, is imported when the
+  shell starts (``warm_up``): a collection that leaves its import finder
+  installed never loads it, and every test sees the same process
+  whichever test ran first.
 
 What a collection leaves in the process (the four ``open`` functions,
 the injected builtins, the import finder; #250) is undone before IPython
@@ -69,9 +71,7 @@ use ``Cell.describe()``, which masks it with the paths, never a trial or
 a raw output, and the repr of a ``Cell``, which pytest prints when a cell
 appears in a failing assertion, is masked too.
 
-``%%now_run --interactive`` fails on an import today (#313):
-``py3compat_stand_in`` gets past it on the test side only. The known
-defects that more than one module pins are defined here, once.
+The known defects that more than one module pins are defined here, once.
 """
 
 import asyncio
@@ -90,7 +90,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import types
 from io import StringIO
 from pathlib import Path
 
@@ -108,7 +107,6 @@ from noworkflow.now.utils import io as now_io
 from noworkflow.tests.e2e.harness import clean_env, tail
 from noworkflow.tests.e2e.normalize import Normalizer
 from noworkflow.tests.helpers import leaks
-from noworkflow.tests.helpers.defects import Defect
 from noworkflow.tests.helpers.persistence import real_stores
 
 # Seconds a cell may run, as long as the harness lets `now` run, and
@@ -146,7 +144,8 @@ LAST_EXCEPTION = ("last_type", "last_value", "last_traceback", "last_exc")
 # - ``IPython.terminal.embed`` defines the magics classes TerminalMagics and
 #   EmbeddedMagics. Execution.configure imports it for the injected
 #   ``now_ipython`` builtin (``debugger_builtins``: ``from IPython import
-#   embed``), while the extension's names are pending (#384).
+#   embed``): imported first, an in-process collection defines no magics
+#   class, whichever test runs one first.
 # - What ``Trial()`` imports the first time it builds a trial. The magic
 #   builds the trial of an ``--interactive`` cell after the collection;
 #   imported there, these modules of noWorkflow would get a module row of
@@ -158,30 +157,6 @@ WARM_IMPORTS = (
     "noworkflow.now.models.dependency_graph.config",
     "noworkflow.now.models.graphs.trial_graph",
     "noworkflow.now.models.trial_prolog",
-)
-
-# Known defects that more than one module pins.
-MAGIC_REGISTRY = Defect(
-    "#384: magics/command.py "
-    "IpythonCommandMagic.create_magic applies IPython's line_magic and "
-    "cell_magic markers at run time (NoworkflowMagics._generate_magics), "
-    "and each marker records its name in IPython's module-level table of "
-    "pending magics (IPython.core.magic.magics), which only the next "
-    "@magics_class drains: the next magics class decorated in the process "
-    "takes the extension's names and cannot be created, for the rest of "
-    "the process. IPython 9.17.1 (uv.lock) decorates ScriptMagics and "
-    "HistoryMagics lazily, on their first use, and a user's own "
-    "@magics_class takes the names as well, so loading IPython's classes "
-    "first does not fix it; %reload_ext records the names again",
-    signature="object has no attribute 'now_run'",
-)
-INTERACTIVE_IMPORT = Defect(
-    "#313: magics/now_run.py NowRun.execute imports builtin_mod from "
-    "IPython.utils.py3compat for --interactive, a module IPython 9.17.1 "
-    "(uv.lock) no longer has (9.15.0 still had it), so the cell fails "
-    "before it swaps anything or creates its trial",
-    signature="No module named 'IPython.utils.py3compat'",
-    condition=importlib.util.find_spec("IPython.utils.py3compat") is None,
 )
 
 
@@ -541,7 +516,7 @@ def model_defaults_kept():
 
 @contextlib.contextmanager
 def magic_table_kept():
-    """Put back IPython's table of pending magics (#384)"""
+    """Put back IPython's table of pending magics"""
     saved = {kind: dict(table) for kind, table in ipython_magic.magics.items()}
     try:
         yield
@@ -564,8 +539,8 @@ def magics_classes():
 def names_taken(cls):
     """The magics in the class table of ``cls`` that name no method of it
 
-    What a class decorated with ``@magics_class`` while ``%load_ext
-    noworkflow`` had left its names pending took (#384):
+    What a class decorated with ``@magics_class`` while names were pending
+    in IPython's table took (as after ``%load_ext noworkflow`` until #384):
     IPython cannot create it, ``Magics.__init__`` looks the names up.
     """
     table = vars(cls).get("magics")
@@ -661,12 +636,11 @@ def warm_up(ip):
     loaded later
 
     Every magics class that the shell, the magics or an in-process
-    collection would define: ``%load_ext noworkflow`` breaks the next one
-    decorated after it (#384). Those are the magics classes
-    IPython loads lazily, and TerminalMagics and EmbeddedMagics, which an
-    ``--interactive`` cell imports (``WARM_IMPORTS``): the first test of
-    the process to run one would otherwise break them for every later
-    test. And what the first cell and the first traceback import (the
+    collection would define: the magics classes IPython loads lazily, and
+    TerminalMagics and EmbeddedMagics, which an ``--interactive`` cell
+    imports (``WARM_IMPORTS``), so that no test defines one and the
+    process is the same whichever test ran first. And what the first cell
+    and the first traceback import (the
     transcript logger, ``stack_data`` and the libraries under it) and what
     the magic's ``Trial()`` imports: imported while a collection leaves
     noWorkflow's import finder in ``sys.meta_path`` (an ``--interactive``
@@ -763,11 +737,10 @@ def open_shell(project, extension=True):
         )
     if taken:
         failures.append(
-            "a magics class was defined while the extension's names were "
-            "pending (#384; repaired now): {}\nImport what "
-            "defines it in warm_up, before the extension loads.".format(
-                "; ".join(taken)
-            )
+            "a magics class was defined while names were pending in "
+            "IPython's table, as after %load_ext noworkflow until #384 "
+            "(repaired now): {}\nA line_magic or cell_magic marker was "
+            "applied outside a class body.".format("; ".join(taken))
         )
     if failures:
         pytest.fail("\n".join(failures), pytrace=False)
@@ -787,25 +760,6 @@ def argv_and_path0_kept():
     finally:
         sys.argv = argv
         sys.path[0] = path0
-
-
-@contextlib.contextmanager
-def py3compat_stand_in():
-    """``IPython.utils.py3compat`` as ``now_run.py`` imports it, test side
-    only
-
-    The module left IPython (#313); the stand-in holds ``builtin_mod``,
-    the only name the magic takes from it, as IPython's held the builtins
-    module, so ``%%now_run --interactive`` runs past the import. No module
-    of noWorkflow changes. ``sys.argv`` and ``sys.path[0]`` are put back
-    with it (``argv_and_path0_kept``). Entered before a shell opens, so
-    that it is undone after the shell closes.
-    """
-    stand_in = types.ModuleType("IPython.utils.py3compat")
-    stand_in.builtin_mod = builtins
-    with argv_and_path0_kept(), pytest.MonkeyPatch.context() as patch:
-        patch.setitem(sys.modules, stand_in.__name__, stand_in)
-        yield stand_in
 
 
 def run_python(project, code, *args, timeout=CELL_TIMEOUT):

@@ -225,6 +225,22 @@ def test_a_puregit_run_commits_the_trial_with_the_synthetic_identity(puregit_sto
     }
 
 
+def git_failure(stderr):
+    """The last line of ``stderr``, a ``CalledProcessError`` of git, with
+    its command written as from Python 3.15.1 on
+
+    Up to 3.15.0 the message encloses a list command in quotes
+    (``Command '['git', ...]' returned``); from 3.15.1 it is the bare repr
+    (``Command ['git', ...] returned``). ``now`` may run on another Python
+    than the tests (``NOW_E2E_CMD``), so the line is normalized instead of
+    the expectation.
+    """
+    line = last_line(stderr)
+    return line.replace("Command '[", "Command [", 1).replace(
+        "]' returned", "] returned", 1
+    )
+
+
 def run_without_identity(project):
     """``now run --content-engine puregit`` with no committer identity
 
@@ -255,8 +271,8 @@ def test_run_with_puregit_without_a_git_identity(puregit_project):
 
     assert result.returncode == 1, str(result)
     assert "Committer identity unknown" in result.stdout
-    assert last_line(result.stderr).startswith(
-        "subprocess.CalledProcessError: Command '['git', 'commit-tree'"
+    assert git_failure(result.stderr).startswith(
+        "subprocess.CalledProcessError: Command ['git', 'commit-tree'"
     ), str(result)
     assert not (puregit_project.path / "data.txt").exists()
     assert os.listdir(puregit_project.store) == ["content.git"]
@@ -300,8 +316,8 @@ def test_run_with_puregit_of_a_script_that_reads_under_dot_git(puregit_project):
 
     assert result.returncode == 1, str(result)
     assert "Invalid path '.git/HEAD'" in result.stdout
-    assert last_line(result.stderr).startswith(
-        "subprocess.CalledProcessError: Command '['git', 'update-index', "
+    assert git_failure(result.stderr).startswith(
+        "subprocess.CalledProcessError: Command ['git', 'update-index', "
         "'--add', '--cacheinfo', '100644', "
     ), str(result)
     assert [trial["status"] for trial in puregit_project.trials()] == ["finished"]
@@ -472,9 +488,9 @@ def test_restore_by_a_file_name_prefix_on_a_puregit_store(puregit_store):
     result = restore_data(puregit_store, "script")
 
     assert result.returncode == 1, str(result)
-    assert last_line(result.stderr) == (
-        "subprocess.CalledProcessError: Command '['git', 'cat-file', '-p', "
-        "b'script.py']' returned non-zero exit status 128."
+    assert git_failure(result.stderr) == (
+        "subprocess.CalledProcessError: Command ['git', 'cat-file', '-p', "
+        "b'script.py'] returned non-zero exit status 128."
     )
     assert not (puregit_store.path / "out.txt").exists()
 

@@ -34,6 +34,7 @@ git clean -dfX
 ```
 
 Reinstall workspace modules using npm:
+
 ```bash
 cd ..\..
 npm install

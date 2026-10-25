@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Universidade Federal Fluminense (UFF)
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""``now restore``, ``--dir``, ``now gc``, ``now import`` and ``now demo``
+"""``now restore``, ``--dir``, ``now gc`` and ``now demo``
 
 Run as processes on real stores:
 
@@ -9,12 +9,15 @@ Run as processes on real stores:
   deleted subdirectory included), records a ``backup`` trial when the
   project differs from the head, and ``-f FILE -t TARGET`` writes one
   version of one file elsewhere;
+- a program the trial launched comes back executable (#205), while a
+  data file or an imported module comes back with the default mode, and
+  ``-f`` without ``-i`` restores what the trial wrote into a file it
+  created, and never deletes a target (#246);
 - the defects of restore: a binary local module crashes it (#183), the
   backup trial imports every local module of the head, changed or not, to
   read its version, so their code runs and a module that exits at import
-  aborts the restore (#396), a restored executable loses its executable
-  bit (#205), ``-f`` with the default ``-i 1`` deletes an unrelated
-  target, a backup trial records the parent of the project as its path,
+  aborts the restore (#396), a backup trial records the parent of the
+  project as its path,
   ``--dir`` from another directory writes into the current directory, and
   files outside the project are put back when they are in a sibling
   directory whose name starts with the project's or, on Windows from
@@ -22,8 +25,7 @@ Run as processes on real stores:
   drive (#440);
 - ``--dir`` of ``run`` and ``list``, and the sibling import that ``run
   --dir`` breaks;
-- ``now gc`` (#224) and ``now import`` on the plain content engine, both of
-  which crash;
+- ``now gc`` (#224) on the plain content engine, which crashes;
 - ``now demo 1`` through the console script (slow, needs matplotlib), whose
   step 3 script raises NameError.
 
@@ -53,6 +55,10 @@ from pathlib import Path
 import pytest
 
 import noworkflow
+from noworkflow.now.collection.prov_execution.external import (
+    EXECUTABLE_CAP,
+    PLACEHOLDER_PREFIX,
+)
 
 from ..helpers.defects import Defect, known_defects
 from .harness import (
@@ -283,42 +289,54 @@ def test_restore_file_that_already_has_the_version_exits_0(project):
     assert project.files() == before
 
 
-def test_restore_file_onto_an_existing_target(project):
-    """``-f out/sub/result.txt -t EXISTING`` with the default ``-i 1``
-    takes the before-hash of the first access, which is empty for a written
-    file, and so deletes the unrelated target (#246
-    changes it)"""
+def test_restore_file_the_trial_created_restores_the_content_it_wrote(project):
+    """Without ``-i``, ``-f`` of a file the trial created, whose first
+    access has no content before, restores the content after that access,
+    the version the trial wrote (#246): into its own path once deleted,
+    and into an existing target, which it overwrites"""
     build_restore(project)
+    os.remove(str(project.path / RESULT))
     project.write("target.txt", "keep\n")
 
+    result = project.run("restore", "1", "-f", RESULT)
+    assert result.stdout == "[now] File {} restored\n".format(RESULT)
     result = project.run("restore", "1", "-f", RESULT, "-t", "target.txt")
+    assert result.stdout == "[now] File target.txt restored\n"
 
-    assert result.stdout == "[now] File target.txt removed\n"
-    assert not (project.path / "target.txt").exists()
+    assert (project.path / RESULT).read_bytes() == TRIAL1_OUTPUT
+    assert (project.path / "target.txt").read_bytes() == TRIAL1_OUTPUT
     assert len(project.trials()) == 2
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "#246: restore -f FILE -t EXISTING with the "
-        "default -i 1 deletes the target when the first access had no "
-        "before-hash"
-    ),
-)
-def test_restore_file_onto_an_existing_target_desired(project):
-    """Restoring a version that did not exist into an existing target
-    leaves the target alone (or restores something into it); it never
-    removes it"""
+def test_restore_file_onto_an_existing_target_never_removes_it(project):
+    """``-f out/sub/result.txt -i 1 -t EXISTING`` asks for the content
+    before the first access of a file the trial created, a version in which
+    the file did not exist: the target, a file the trial never saw, is left
+    as it is, stderr says so and the command exits with 1 (until #246 it
+    deleted the target)"""
     build_restore(project)
     project.write("target.txt", "keep\n")
 
-    project.run(
-        "restore", "1", "-f", RESULT, "-t", "target.txt", expect=None, allow_stderr=True
+    result = project.run(
+        "restore",
+        "1",
+        "-f",
+        RESULT,
+        "-i",
+        "1",
+        "-t",
+        "target.txt",
+        expect=1,
+        allow_stderr=True,
     )
 
-    assert (project.path / "target.txt").exists()
+    assert result.stderr == (
+        "[now] File {} did not exist at that point of the trial: "
+        "target.txt left as it is\n".format(RESULT)
+    ), str(result)
+    assert result.stdout == "", str(result)
+    assert (project.path / "target.txt").read_text(encoding="utf-8") == "keep\n"
+    assert len(project.trials()) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -731,63 +749,166 @@ def test_a_module_that_exits_at_import_does_not_abort_restore_desired(project):
 # ---------------------------------------------------------------------------
 
 POSIX_ONLY = pytest.mark.skipif(os.name == "nt", reason="Windows has no executable bit")
+# A script that launches a program of the project, the shell script
+# tool.sh, which prints "tool".
+LAUNCH_SCRIPT = (
+    "import subprocess\n"
+    "\n"
+    "completed = subprocess.run(['./tool.sh'])\n"
+    "print('exit', completed.returncode)\n"
+)
 
 
-def restore_deleted_executable(project):
-    """Delete ``tool.sh`` (0755 in the corpus) and ``now restore 1``
+def mode_of(path):
+    return stat.S_IMODE(path.stat().st_mode)
 
-    Returns the mode it had before. The file must be deleted: restoring
-    over an existing file truncates it in place and keeps its mode.
-    """
-    build_restore(project)
+
+def executable_where_readable(mode):
+    """``chmod +x`` as restore applies it: execute wherever read"""
+    return mode & 0o111 and (mode & 0o444) >> 2 == mode & 0o111
+
+
+def build_launch(project):
+    """A trial that launches ``./tool.sh`` (0755), recorded as a program of
+    the trial in the module table (#203)"""
+    project.copy_corpus("restore")
+    project.write("main.py", LAUNCH_SCRIPT)
     tool = project.path / "tool.sh"
-    mode = stat.S_IMODE(tool.stat().st_mode)
-    assert mode & 0o111, "the corpus copy of tool.sh must be executable"
+    assert mode_of(tool) & 0o111, "the corpus copy of tool.sh must be executable"
+    result = project.run("run", "main.py")
+    assert result.stdout.splitlines()[-2:] == ["tool", "exit 0"], str(result)
+    names = [row["name"] for row in project.query("SELECT name FROM module")]
+    assert "tool.sh" in names, names
+    return tool
+
+
+@POSIX_ONLY
+def test_restore_of_a_deleted_data_file_or_module_drops_the_executable_bit(project):
+    """``tool.sh``, a file the script reads, and ``helper.py``, a module it
+    imports, both 0755, come back from ``now restore 1`` with the default
+    mode: the store records no file mode, and only a program the trial
+    launched gets the executable bit (#205)"""
+    build_restore(project)
+    for name in ("tool.sh", "helper.py"):
+        os.chmod(project.path / name, 0o755)
+        os.remove(str(project.path / name))
+
+    result = project.run("restore", "1")
+
+    trial_id = project.trials()[0]["id"]
+    for name in ("tool.sh", "helper.py"):
+        line = "[now] File {} from trial {} restored".format(name, trial_id)
+        assert line in result.stdout.splitlines(), str(result)
+        assert (project.path / name).read_bytes() == corpus_bytes(name)
+        mode = mode_of(project.path / name)
+        assert mode & 0o111 == 0, "{} restored with {}".format(name, oct(mode))
+
+
+@POSIX_ONLY
+def test_restore_of_a_deleted_launched_program_keeps_it_executable(project):
+    """``now restore 1`` puts back ``tool.sh``, the program trial 1
+    launched, with the executable bit wherever it has read permission, so
+    the restored project runs as it is (until #205 it came back 0644)"""
+    tool = build_launch(project)
     os.remove(str(tool))
 
     result = project.run("restore", "1")
 
-    assert (
-        "[now] File tool.sh from trial {} restored".format(project.trials()[0]["id"])
-        in result.stdout.splitlines()
-    )
+    line = "[now] File tool.sh from trial {} restored".format(project.trials()[0]["id"])
+    assert line in result.stdout.splitlines(), str(result)
     assert tool.read_bytes() == corpus_bytes("tool.sh")
-    return mode
+    assert executable_where_readable(mode_of(tool)), oct(mode_of(tool))
+    ran = subprocess.run(
+        [str(tool)], cwd=str(project.path), capture_output=True, text=True, timeout=30
+    )
+    assert ran.stdout == "tool\n", ran
 
 
 @POSIX_ONLY
-def test_restore_of_a_deleted_executable(project):
-    """A restored ``tool.sh`` is created with the default mode: the store
-    records no file mode, so the executable bit is lost (#205 changes it)
+def test_restore_f_of_a_launched_program_keeps_it_executable(project):
+    """``now restore 1 -f tool.sh`` of the deleted program, and with ``-t``
+    into a new path, write it with the executable bit: the target of a
+    program is a copy of the program"""
+    tool = build_launch(project)
+    os.remove(str(tool))
 
-    #205's proposal (through #203) may set the bit only for executables
-    recorded as external tools, while ``tool.sh`` is recorded here as a file
-    the script reads. If the fix keeps this test red, the test follows the
-    fix's scope.
-    """
-    restore_deleted_executable(project)
+    result = project.run("restore", "1", "-f", "tool.sh")
+    assert result.stdout == "[now] File tool.sh restored\n", str(result)
+    result = project.run("restore", "1", "-f", "tool.sh", "-t", "bin/copy.sh")
+    assert result.stdout == "[now] File bin/copy.sh restored\n", str(result)
 
-    mode = stat.S_IMODE((project.path / "tool.sh").stat().st_mode)
-    assert mode & 0o111 == 0, oct(mode)
+    for path in (tool, project.path / "bin" / "copy.sh"):
+        assert path.read_bytes() == corpus_bytes("tool.sh")
+        assert executable_where_readable(mode_of(path)), oct(mode_of(path))
 
 
-@POSIX_ONLY
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=("#205: restore loses the executable bit of a restored file"),
+# A program of the project above the cap of #203: a shell script that
+# exits at its second line, padded past 16 MB with a comment the shell
+# never reads.
+LARGE_PROGRAM = "#!/bin/sh\nexit 0\n#{}\n"
+LARGE_PROGRAM_SCRIPT = (
+    "import subprocess\n"
+    "\n"
+    "completed = subprocess.run(['./large.sh'])\n"
+    "print('exit', completed.returncode)\n"
 )
-def test_restore_of_a_deleted_executable_desired(project):
-    """A restored ``tool.sh`` gets back the mode it had (0755)
 
-    #205's proposal (through #203) may cover only executables recorded as
-    external tools; if the fix keeps this test red, the test follows the
-    fix's scope.
-    """
-    before = restore_deleted_executable(project)
 
-    mode = stat.S_IMODE((project.path / "tool.sh").stat().st_mode)
-    assert mode == before, "{} != {}".format(oct(mode), oct(before))
+@pytest.mark.skipif(os.name == "nt", reason="a shell script as the launched program")
+def test_restore_never_writes_the_placeholder_of_a_large_executable(project):
+    """A launched program of the project above ``EXECUTABLE_CAP`` is a
+    local module whose code is a placeholder, not its bytes (#203): `now
+    restore` of the trial, which restores the local modules, and `now
+    restore -f` of the program both leave the file as it is, report on
+    stderr that it was too large to store, and exit with 1"""
+    padding = "x" * (EXECUTABLE_CAP + 1)
+    project.write("large.sh", LARGE_PROGRAM.format(padding))
+    os.chmod(project.path / "large.sh", 0o755)
+    project.write("main.py", LARGE_PROGRAM_SCRIPT)
+    result = project.run("run", "main.py")
+    assert "exit 0" in result.stdout.splitlines()
+    (row,) = project.query(
+        "SELECT m.name, b.code_hash FROM module m JOIN code_block b "
+        "ON b.trial_id = m.trial_id AND b.id = m.code_block_id WHERE m.name = 'large.sh'"
+    )
+    placeholder = project.content(row["code_hash"])
+    assert placeholder.startswith(PLACEHOLDER_PREFIX), placeholder[:60]
+
+    changed = LARGE_PROGRAM.format("y" * (EXECUTABLE_CAP + 1)).encode("ascii")
+    (project.path / "large.sh").write_bytes(changed)
+    for args in (("restore", "1"), ("restore", "1", "-f", "large.sh")):
+        result = project.run(*args, expect=1, allow_stderr=True)
+        assert "the executable was too large to store" in result.stderr, result
+        assert "File has not changed!" not in result.stdout, result
+        kept = (project.path / "large.sh").read_bytes() == changed
+        assert kept, "now {} wrote over large.sh".format(" ".join(args))
+
+
+@pytest.mark.skipif(os.name == "nt", reason="a shell script as the launched program")
+def test_restore_never_writes_the_placeholder_of_a_program_above_the_chosen_cap(
+    project,
+):
+    """With ``--executable-cap 10`` (#463) a small program of the project
+    is stored as the placeholder, and `now restore -f` of it leaves the
+    file as it is, reports it on stderr and exits with 1, as above the
+    default cap"""
+    project.write("large.sh", LARGE_PROGRAM.format("x"))
+    os.chmod(project.path / "large.sh", 0o755)
+    project.write("main.py", LARGE_PROGRAM_SCRIPT)
+    result = project.run("run", "--executable-cap", "10", "main.py")
+    assert "exit 0" in result.stdout.splitlines()
+    (row,) = project.query(
+        "SELECT b.code_hash FROM module m JOIN code_block b "
+        "ON b.trial_id = m.trial_id AND b.id = m.code_block_id WHERE m.name = 'large.sh'"
+    )
+    placeholder = project.content(row["code_hash"])
+    assert placeholder.startswith(PLACEHOLDER_PREFIX), placeholder[:60]
+
+    changed = LARGE_PROGRAM.format("y").encode("ascii")
+    (project.path / "large.sh").write_bytes(changed)
+    result = project.run("restore", "1", "-f", "large.sh", expect=1, allow_stderr=True)
+    assert "the executable was too large to store" in result.stderr, result
+    assert (project.path / "large.sh").read_bytes() == changed
 
 
 # ---------------------------------------------------------------------------
@@ -1186,70 +1307,6 @@ def test_gc_on_a_plain_store_desired(weather_project, args):
     result = weather_project.run("gc", *args, expect=None, allow_stderr=True)
 
     assert result.returncode == 0, str(result)
-
-
-# ---------------------------------------------------------------------------
-# import
-# ---------------------------------------------------------------------------
-
-IMPORT_BUNDLE = (
-    "#247: now import fails on three defects in a row: "
-    "cmd_import calls PlainEngine.put(content) without the file name; "
-    "utils/collab.import_bundle reads bundle.stageTags, which "
-    "BundleLW.__init__ never sets; and it stores the stage tags through "
-    "ObjectStore(StageTags), the ORM model, which has no .model for "
-    "do_store()"
-)
-
-
-def test_import_into_an_empty_project(weather_project, tmp_path):
-    """``now import --source STORE`` copies the content files first, each
-    with ``PlainEngine.put(content)``, which needs a file name: exit 1, a
-    TypeError on stderr, and a target with ``content/`` but no database
-    (#247 changes it)
-
-    Past that call, ``utils/collab.import_bundle`` (also behind ``now pull``
-    and the import endpoint of ``now vis``) fails on its own, whatever the
-    engine: it reads ``bundle.stageTags``, which ``BundleLW.__init__``
-    never sets (AttributeError), and once that exists, it stores the stage
-    tags through ``ObjectStore(StageTags)``, the ORM model, whose
-    ``do_store()`` needs the ``model`` of a lightweight class
-    (AttributeError), after the trials and most of their rows are already
-    stored.
-    """
-    target = NowProject(tmp_path / "target")
-
-    result = target.run(
-        "import", "--source", weather_project.path, expect=1, allow_stderr=True
-    )
-
-    assert last_line(result.stderr) == (
-        "TypeError: PlainEngine.put() missing 1 required positional "
-        "argument: 'filename'"
-    ), str(result)
-    assert (target.store / "content").is_dir()
-    assert not (target.store / "db.sqlite").exists()
-
-
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=IMPORT_BUNDLE)
-def test_import_into_an_empty_project_desired(weather_project, tmp_path):
-    """``now import`` copies the source's trial into an empty target, and
-    ``now list`` there shows it
-
-    Fixing ``PlainEngine.put()`` alone does not flip this test: the two
-    defects of ``utils/collab.import_bundle`` (``bundle.stageTags`` never
-    set, ``ObjectStore(StageTags)`` given the ORM model) fail next.
-    """
-    target = NowProject(tmp_path / "target")
-    source = weather_project.trials()[0]
-
-    result = target.run(
-        "import", "--source", weather_project.path, expect=None, allow_stderr=True
-    )
-
-    assert result.returncode == 0, str(result)
-    listed = target.run("list")
-    assert "Trial {}".format(source["id"]) in listed.stdout, str(listed)
 
 
 # ---------------------------------------------------------------------------

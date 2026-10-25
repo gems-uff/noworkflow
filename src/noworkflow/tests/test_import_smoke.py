@@ -10,14 +10,16 @@ upgrade of IPython, ipykernel or traitlets that breaks an import would show
 only in a notebook. These tests import them and check the classes they
 build on; they neither start a kernel nor run a magic.
 
-``noworkflow.kernel`` has no ``__init__.py``: from the checkout it imports
-as a namespace package, but ``pyproject.toml`` sets ``namespaces = false``,
-so setuptools leaves it out of the wheel, and the kernelspec that ``now
-kernel`` installs from a ``pip install`` names a module that is not there
-(#341). The discovery is checked with setuptools
-itself, with the options read from ``pyproject.toml``; it is plain
-directory listing, the same on every system and Python version (measured
-on macOS with 3.11 to 3.15).
+``pyproject.toml`` sets ``namespaces = false``, so setuptools puts in the
+wheel only the directories that have an ``__init__.py``. ``kernel/`` had
+none: from the checkout it imported as a namespace package, while the
+wheel left it out and the kernelspec that ``now kernel`` installs from a
+``pip install`` named a module that was not there (#341). The discovery
+is checked with setuptools itself, with the options read from
+``pyproject.toml``; it is plain directory listing, the same on every
+system and Python version. The kernel itself is started in
+``e2e/test_kernel.py``, which the ``checks`` job of ``ci.yml`` also runs
+against the built wheel.
 """
 
 import importlib
@@ -28,22 +30,10 @@ from pathlib import Path
 import pytest
 import setuptools
 
-import noworkflow
-from noworkflow.tests.helpers.defects import Defect, known_defects
-
-SRC = Path(noworkflow.__file__).resolve().parent.parent
 KERNEL_MODULES = ("nowkernel", "shell", "__main__")
 # Directories of the package whose scripts are data, not modules: the
 # demos and the scripts that the tests trace.
 DATA_DIRECTORIES = ("resources", "tests")
-
-KERNEL_NOT_SHIPPED = Defect(
-    reason="#341: src/noworkflow/kernel has no "
-    "__init__.py and pyproject.toml sets namespaces = false, so the "
-    "wheel lacks the module that the kernelspec of `now kernel` runs "
-    "(python -m noworkflow.kernel: No module named noworkflow.kernel)",
-    signature="noworkflow.kernel is not among the packages",
-)
 
 
 def find_options(root):
@@ -139,50 +129,24 @@ def test_kernel_modules_import(name):
         assert module.NowKernel is nowkernel.NowKernel
 
 
-def test_kernel_runs_as_a_namespace_package_from_the_checkout():
-    """From the checkout, ``noworkflow.kernel`` is a namespace package and
-    ``python -m noworkflow.kernel`` finds its ``__main__``
-
-    Part of the characterization of #341: a fix
-    that adds ``kernel/__init__.py`` turns it into a regular package.
+def test_kernel_is_a_regular_package():
+    """``noworkflow.kernel`` is a regular package, the same from the
+    checkout as from the wheel, and ``python -m noworkflow.kernel`` finds
+    its ``__main__``
     """
     kernel = importlib.import_module("noworkflow.kernel")
-    assert getattr(kernel, "__file__", None) is None
-    assert not (SRC / "noworkflow" / "kernel" / "__init__.py").exists()
+    assert kernel.__file__ is not None
     assert importlib.util.find_spec("noworkflow.kernel.__main__") is not None
 
 
-def test_package_discovery_of_the_kernel(root):
+def test_package_discovery_finds_every_directory_of_modules(root):
     """setuptools, with the options of ``pyproject.toml``, finds every
-    directory of modules but ``noworkflow.kernel``, although
-    ``kernel/__main__.py`` exists, and no package data covers it
-
-    Characterization of #341.
+    directory of modules, ``noworkflow.kernel`` included, so the wheel
+    ships the module that the kernelspec of ``now kernel`` runs (#341)
     """
     packages = discovered_packages(root)
     # Not vacuous: the discovery found the package itself.
     assert {"noworkflow", "noworkflow.now", "noworkflow.tests"} <= packages
-    assert (root / "src" / "noworkflow" / "kernel" / "__main__.py").is_file()
-    assert "noworkflow.kernel" not in packages
+    assert "noworkflow.kernel" in packages
     left_out = module_directories(root / "src" / "noworkflow") - packages
-    assert sorted(left_out) == ["noworkflow.kernel"]
-    with open(root / "pyproject.toml", "rb") as handle:
-        data = tomllib.load(handle)["tool"]["setuptools"]["package-data"]
-    assert [
-        pattern
-        for pattern in data.get("noworkflow", [])
-        if pattern.startswith("kernel")
-    ] == []
-
-
-@known_defects(KERNEL_NOT_SHIPPED)
-def test_package_discovery_of_the_kernel_desired(root):
-    """setuptools finds ``noworkflow.kernel``, so the wheel ships the
-    module that the kernelspec of ``now kernel`` runs
-    """
-    packages = discovered_packages(root)
-    assert "noworkflow.kernel" in packages, (
-        "noworkflow.kernel is not among the packages that setuptools finds: {}".format(
-            sorted(packages)
-        )
-    )
+    assert sorted(left_out) == []

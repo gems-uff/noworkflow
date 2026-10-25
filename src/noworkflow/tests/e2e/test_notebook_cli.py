@@ -5,7 +5,7 @@
 
 ``now clean`` slices a notebook trial: a trial whose code components
 include cells (type ``cell``), which only the noWorkflow kernel records
-(``kernel/shell.py``), and the kernel does not start today (#315). On any
+(``kernel/shell.py``; ``e2e/test_kernel.py`` slices one). On any
 other trial, a script or a ``%%now_run`` cell, it prints that the trial is
 not a notebook trial and writes nothing; that is what runs here, and what
 the in-process shell checks for a ``%%now_run`` trial

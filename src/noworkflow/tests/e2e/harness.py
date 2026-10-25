@@ -21,9 +21,13 @@ import hashlib
 import os
 import shlex
 import shutil
+import socket
 import sqlite3
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -192,6 +196,25 @@ def tail(text, lines=40):
     return "[... {} lines ...]\n".format(len(parts) - lines) + "\n".join(parts[-lines:])
 
 
+def free_port():
+    """A port of 127.0.0.1 that nothing listens on, for a server to bind"""
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+@dataclasses.dataclass
+class VisServer:
+    """A ``now vis`` that ``NowProject.serve`` started"""
+
+    url: str
+    log_path: Path
+
+    def log(self, lines=40):
+        """The end of what the server printed, for assertion messages"""
+        return tail(self.log_path.read_text(encoding="utf-8"), lines)
+
+
 class NowProject:
     """A project directory, its store and the ``now`` that runs on it"""
 
@@ -244,6 +267,70 @@ class NowProject:
         if not allow_stderr:
             assert result.stderr == "", "expected an empty stderr\n{}".format(result)
         return result
+
+    @contextlib.contextmanager
+    def serve(self, *args, timeout=60):
+        """``now vis`` on a free port of 127.0.0.1, serving the project's
+        store: yields a ``VisServer`` once ``/`` answers, and stops it on exit
+
+        ``args`` follow ``vis``: ``"--force", "true"`` creates the store of
+        an empty project, as a collaboration server starts. It runs from
+        inside the project (its ``/commands/*`` routes run ``now`` without
+        ``--dir``, #356), with the project's environment, and what it prints
+        goes to ``vis-<port>.log`` next to the project. Binding a port is
+        refused inside the Claude Code sandbox.
+        """
+        port = free_port()
+        server = VisServer(
+            "http://127.0.0.1:{}".format(port),
+            self.root / "vis-{}.log".format(port),
+        )
+        command = self.command + [
+            "vis",
+            "-p",
+            str(port),
+            "--host",
+            "127.0.0.1",
+            "--dir",
+            str(self.path),
+        ]
+        with open(server.log_path, "w", encoding="utf-8") as log:
+            process = subprocess.Popen(
+                command + [str(arg) for arg in args],
+                cwd=str(self.path),
+                env=self.env,
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
+            try:
+                deadline = time.monotonic() + timeout
+                while True:
+                    try:
+                        with urllib.request.urlopen(
+                            server.url + "/", timeout=5
+                        ) as answer:
+                            if answer.status == 200:
+                                break
+                    except (urllib.error.URLError, ConnectionError):
+                        pass
+                    if process.poll() is not None or time.monotonic() > deadline:
+                        log.flush()
+                        pytest.fail(
+                            "now vis did not answer on {}:\n{}".format(
+                                server.url, server.log(60)
+                            ),
+                            pytrace=False,
+                        )
+                    time.sleep(0.2)
+                yield server
+            finally:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
 
     def copy_corpus(self, name):
         """Copy ``corpus/<name>`` into the project, keeping the file modes"""

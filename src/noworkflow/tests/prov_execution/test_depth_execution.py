@@ -220,3 +220,59 @@ class TestDepthExecution(CollectionTestCase):
         self.assertEqual(activation_f.name, "f")
 
         self.assert_dependency(var_y, var_f, "assign", True)
+
+    # A depth limit only reduces what is collected: the script computes
+    # what it computes without one (#243).
+
+    def test_depth_1_keeps_the_items_of_a_comprehension(self):
+        """A comprehension below the limit keeps its items: the rewritten
+        comprehension filters each item through assign(), which has to
+        hold even when it records nothing"""
+        self.script(
+            "# script.py\n"
+            "def f():\n"
+            "    return [x * 2 for x in [1, 2, 3] if x != 2]\n"
+            "f()\n",
+            depth=1,
+        )
+        var_f = self.get_evaluation(name="f()")
+        self.assertIsNotNone(var_f)
+        self.assertEqual(var_f.repr, "[2, 6]")
+        self.assertIsNone(self.get_evaluation(name="x"))
+
+    def test_depth_2_runs_an_init_at_the_limit(self):
+        """An __init__ whose activation is below the limit returns like any
+        other function: nothing of it is recorded, and the bound argument
+        that match_arguments never resolved is left alone"""
+        self.script(
+            "# script.py\n"
+            "class Box:\n"
+            "    def __init__(self):\n"
+            "        self.x = 1\n"
+            "box = Box()\n",
+            depth=2,
+        )
+        self.execute()
+        var_box = self.get_evaluation(name="Box()")
+        self.assertIsNotNone(var_box)
+        self.assertIsNone(self.get_evaluation(name="self.x"))
+
+    def test_depth_1_leaves_no_access_on_the_dependency_stack(self):
+        """A subscript or attribute read below the limit pops what access()
+        pushed, so the stack of an inactive activation does not grow with
+        every read: at the end it holds the activation's own
+        DependencyAware and the one of its call, as an active one does"""
+        self.script(
+            "# script.py\n"
+            "def f():\n"
+            "    x = [1, 2]\n"
+            "    y = x[0] + x[1] + x[-1]\n"
+            "    z = x.count\n"
+            "    return y\n"
+            "f()\n",
+            depth=1,
+        )
+        var_f = self.get_evaluation(name="f()")
+        self.assertIsNotNone(var_f)
+        activation = self.metascript.activations_store[var_f.id]
+        self.assertEqual(len(activation.dependencies), 2)

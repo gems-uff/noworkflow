@@ -76,6 +76,7 @@ BUNDLE_TABLES = {
     "fileAccesses": "file_access",
     "members": "member",
     "modules": "module",
+    "stageTags": "stage_tags",
 }
 VISIBLE_REMOTE = "http://remote.invalid/experiments/visible"
 HIDDEN_REMOTE = "http://remote.invalid/experiments/hidden"
@@ -386,11 +387,10 @@ def test_files_lists_every_content_hash(collab):
 
 def test_bundle_carries_the_rows_of_the_requested_trial(collab):
     """``collab/bundle?id=<trial>`` gives that trial and, for each table of
-    its provenance, as many rows as the store has for it
+    its provenance, as many rows as the store has for it, and the trial's
+    user, which ``now pull`` stores with the trial (#247)
 
-    Today it carries no user: ``getBundle`` never passes user ids to
-    ``export_bundle``. A user's id holds the hostname, so the list is
-    compared into a boolean.
+    A user's id holds the hostname, so it is compared into a boolean.
     """
     ids = collab.ids
     route = "/experiments/{}/collab/bundle?id={}".format(ids.experiment, ids.trial)
@@ -401,8 +401,9 @@ def test_bundle_carries_the_rows_of_the_requested_trial(collab):
         assert {row["trial_id"] for row in bundle[key]} <= {ids.trial}, key
         assert len(bundle[key]) == collab.project.count(table, ids.trial), key
     assert bundle["activations"], "the trial has activations"
-    no_user = bundle["users"] == []
-    assert no_user, "the bundle carries {} users".format(len(bundle["users"]))
+    (trial,) = collab.project.query("SELECT user_id FROM trial WHERE id = ?", ids.trial)
+    its_user = [user["id"] for user in bundle["users"]] == [trial["user_id"]]
+    assert its_user, "the bundle carries {} users".format(len(bundle["users"]))
 
 
 def test_bundle_ignores_ids_that_name_no_trial(collab):

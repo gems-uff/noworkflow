@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
 import weakref
 from collections import OrderedDict, namedtuple
 from functools import wraps
@@ -13,7 +14,7 @@ from functools import wraps
 from future.utils import viewitems, viewkeys, viewvalues, with_metaclass
 from sqlalchemy import Column
 
-from .. import relational
+from .. import persistence_config, relational
 
 
 class MetaModel(type):
@@ -190,7 +191,10 @@ def proxy_attr(name, proxy_func=proxy, doc=None):
 class AlchemyProxy(Model):
     """Alchemy Proxy super class.
 
-    Store _alchemy_pk primary key and other columns from table
+    Store _alchemy_pk primary key and other columns from table, and the
+    path of the store the instance came from: the instance reads its
+    relations through the session of the store the process is connected
+    to, and one read after connecting to another store says so
     """
 
     __alchemy_refs__ = {}
@@ -201,6 +205,7 @@ class AlchemyProxy(Model):
 
     def __init__(self, obj):
         super(AlchemyProxy, self).__init__(obj)
+        self._store_path = persistence_config.path
         if isinstance(obj, relational.base):
             self._store_pk(obj)
         else:
@@ -231,13 +236,38 @@ class AlchemyProxy(Model):
             setattr(self, column, getattr(obj, column))
 
     def _get_instance(self):
+        self._check_store()
         return relational.session.query(self.__model__).get(self._alchemy_pk)
+
+    def _check_store(self):
+        """Raise when the process is connected to another store than the
+        one the instance came from
+
+        The primary key of most tables is a number each store counts on its
+        own (the trial's sequence_key), so the session of another store
+        would hand back another row, of another trial, or none.
+        """
+        store = getattr(self, "_store_path", None)
+        current = persistence_config.path
+        if not store or not current or store == current:
+            return
+        if os.path.realpath(store) == os.path.realpath(current):
+            return
+        key = getattr(self, "id", None) or self._alchemy_pk
+        if isinstance(key, (list, tuple)):
+            key = ", ".join(str(part) for part in key)
+        raise RuntimeError(
+            "{} {} belongs to the store in {}, and noWorkflow is now "
+            "connected to the store in {}: connect to {} again to "
+            "read it".format(type(self).__name__, key, store, current, store)
+        )
 
     def __getstate__(self):
         return (self._alchemy_pk,)
 
     def __setstate__(self, state):
         (self._alchemy_pk,) = state
+        self._store_path = persistence_config.path
         self._restore_instance()
 
     def to_dict(self, ignore=tuple(), extra=tuple()):

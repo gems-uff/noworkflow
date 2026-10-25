@@ -1,45 +1,39 @@
 import {
   select as d3_select,
   Selection as d3_Selection,
-  BaseType as d3_BaseType,
+  BaseType as d3_BaseType
 } from 'd3-selection';
 
-import {Widget} from '@lumino/widgets';
+import { Widget } from '@lumino/widgets';
 
-import {json} from '@noworkflow/utils';
+import { json } from '@noworkflow/utils';
 
-import {BaseActivationGraphWidget} from './base_activation_graph';
+import { BaseActivationGraphWidget } from './base_activation_graph';
 
-import {TrialGraph, TrialGraphData} from '@noworkflow/trial';
+import { TrialGraph, ITrialGraphData } from '@noworkflow/trial';
 
-
-export
-class TrialGraphWidget extends BaseActivationGraphWidget {
-
+export class TrialGraphWidget extends BaseActivationGraphWidget {
   name: string;
   cls: string;
   t1: string;
   t2: string;
   graph: TrialGraph;
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
   static url(trialId: string, selectedGraph: string, useCache: boolean) {
-    let cache = useCache ? "1" : "0"
-    return ("trials/"
-      + trialId + "/" + selectedGraph + "/" + cache + ".json"
-    );
+    const cache = useCache ? '1' : '0';
+    return 'trials/' + trialId + '/' + selectedGraph + '/' + cache + '.json';
   }
 
   constructor(name: string, cls: string, t1: string, t2: string) {
     super({ node: BaseActivationGraphWidget.createNode(cls) });
     this.d3node = d3_select(this.node);
-    this.d3node.select('.reload-button')
-      .on("click", () => {
-        this.load(
-          this.d3node.select(".graph-type").property("value"),
-          this.d3node.select(".use-cache").property("checked"),
-        )
-      })
+    this.d3node.select('.reload-button').on('click', () => {
+      this.load(
+        this.d3node.select('.graph-type').property('value'),
+        this.d3node.select('.use-cache').property('checked')
+      );
+    });
     this.addClass('content');
     this.addClass('trial-widget');
     this.title.label = name;
@@ -51,26 +45,40 @@ class TrialGraphWidget extends BaseActivationGraphWidget {
     this.t2 = t2;
   }
 
-  setGraph(data: TrialGraphData, config: any={}) {
-    let sub = this.node.getElementsByClassName("sub-content")[0];
-    sub.innerHTML = "";
+  setGraph(data: ITrialGraphData, config: any = {}) {
+    const sub = this.node.getElementsByClassName('sub-content')[0];
+    sub.innerHTML = '';
     this.graph = new TrialGraph(this.cls, sub, config);
     this.graph.load(data, this.t1, this.t2);
-
   }
 
-  graphDefinition(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData) {
-    var result = super.graphDefinition(selectedGraph, useCache, genDataflow, data);
+  graphDefinition(
+    selectedGraph: string = 'namespace_match',
+    useCache: boolean = true,
+    genDataflow: boolean = true,
+    data: ITrialGraphData
+  ) {
+    const result = super.graphDefinition(
+      selectedGraph,
+      useCache,
+      genDataflow,
+      data
+    );
     return Object.assign({}, result, {
-      queryTooltip: selectedGraph != "definition_tree"
+      queryTooltip: selectedGraph !== 'definition_tree'
     });
   }
 
-  load(selectedGraph: string = "namespace_match", useCache: boolean = true) {
-    let sub = this.node.getElementsByClassName("sub-content")[0];
-    json("Trial", sub, TrialGraphWidget.url(this.t1, selectedGraph, useCache), (data: TrialGraphData) => {
-      this.configureGraph(selectedGraph, useCache, true, data);
-    })
+  load(selectedGraph: string = 'namespace_match', useCache: boolean = true) {
+    const sub = this.node.getElementsByClassName('sub-content')[0];
+    json(
+      'Trial',
+      sub,
+      TrialGraphWidget.url(this.t1, selectedGraph, useCache),
+      (data: ITrialGraphData) => {
+        this.configureGraph(selectedGraph, useCache, true, data);
+      }
+    );
   }
 
   protected onResize(msg: Widget.ResizeMessage): void {
@@ -80,6 +88,4 @@ class TrialGraphWidget extends BaseActivationGraphWidget {
       this.graph.updateWindow();
     }
   }
-
 }
-
