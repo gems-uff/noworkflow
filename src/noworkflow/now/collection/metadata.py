@@ -233,6 +233,7 @@ class Metascript(object):  # pylint: disable=too-many-instance-attributes
             verbose=False,
             meta=False,
             bypass_modules=False,
+            coarse_granularity=False,
             depth=sys.getrecursionlimit(),
             save_frequency=0,
             call_storage_frequency=10000,

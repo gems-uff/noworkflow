@@ -137,19 +137,48 @@ jobs:
       # rules.pl, the demos and bundle.js reach it only through package-data
       # globs; if a glob or the build backend drops them, `now --version`,
       # `now export prolog -r`, `now demo` and `now vis` break on install
-      # while the suite, which runs from the source tree, stays green.
+      # while the suite, which runs from the source tree, stays green. The
+      # same goes for a package directory without __init__.py, which imports
+      # from the source tree and is left out of both distributions
+      # (namespaces = false): the kernel's was, and `now kernel` installed
+      # a kernel that could not start (#341).
       - name: Build the package
+        id: build
         if: ${{ !cancelled() && github.event_name != 'schedule' }}
         run: |
           uv build
           contents=$(unzip -Z1 dist/*.whl)
           for file in noworkflow/resources/version.txt noworkflow/resources/rules.pl \
-              noworkflow/resources/demo/1/steps.txt noworkflow/now/vis/static/dist/bundle.js; do
+              noworkflow/resources/demo/1/steps.txt noworkflow/now/vis/static/dist/bundle.js \
+              noworkflow/kernel/__init__.py noworkflow/kernel/__main__.py; do
             if ! grep -qxF "$file" <<<"$contents"; then
               echo "::error::$file is missing from the wheel"
               exit 1
             fi
           done
+          sdist=$(tar -tzf dist/*.tar.gz)
+          for file in src/noworkflow/kernel/__init__.py src/noworkflow/kernel/__main__.py; do
+            if ! grep -qE "^[^/]+/$file\$" <<<"$sdist"; then
+              echo "::error::$file is missing from the sdist"
+              exit 1
+            fi
+          done
+
+      # The kernel that `now kernel` installs runs `python -m
+      # noworkflow.kernel` with the interpreter of that `now`, so only an
+      # install of the wheel shows that it starts for a user (#341). The
+      # wheel goes into a fresh environment, its dependencies resolved as
+      # pip would for a user (not uv.lock); the check after the install
+      # refuses a kernel imported from anywhere else; then the kernel's
+      # tests start it through jupyter_client, with NOW_E2E_CMD on the
+      # `now` of that environment (e2e/test_kernel.py).
+      - name: Start the kernel from the wheel
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.sync.outcome == 'success' }}
+        run: |
+          uv venv "$RUNNER_TEMP/wheel"
+          uv pip install --python "$RUNNER_TEMP/wheel/bin/python" dist/*.whl
+          "$RUNNER_TEMP/wheel/bin/python" -I -c 'import sys, noworkflow.kernel as k; sys.exit(not k.__file__.startswith(sys.prefix))'
+          NOW_E2E_CMD="$RUNNER_TEMP/wheel/bin/now" uv run --no-sync pytest -p no:randomly src/noworkflow/tests/e2e/test_kernel.py
 
   test:
     if: github.event_name != 'schedule'
@@ -176,16 +205,16 @@ jobs:
         # and counted by the paper-example, vis-browser and engines jobs.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 3259 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 3259 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 3259 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 3259 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 3264 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 3264 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 3264 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 3264 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 3287, reference: true }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 3292, reference: true }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:

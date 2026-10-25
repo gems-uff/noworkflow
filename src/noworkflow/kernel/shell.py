@@ -58,6 +58,15 @@ class OverrideShell(object):
 
         metascript.deployment.collect_provenance()
         metascript.execution.configure()
+        # IPython puts an open of its own in the user namespace (it refuses
+        # the descriptors 0, 1 and 2), which shadows the builtin that
+        # configure wraps: without wrapping it too, no cell records the
+        # files it opens.
+        namespace = metascript.namespace
+        if "open" in namespace:
+            namespace["open"] = metascript.execution.collector.new_open(
+                namespace["open"]
+            )
 
         _, id_ = self.metascript.definition.create_code_block(
             "",
@@ -91,11 +100,16 @@ class OverrideShell(object):
         store_history=False,
         silent=False,
         shell_futures=True,
-        cell_id=None,
+        **kwargs,
     ):
         """Run a complete IPython cell.
         https://github.com/ipython/ipython/blob/master/
             IPython/core/interactiveshell.py#L2561
+
+        ``kwargs`` are the arguments IPython's ``run_cell`` takes besides
+        these (``cell_id``, ``cell_meta``), passed on as they come:
+        ipykernel chooses which to send from the signature of
+        ``run_cell_async``, not from this override.
         """
         if store_history and not self.metascript.jupyter_original:
             # ToDo: variable dependency
@@ -110,7 +124,7 @@ class OverrideShell(object):
                 store_history=store_history,
                 silent=silent,
                 shell_futures=shell_futures,
-                cell_id=cell_id,
+                **kwargs,
             )
             external.stop()
             sys.meta_path.remove(self.metascript.definition.finder)
@@ -124,7 +138,7 @@ class OverrideShell(object):
                 store_history=store_history,
                 silent=silent,
                 shell_futures=shell_futures,
-                cell_id=cell_id,
+                **kwargs,
             )
             self.metascript.jupyter_original = old_original
         return result

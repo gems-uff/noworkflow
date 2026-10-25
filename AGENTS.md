@@ -261,7 +261,7 @@ run `now` as a process on a real store in a temporary directory. What
 neither executes:
 
 - **Commands the e2e tests do not run:** `vis` (the server; its routes run
-  in process, see below), `push`, `pull`, `kernel`, `debug`, `evaluation`
+  in process, see below), `push`, `pull`, `debug`, `evaluation`
   (its query options run through `clean`), and `demo` outside the reference
   leg (see below). For the commands they do run, only the flags their tests
   name are covered.
@@ -334,9 +334,10 @@ neither executes:
   `os.fork` or `multiprocessing` is not a launch and is tested as not
   recorded; the `strace` backend has no test anywhere until #206
   installs `strace` on a leg; and the kernel's own use of the tracer
-  (around each cell, `kernel/shell.py`) runs nowhere, like the rest of
-  the kernel. The leak detector sees the children of the pytest process
-  only, never what a `now` run as a process leaves behind.
+  (around each cell, `kernel/shell.py`) runs for one `subprocess.run`
+  and one `%%bash` cell only (`e2e/test_kernel.py`; the `%%bash` cell
+  skips on Windows). The leak detector sees the children of the pytest
+  process only, never what a `now` run as a process leaves behind.
 - **The exports off the reference leg:** goldens compare `prolog`, `prov`,
   `dataflow` and `prospective` on the reference leg only (Linux, the newest
   blocking Python); on every other leg nothing compares their output.
@@ -371,9 +372,14 @@ neither executes:
   install it, and so do the Linux and macOS legs of `pre-release.yml`; its
   Windows legs do not.
 - **Jupyter:** the magics run in an in-process IPython shell
-  (`src/noworkflow/tests/ipython/`), never under a kernel: the kernel in
-  `src/noworkflow/kernel/` is only imported (#315), so `now clean` never
-  meets a notebook trial, and the lab extension has no automated test:
+  (`src/noworkflow/tests/ipython/`), never under a kernel. The kernel runs
+  as a process only in `e2e/test_kernel.py`: started through
+  `jupyter_client` from the kernelspec `now kernel` installs, from the
+  checkout on every leg and from the built wheel in the `checks` job of
+  `ci.yml`, for a handful of cells (their code, a function, the files
+  they open, a launch, a `%%bash` cell, `now clean` on the trial); no
+  other magic, no rich output, no error in a cell and no interrupt
+  runs under it. The lab extension has no automated test:
   only the type-check and the lint of the `frontend` job reach it, so an update of
   its packages (codemirror, `@jupyterlab/*`) is measured by nothing else.
   `%%dot` and the diagrams of `%now_schema` skip where
@@ -518,6 +524,13 @@ and therefore the first suspects when an upgrade breaks something:
   `open`s and restores them in a context manager; also pokes at
   `__builtins__["open"]`, which is a dict or a module depending on who imports
   it.
+- `src/noworkflow/kernel/shell.py`: replaces the kernel shell's
+  `run_cell`, passing on whatever keyword arguments IPython's takes
+  (ipykernel picks them from the signature of `run_cell_async`), and
+  IPython's `CachingCompiler` class with one that parses through the
+  collector; and wraps, besides the builtins, the `open` IPython puts in
+  the user namespace, which shadows the builtin. All of it lasts the
+  whole kernel process.
 - `src/noworkflow/now/ipython/magics/now_run.py`: swaps `sys.argv`,
   `sys.path[0]` and `sys.modules["__main__"]` for the shell's user module
   while the cell runs, and swaps them back by hand.

@@ -562,7 +562,12 @@ Out [14]: %
      ...: ...
 ```
 
-To clean Jupyter Notebook using the collected provenance, run:
+To record a whole notebook session, cell by cell, install the noWorkflow kernel and choose "noWorkflow 3" as the notebook's kernel. The session becomes one trial, saved after each cell:
+```bash
+$ now kernel --user
+```
+
+To clean Jupyter Notebook using the provenance the kernel collected, keeping only the cells that a cell depends on, run:
 ```bash
 $ now clean [trial]
 ```

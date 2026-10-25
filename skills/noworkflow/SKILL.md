@@ -287,8 +287,9 @@ now pull --url http://host:5000/experiments/<id>
 - `now import` (#247), `now pull` (#247) and `now push` (#312) fail today.
   The server side of push and pull is `now vis --force true`, whose page
   creates the experiment and its URL.
-- `now clean` needs a trial recorded by the noWorkflow Jupyter kernel, and
-  that kernel fails to start today (#315).
+- `now clean` needs a trial recorded by the noWorkflow Jupyter kernel
+  (`now kernel`, then the "noWorkflow 3" kernel in Jupyter); on a script
+  or a `%%now_run` trial it says the trial is not a notebook trial.
 
 ## Jupyter
 

@@ -8,11 +8,11 @@ value (``get_cells``), writes them as a notebook (``create_clean``) and
 can merge the result into the notebook the user had
 (``create_merged_from_cells``, ``merge_json``). A notebook trial has
 code components of type ``cell``, which only the noWorkflow kernel
-records, and the kernel does not start today (#315): so the functions
-below ``get_cells`` run here on stand-in cells, objects with the three
-attributes they read (``name``, ``evaluations``, ``this_block``), and
-``now clean`` itself runs on trials that are not notebook trials
-(``e2e/test_notebook_cli.py``).
+records, as a process: so the functions below ``get_cells`` run here on
+stand-in cells, objects with the three attributes they read (``name``,
+``evaluations``, ``this_block``); ``now clean`` runs on a trial of the
+kernel in ``e2e/test_kernel.py`` and on trials that are not notebook
+trials in ``e2e/test_notebook_cli.py``.
 
 ``create_history`` (``cleaning/ipython.py``) builds a notebook from the
 history of a living IPython shell, without noWorkflow: it runs in the
