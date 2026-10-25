@@ -15,11 +15,18 @@ from sqlalchemy import or_, true
 
 from ..models.cleaning.merge import lcs
 from ..models.diff import Diff as DiffModel
-from ..models.diff import in_diff_order, unified_text_diff
+from ..models.diff import diff_set, in_diff_order, unified_text_diff
 from ..models.graphs.diff_graph import CONFIG
 from ..models.prov.export import OPERATIONS
 from ..persistence import content, persistence_config, relational
-from ..persistence.models import Activation, CodeComponent, Dependency, Evaluation
+from ..persistence.models import (
+    Activation,
+    CodeComponent,
+    Dependency,
+    Evaluation,
+    FileAccess,
+)
+from ..persistence.models.base import proxy_gen
 from ..utils.cross_version import zip_longest
 from ..utils.io import print_msg
 from .cmd_show import print_trial_relationship
@@ -205,6 +212,36 @@ def print_ted(diff, mode):
     print(f"{mode.capitalize()} TED:", ted)
 
 
+def accesses_under(trial_id, activation_id):
+    """The file accesses of a trial made by an activation or below it
+
+    The collector gives an access to the activation of the ``open()`` call
+    that made it, or of the call that launched the process that exchanged
+    the file (#202), and the caller of an activation is the activation of
+    its evaluation. An access is under ``activation_id`` when that chain of
+    callers, from its own activation up to the script's, passes through it
+    (#361).
+    """
+    callers = dict(
+        relational.session.query(Evaluation.m.id, Evaluation.m.activation_id).filter(
+            Evaluation.m.trial_id == trial_id,
+            Activation.m.trial_id == trial_id,
+            Activation.m.id == Evaluation.m.id,
+        )
+    )
+    result = set()
+    accesses = relational.session.query(FileAccess.m).filter(
+        FileAccess.m.trial_id == trial_id
+    )
+    for access in proxy_gen(accesses):
+        current = access.activation_id
+        while current is not None and current != activation_id:
+            current = callers.get(current)
+        if current is not None:
+            result.add(access)
+    return result
+
+
 def hide_timestamp(elements):
     """Set hide_timestamp of elements"""
     for element in elements:
@@ -329,7 +366,6 @@ class Diff(Command):
                     diff.trial2.id,
                     args.function_activations[0],
                     args.function_activations[1],
-                    diff.file_accesses,
                     variable_types_to_show,
                 )
             except IndexError as e:
@@ -530,7 +566,6 @@ class Diff(Command):
         trial2_id,
         function1_id,
         function2_id,
-        file_accesses,
         variable_types_to_show,
     ):
 
@@ -653,15 +688,13 @@ class Diff(Command):
             .all()
         )
 
-        (added, removed, replaced) = file_accesses
-        new_added = self.filter_file_accesses_diff_function(
-            added, function_as_activation_trial1.id, function_as_activation_trial2.id
-        )
-        new_removed = self.filter_file_accesses_diff_function(
-            removed, function_as_activation_trial1.id, function_as_activation_trial2.id
-        )
-        new_replaced = self.filter_file_accesses_diff_function(
-            replaced, function_as_activation_trial1.id, function_as_activation_trial2.id
+        # The accesses made under each activation, compared as the trial
+        # diff compares the accesses of two trials. Filtering the trial
+        # diff instead would miss two calls of one trial and an access
+        # that moved from one function to another
+        (new_added, new_removed, new_replaced) = diff_set(
+            accesses_under(trial1_id, function_as_activation_trial1.id),
+            accesses_under(trial2_id, function_as_activation_trial2.id),
         )
 
         functions_info = {
@@ -725,20 +758,3 @@ class Diff(Command):
         }
 
         return functions_info
-
-    def filter_file_accesses_diff_function(
-        self, old_set, activation_id1, activation_id2
-    ):
-        new_set = set()
-        for file in old_set:
-            if isinstance(file, tuple):
-                if (
-                    file[0].activation_id == activation_id1
-                    and file[1].activation_id == activation_id2
-                ):
-                    new_set.add(file)
-            elif (file.activation_id == activation_id1) or (
-                file.activation_id == activation_id2
-            ):
-                new_set.add(file)
-        return new_set

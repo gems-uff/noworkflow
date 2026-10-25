@@ -167,8 +167,10 @@ now diff 1 2 -t              # hide the timestamps
 ```
 
 Both trials are required. To compare **one function's activation** in the
-two trials (its output, arguments, duration and variables), `-fa` takes the
-two activations' database ids, one per trial:
+two trials (its output, arguments, duration and variables, and the files
+read or written by it or below it, by the processes it launched too), `-fa`
+takes the two activations' database ids, one per trial (the same trial twice
+compares two calls of one run):
 
 ```bash
 sqlite3 -readonly .noworkflow/db.sqlite "SELECT t.sequence_key, a.id, a.name

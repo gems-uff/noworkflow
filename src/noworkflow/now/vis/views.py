@@ -685,11 +685,10 @@ def get_function_activation_arguments(trial_id, function_id, expCode=None):
 def execute_command_diff_function_activation(
     trial1_id, activation1_id, trial2_id, activation2_id, expCode=None
 ):
-    diff = Diff(trial1_id, trial2_id)
     diffCMD = DiffCMD()
 
     functions_info = diffCMD.get_diff_function_info(
-        trial1_id, trial2_id, activation1_id, activation2_id, diff.file_accesses, "all"
+        trial1_id, trial2_id, activation1_id, activation2_id, "all"
     )
     differ = difflib.Differ()
     trial1_variables_that_changed, trial2_variables_added, trial1_variables_removed = (

@@ -19,17 +19,18 @@
 Expected values come from the store's tables: the arguments are the
 evaluations an ``argument`` dependency points to, the variables the
 evaluations inside the activation, the file accesses those whose
-activation is the compared one or below it. In the two-trial store the
-second trial changes the last row of data2.dat, so the values read from it
-and the accesses of data2.dat and output.csv differ; a store of its own,
-whose second trial reads data3.dat instead of data2.dat, gives the diff an
-added and a removed access.
+activation is the compared one or below it (until #361 only the accesses
+of the compared activation itself, an ``open()`` call). In the two-trial
+store the second trial changes the last row of data2.dat, so the values
+read from it and the accesses of data2.dat and output.csv differ; a store
+of its own, whose second trial reads data3.dat instead of data2.dat, gives
+the diff an added and a removed access, and so do the two calls of
+``csv_read`` in one trial.
 
-Known defects, each with a characterization and a ``_desired`` twin:
-``EXPERIMENT_PREFIX`` (``/experiments/<code>/getFunctionActivations``),
-``FUNCTION_ACCESSES`` (the diff of a function never lists the files it
-read or wrote). The route prints nothing on the server's stdout: until
-#204 it printed a debug line per replaced access (#248). A non-integer activation id and an activation the trial does not have raise
+Known defect, with a characterization and a ``_desired`` twin:
+``EXPERIMENT_PREFIX`` (``/experiments/<code>/getFunctionActivations``).
+The route prints nothing on the server's stdout: until #204 it printed a
+debug line per replaced access (#248). A non-integer activation id and an activation the trial does not have raise
 (characterized only: the frontend builds both from the store). Measured on
 macOS with Python 3.11 to 3.15: none of it depends on the version.
 """
@@ -42,17 +43,8 @@ from werkzeug.http import http_date
 
 from noworkflow.tests.e2e.harness import WEATHER_ARGS, WEATHER_DATA2_TRIAL2
 
-from .support import EXPERIMENT_PREFIX, Defect, known_defects
+from .support import EXPERIMENT_PREFIX, known_defects
 
-FUNCTION_ACCESSES = Defect(
-    reason="#361: get_diff_function_info "
-    "(cmd/cmd_diff.py) keeps only the file accesses whose "
-    "activation_id is the compared activation, while the collector "
-    "gives each access the activation of its open() call, so the "
-    "diff of any other function lists none of the files it read or "
-    "wrote",
-    signature="file_accesses_replaced is empty",
-)
 DIFF_KEYS = {
     "output_function_trial1",
     "output_function_trial2",
@@ -525,28 +517,11 @@ def test_function_diff_of_an_open_call_lists_its_replaced_access(vis):
 
 
 @pytest.mark.parametrize("function", ["run_simulation", "csv_read"])
-def test_function_diff_of_a_function_lists_no_file_access(vis, function):
-    """Today the diff of a function that read data2.dat, changed between
-    the trials, lists no file access: the access belongs to the
-    activation of the ``open()`` call below it
-    """
-    pair = pair_of(vis, function)
-    under = [accesses_under(vis.project, *side) for side in pair]
-    assert (
-        under[0]["data2.dat"]["content_hash_after"]
-        != under[1]["data2.dat"]["content_hash_after"]
-    ), "data2.dat did not change below the function"
-    answer = function_diff(vis, pair)
-    assert answer["file_accesses_added"] == []
-    assert answer["file_accesses_removed"] == []
-    assert answer["file_accesses_replaced"] == []
-
-
-@pytest.mark.parametrize("function", ["run_simulation", "csv_read"])
-@known_defects(FUNCTION_ACCESSES)
-def test_function_diff_of_a_function_lists_its_file_accesses_desired(vis, function):
+def test_function_diff_of_a_function_lists_the_file_accesses_below_it(vis, function):
     """The diff of a function lists the accesses made below it that
-    changed between the trials: data2.dat as replaced
+    changed between the trials: data2.dat as replaced, although the access
+    belongs to the activation of the ``open()`` call below the function
+    (until #361 the list was empty)
     """
     pair = pair_of(vis, function)
     under = [accesses_under(vis.project, *side) for side in pair]
@@ -599,6 +574,27 @@ def test_function_diff_of_a_renamed_input_lists_added_and_removed(project, vis_f
         assert listed["stack"].endswith("csv_read -> open"), key
 
 
+def test_function_diff_of_two_calls_of_one_trial(vis):
+    """The diff of the two calls of ``csv_read`` in one trial lists the
+    file the first call read as removed and the one the second read as
+    added: the diff of a trial with itself has no file access to filter,
+    so the function diff compares the accesses below each activation
+    (until #361 both lists were empty)
+    """
+    trial_id = vis.trial_ids[0]
+    pair = tuple(
+        (trial_id, activation_reading(vis.project, trial_id, "csv_read", name))
+        for name in ("data1.dat", "data2.dat")
+    )
+    answer = function_diff(vis, pair)
+    assert answer["file_accesses_replaced"] == []
+    for key, name in (
+        ("file_accesses_removed", "data1.dat"),
+        ("file_accesses_added", "data2.dat"),
+    ):
+        assert [access["name"] for access in answer[key]] == [name], key
+
+
 def test_function_diff_under_an_experiment_is_the_same(vis):
     """``/experiments/<code>/commands/diff/...`` answers the same diff"""
     pair = pair_of(vis, "open")
@@ -639,9 +635,9 @@ def replaced_in_trials(project):
 @pytest.mark.parametrize("function", ["run_simulation", "open"])
 def test_function_diff_prints_nothing(vis, capsys, function):
     """The function diff writes nothing on the server's stdout, for a
-    function whose diff lists no access and for the ``open()`` call whose
-    diff lists one, although accesses changed between the trials (until
-    #204 it printed one ``access(...)`` pair per replaced access, #248)
+    function and for the ``open()`` call below it, whose diffs list an
+    access replaced between the trials (until #204 it printed one
+    ``access(...)`` pair per replaced access of the trial diff, #248)
     """
     assert replaced_in_trials(vis.project), "no access changed between the trials"
     function_diff(vis, pair_of(vis, function))

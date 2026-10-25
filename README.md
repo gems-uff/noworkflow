@@ -234,7 +234,7 @@ The *-fa* option compares two function activations instead of whole trials, taki
 ```bash
 $ now diff [trial1] [trial2] -fa 57 65
 ```
-It reports the differences in output, arguments, duration, variables, and file accesses. An optional argument after the ids selects which kinds of variable are shown: leaving it blank shows name, attribute, and access variables; *op* also shows operations; and *all* shows every kind.
+It reports the differences in output, arguments, duration, variables, and in the file accesses made by each call or by the calls below it, the processes they launched included. The two activations may also be two calls of one trial. An optional argument after the ids selects which kinds of variable are shown: leaving it blank shows name, attribute, and access variables; *op* also shows operations; and *all* shows every kind.
 
 The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. The *-m* option chooses the graph mode: *activation*, *coarseGrain*, *looplessCoarseGrain*, *fineGrain*, or *all*. Please, run "now export dataflow -h" to get the description of all options.
 ```bash

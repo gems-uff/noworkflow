@@ -25,7 +25,11 @@ nonzero, and that a tag, a sequence key and a trial id name the same trial.
 ``now diff -e`` prints the environment of the machine, so it is never a
 golden: its test checks only which attribute names changed, and never prints
 a value. ``now diff -fa`` compares two function activations; it has no
-golden, and its tests check the sections it prints. ``--content`` prints,
+golden, and its tests check the sections it prints. Its file accesses
+are those made below each activation (#361), which ``functions_project``
+checks: ``corpus/processes/functions.py`` run twice, with other inputs in
+the second run, where the accesses belong to the ``open()`` call below a
+function and to the launch of a process below another. ``--content`` prints,
 under each replaced file access, the unified diff of its two contents,
 which the tests rebuild from the content store; ``-m`` prints the code hash
 of a replaced module, here a local module edited between two trials
@@ -116,6 +120,14 @@ ACCESS_NAME = "  Name: "
 # trial, and its argument `data` changed in trial 2.
 FUNCTION = "write_output"
 DEBUG_TUPLE = "(access("
+# The second run of functions.py reads other inputs: the first read_text
+# call reads another parent_in.txt, and the process launch starts reads
+# another child_in.txt and writes another child_out.txt. child.py is the
+# same in both runs.
+FUNCTION_INPUTS = (
+    ("parent_in.txt", "parent input, changed\n"),
+    ("child_in.txt", "child input, changed\n"),
+)
 
 
 def lines_of(text):
@@ -263,6 +275,46 @@ def activation_id(project, sequence_key, name):
     return rows[0]["id"]
 
 
+def activation_ids(project, sequence_key, name):
+    """Ids of the activations of ``name`` in a trial, in the order of the
+    calls"""
+    return [
+        row["id"]
+        for row in project.query(
+            "SELECT activation.id FROM activation "
+            "JOIN trial ON trial.id = activation.trial_id "
+            "WHERE trial.sequence_key = ? AND activation.name = ? "
+            "ORDER BY activation.id",
+            sequence_key,
+            name,
+        )
+    ]
+
+
+def access_names(stdout):
+    """``{section: (count in the header, [names])}`` of the file access
+    sections of ``now diff``"""
+    sections, section = {}, None
+    for line in lines_of(stdout):
+        match = ACCESS_HEADER.match(line)
+        if match:
+            section = match.group(2)
+            sections[section] = (int(match.group(1)), [])
+        elif line.startswith("[now] "):
+            section = None
+        elif section is not None and line.startswith(ACCESS_NAME):
+            sections[section][1].append(line[len(ACCESS_NAME) :])
+    return sections
+
+
+def access_sections(stdout):
+    """The lines of ``now diff`` from the first file access section on"""
+    lines = lines_of(stdout)
+    starts = [index for index, line in enumerate(lines) if ACCESS_HEADER.match(line)]
+    assert starts, "no file access section"
+    return lines[starts[0] :]
+
+
 def missing_function_id(project):
     """An id that names no evaluation, hence no activation, in any trial"""
     return project.query("SELECT MAX(id) AS id FROM evaluation")[0]["id"] + 1000
@@ -316,6 +368,28 @@ def _graph_store(tmp_path_factory):
     }
     assert cached_trees(project) == expected, str(sorted(cached_trees(project)))
     return project
+
+
+@pytest.fixture(scope="module")
+def _functions_store(tmp_path_factory):
+    project = NowProject(tmp_path_factory.mktemp("diff_functions"))
+    project.copy_corpus("processes")
+    project.run("run", "functions.py")
+    for name, text in FUNCTION_INPUTS:
+        project.write(name, text)
+    project.run("run", "functions.py")
+    return project
+
+
+@pytest.fixture
+def functions_project(_functions_store):
+    """``corpus/processes/functions.py`` after two runs with other inputs
+    in the second, owned by this module: read-only"""
+    before = _functions_store.fingerprint()
+    yield _functions_store
+    assert _functions_store.fingerprint() == before, (
+        "the test changed functions_project"
+    )
 
 
 @pytest.fixture
@@ -669,6 +743,68 @@ def test_diff_fa_with_an_id_that_names_no_function(two_trial_project):
         "diff: error: argument -fa/--function-activations: Wrong input. "
         "There isn't a function with the id: {}".format(missing)
     ), str(result)
+
+
+@pytest.mark.parametrize(
+    "function, replaced",
+    [
+        pytest.param("read_text", ["parent_in.txt"], id="open-below"),
+        pytest.param("launch", ["child_in.txt", "child_out.txt"], id="launch-below"),
+    ],
+)
+def test_diff_fa_lists_the_file_accesses_below_each_activation(
+    functions_project, function, replaced
+):
+    """``-fa`` on the first call of a function in each trial lists the
+    accesses made below it that changed: the input the ``open()`` call
+    below ``read_text`` read, and the files the process that ``launch``
+    starts read and wrote, not child.py, the same in both trials
+
+    Until #361 it listed only the accesses of the compared activation
+    itself, so both lists were empty.
+    """
+    project = functions_project
+    ids = [activation_ids(project, key, function)[0] for key in (1, 2)]
+    result = project.run("diff", "1", "2", "-t", "-fa", *ids)
+    assert access_names(result.stdout) == {
+        "added": (0, []),
+        "removed": (0, []),
+        "replaced": (len(replaced), replaced),
+    }, str(result)
+
+
+def test_diff_fa_of_the_script_lists_what_the_trial_diff_lists(functions_project):
+    """``-fa`` on the activations of the script prints the file access
+    sections that ``-f`` prints, every access being below the script"""
+    project = functions_project
+    ids = [activation_ids(project, key, "__main__")[0] for key in (1, 2)]
+    function_diff = project.run("diff", "1", "2", "-t", "-fa", *ids)
+    trial_diff = project.run("diff", "1", "2", "-t", "-f")
+    assert access_names(trial_diff.stdout)["replaced"] == (
+        3,
+        ["child_in.txt", "child_out.txt", "parent_in.txt"],
+    ), str(trial_diff)
+    assert access_sections(function_diff.stdout) == access_sections(
+        trial_diff.stdout
+    ), str(function_diff)
+
+
+def test_diff_fa_compares_two_calls_of_one_trial(functions_project):
+    """``-fa`` on the two calls of ``read_text`` in one trial lists the
+    file the first call read as removed and the one the second read as
+    added: the diff of a trial with itself has no file access to filter,
+    so the function diff compares the accesses below each activation
+
+    Until #361 both lists were empty.
+    """
+    project = functions_project
+    first, second = activation_ids(project, 2, "read_text")
+    result = project.run("diff", "2", "2", "-t", "-fa", first, second)
+    assert access_names(result.stdout) == {
+        "added": (1, ["child_in.txt"]),
+        "removed": (1, ["parent_in.txt"]),
+        "replaced": (0, []),
+    }, str(result)
 
 
 # --- --content and -m (#204) -------------------------------------------------
