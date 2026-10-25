@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Universidade Federal Fluminense (UFF)
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""``now restore``, ``--dir``, ``now gc``, ``now import`` and ``now demo``
+"""``now restore``, ``--dir``, ``now gc`` and ``now demo``
 
 Run as processes on real stores:
 
@@ -25,8 +25,7 @@ Run as processes on real stores:
   drive (#440);
 - ``--dir`` of ``run`` and ``list``, and the sibling import that ``run
   --dir`` breaks;
-- ``now gc`` (#224) and ``now import`` on the plain content engine, both of
-  which crash;
+- ``now gc`` (#224) on the plain content engine, which crashes;
 - ``now demo 1`` through the console script (slow, needs matplotlib), whose
   step 3 script raises NameError.
 
@@ -1308,70 +1307,6 @@ def test_gc_on_a_plain_store_desired(weather_project, args):
     result = weather_project.run("gc", *args, expect=None, allow_stderr=True)
 
     assert result.returncode == 0, str(result)
-
-
-# ---------------------------------------------------------------------------
-# import
-# ---------------------------------------------------------------------------
-
-IMPORT_BUNDLE = (
-    "#247: now import fails on three defects in a row: "
-    "cmd_import calls PlainEngine.put(content) without the file name; "
-    "utils/collab.import_bundle reads bundle.stageTags, which "
-    "BundleLW.__init__ never sets; and it stores the stage tags through "
-    "ObjectStore(StageTags), the ORM model, which has no .model for "
-    "do_store()"
-)
-
-
-def test_import_into_an_empty_project(weather_project, tmp_path):
-    """``now import --source STORE`` copies the content files first, each
-    with ``PlainEngine.put(content)``, which needs a file name: exit 1, a
-    TypeError on stderr, and a target with ``content/`` but no database
-    (#247 changes it)
-
-    Past that call, ``utils/collab.import_bundle`` (also behind ``now pull``
-    and the import endpoint of ``now vis``) fails on its own, whatever the
-    engine: it reads ``bundle.stageTags``, which ``BundleLW.__init__``
-    never sets (AttributeError), and once that exists, it stores the stage
-    tags through ``ObjectStore(StageTags)``, the ORM model, whose
-    ``do_store()`` needs the ``model`` of a lightweight class
-    (AttributeError), after the trials and most of their rows are already
-    stored.
-    """
-    target = NowProject(tmp_path / "target")
-
-    result = target.run(
-        "import", "--source", weather_project.path, expect=1, allow_stderr=True
-    )
-
-    assert last_line(result.stderr) == (
-        "TypeError: PlainEngine.put() missing 1 required positional "
-        "argument: 'filename'"
-    ), str(result)
-    assert (target.store / "content").is_dir()
-    assert not (target.store / "db.sqlite").exists()
-
-
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=IMPORT_BUNDLE)
-def test_import_into_an_empty_project_desired(weather_project, tmp_path):
-    """``now import`` copies the source's trial into an empty target, and
-    ``now list`` there shows it
-
-    Fixing ``PlainEngine.put()`` alone does not flip this test: the two
-    defects of ``utils/collab.import_bundle`` (``bundle.stageTags`` never
-    set, ``ObjectStore(StageTags)`` given the ORM model) fail next.
-    """
-    target = NowProject(tmp_path / "target")
-    source = weather_project.trials()[0]
-
-    result = target.run(
-        "import", "--source", weather_project.path, expect=None, allow_stderr=True
-    )
-
-    assert result.returncode == 0, str(result)
-    listed = target.run("list")
-    assert "Trial {}".format(source["id"]) in listed.stdout, str(listed)
 
 
 # ---------------------------------------------------------------------------

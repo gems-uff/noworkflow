@@ -123,33 +123,6 @@ GC_AGGRESSIVE = Defect(
     "gitbase's gc(aggressive=False), accepts it",
     signature="gc() got an unexpected keyword argument 'aggressive'",
 )
-PLAIN_PUT_FILENAME = Defect(
-    "#247: PlainEngine.put(content, filename) has no default for filename, "
-    "which ContentDatabaseEngine.put defaults to 'generic'; cmd_import "
-    "calls content.put(content)",
-    signature="PlainEngine.put() missing 1 required positional argument: 'filename'",
-)
-
-
-def _abspath_none_message():
-    """The message of the TypeError that ``os.path.abspath(None)`` raises
-
-    It differs between systems and versions (on Windows 3.15 it comes
-    from ``_path_normpath``).
-    """
-    try:
-        os.path.abspath(None)
-    except TypeError as error:
-        return str(error)
-    raise AssertionError("os.path.abspath(None) raised no TypeError")
-
-
-ABSPATH_NONE = _abspath_none_message()
-GIT_PUT_NONE = Defect(
-    "#247: cmd_pull calls content.put(content, None), and "
-    "GitContentDatabaseEngine._inc_name passes None to os.path.abspath",
-    signature=ABSPATH_NONE,
-)
 PLAIN_GET_PATH = Defect(
     "#224: PlainEngine.get joins content_path, hash[:2] and hash[2:] "
     "without validating the hash, and os.path.join drops the content "
@@ -565,21 +538,9 @@ def test_gc_with_aggressive_desired(engine, engine_spec):
 
 
 @PLAIN_ONLY
-def test_put_without_a_file_name(engine):
-    """``put(content)`` without a file name raises TypeError on plain"""
-    with pytest.raises(TypeError) as raised:
-        engine.put(b"x\n")
-
-    assert str(raised.value) == (
-        "PlainEngine.put() missing 1 required positional argument: 'filename'"
-    )
-
-
-@PLAIN_ONLY
-@known_defects(PLAIN_PUT_FILENAME)
-def test_put_without_a_file_name_desired(engine, engine_spec):
-    """Desired (#247): ``put(content)`` stores it, as the base signature's
-    default file name allows"""
+def test_put_without_a_file_name(engine, engine_spec):
+    """``put(content)`` stores it, as the base signature's default file name
+    allows: ``now import`` and ``now pull`` call it so (#247)"""
     content_hash = engine.put(b"x\n")
 
     assert content_hash == engine_spec.blob_hash(b"x\n")
@@ -597,26 +558,6 @@ def test_puregit_put_without_a_file_name_uses_generic(engine, engine_spec):
         (os.path.basename(name), stored)
         for name, stored in engine.object_hashes.items()
     ] == [("generic", content_hash)]
-
-
-@PUREGIT_ONLY
-def test_puregit_put_with_none_as_the_file_name(engine):
-    """``put(content, None)``, as ``now pull`` calls it, raises the
-    TypeError of ``os.path.abspath(None)`` in ``_inc_name`` on puregit
-    (plain ignores the name)"""
-    with pytest.raises(TypeError) as raised:
-        engine.put(b"x\n", None)
-
-    assert str(raised.value) == ABSPATH_NONE
-
-
-@PUREGIT_ONLY
-@known_defects(GIT_PUT_NONE)
-def test_puregit_put_with_none_as_the_file_name_desired(engine, engine_spec):
-    """Desired (#247): ``put(content, None)`` stores the content"""
-    content_hash = engine.put(b"x\n", None)
-
-    assert content_hash == engine_spec.blob_hash(b"x\n")
 
 
 def path_shaped_hash(path):

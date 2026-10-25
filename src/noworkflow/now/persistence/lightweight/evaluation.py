@@ -81,4 +81,6 @@ class EvaluationLW(BaseLW):  # pylint: disable=too-many-instance-attributes
             "activation_id": self.activation_id,
             "checkpoint": self.checkpoint,
             "repr": self.repr,
+            "member_container_activation_id": self.member_container_activation_id,
+            "member_container_id": self.member_container_id,
         }

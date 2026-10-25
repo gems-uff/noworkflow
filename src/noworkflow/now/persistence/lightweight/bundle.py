@@ -40,6 +40,7 @@ class BundleLW(BaseLW):
         self.fileAccesses = []
         self.members = []
         self.modules = []
+        self.stageTags = []
         self.users = []
 
     def __json__(self):
@@ -56,6 +57,7 @@ class BundleLW(BaseLW):
             "fileAccesses": [x.__json__() for x in self.fileAccesses],
             "members": [x.__json__() for x in self.members],
             "modules": [x.__json__() for x in self.modules],
+            "stageTags": [x.__json__() for x in self.stageTags],
             "users": [x.__json__() for x in self.users],
         }
 
@@ -171,22 +173,16 @@ class BundleLW(BaseLW):
             )
             for x in data["evaluations"]
         ]
+        # A bundle of noWorkflow 2.1.3 has no member containers: each
+        # evaluation is then its own, as a new EvaluationLW says.
+        for evaluation, x in zip(self.evaluations, data["evaluations"]):
+            if "member_container_id" in x:
+                evaluation.member_container_activation_id = x[
+                    "member_container_activation_id"
+                ]
+                evaluation.member_container_id = x["member_container_id"]
         self.fileAccesses = [
             FileAccessLW(
-                x["id"],
-                x["trial_id"],
-                x["name"],
-                x["checkpoint"],
-                x["mode"],
-                x["buffering"],
-                x["content_hash_before"],
-                x["content_hash_after"],
-                x["activation_id"],
-            )
-            for x in data["fileAccesses"]
-        ]
-        self.fileAccesses = [
-            StageTagsLW(
                 x["id"],
                 x["trial_id"],
                 x["name"],
@@ -225,5 +221,16 @@ class BundleLW(BaseLW):
                 x["fullpath"],
             )
             for x in data["modules"]
+        ]
+        # A bundle of noWorkflow 2.1.3 carries no stage tags.
+        self.stageTags = [
+            StageTagsLW(
+                x["id"],
+                x["trial_id"],
+                x["name"],
+                x["tag_name"],
+                activation_id=x["activation_id"],
+            )
+            for x in data.get("stageTags", [])
         ]
         self.users = [UserLW(x["id"], x["userLogin"]) for x in data["users"]]

@@ -284,9 +284,10 @@ now pull --url http://host:5000/experiments/<id>
 - `now schema` creates an empty `.noworkflow/` in the current directory
   when there is none (#253).
 - `now gc` fails with `TypeError` on the default content store (#224).
-- `now import` (#247), `now pull` (#247) and `now push` (#312) fail today.
-  The server side of push and pull is `now vis --force true`, whose page
-  creates the experiment and its URL.
+- The server side of push and pull is `now vis --force true` in an empty
+  directory, whose page creates the experiment and its URL. `now pull` into
+  an empty directory creates the store; `now restore` then puts a pulled
+  trial's files back.
 - `now clean` needs a trial recorded by the noWorkflow Jupyter kernel
   (`now kernel`, then the "noWorkflow 3" kernel in Jupyter); on a script
   or a `%%now_run` trial it says the trial is not a notebook trial.

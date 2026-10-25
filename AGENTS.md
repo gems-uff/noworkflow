@@ -261,21 +261,24 @@ run `now` as a process on a real store in a temporary directory. What
 neither executes:
 
 - **Commands the e2e tests do not run:** `vis` (the server; its routes run
-  in process, see below), `push`, `pull`, `debug`, `evaluation`
+  in process, and the server as a process only under the browser tests
+  and as the server of push and pull, see below), `debug`, `evaluation`
   (its query options run through `clean`), and `demo` outside the reference
   leg (see below). For the commands they do run, only the flags their tests
   name are covered.
-- **`now vis`:** the write routes (experiments, groups, annotations,
-  remotes, the collaboration import and the files it receives) and push
-  and pull against them (#256), in the server and in the JavaScript; the
-  views the browser tests do not open (below). The read routes,
-  `/db/query` included, run in process through Flask's test client
-  (`src/noworkflow/tests/vis/`) on stores that `now run` builds in a
-  temporary directory; the rows only push and pull create are added through
-  the models or in SQL. There the `/commands/*` routes that start `now` run
-  with `subprocess.run` replaced, so only the argv they build and how they
-  answer are checked. The JavaScript and the server as a process run only
-  in the `vis-browser` job of `ci.yml` (`src/noworkflow/tests/browser/`,
+- **`now vis`:** the write routes (groups, annotations, remotes, the
+  experiment routes besides its creation; #256), in the server and in the
+  JavaScript; the views the browser tests do not open (below). The routes
+  push and pull go through (the creation of an experiment, the files, the
+  bundle and its import) run only under `e2e/test_collaboration.py`, on a
+  server started as a process. The read routes, `/db/query` included,
+  run in process through Flask's test client (`src/noworkflow/tests/vis/`)
+  on stores that `now run` builds in a temporary directory; there the rows
+  only push and pull create are added through the models or in SQL, and
+  the `/commands/*` routes that start `now` run with `subprocess.run`
+  replaced, so only the argv they build and how they answer are checked.
+  The JavaScript, and the server's pages, run only in the `vis-browser`
+  job of `ci.yml` (`src/noworkflow/tests/browser/`,
   marked `browser`, deselected on every other leg): `now vis` on a real
   port and the committed bundle in headless Chrome, through the history,
   a trial, the diff, the dataflow and the Prolog export (the only places
@@ -387,11 +390,18 @@ neither executes:
   `%%now_prolog` without `pyswip`, which no
   leg installs, and the tagging helpers that import pandas where the
   `paper` group is not synced (it is in the reference container only).
-- **`push`, `pull`, `demo`:** a remote server and the demo projects are
-  exercised by hand or not at all; the exception is `demo 1` (marked `slow`),
-  which the reference leg runs because it syncs the `demo` extra
-  (matplotlib), and which skips on every other leg and on `uv sync --locked`
-  alone.
+- **`push`, `pull`, `import`:** `e2e/test_collaboration.py` runs them
+  between plain stores, push and pull against a `now vis --force true` on
+  a free port of 127.0.0.1 (`NowProject.serve`), and compares what arrives
+  with the source, table by table; their failure paths (an unknown
+  experiment, a server that answers 400, their exit status) are #256's,
+  and stores of different content engines are compared nowhere. Binding
+  the port is refused inside the Claude Code sandbox, as for the browser
+  tests.
+- **`demo`:** the demo projects are exercised by hand or not at all; the
+  exception is `demo 1` (marked `slow`), which the reference leg runs
+  because it syncs the `demo` extra (matplotlib), and which skips on every
+  other leg and on `uv sync --locked` alone.
 - **Deployment provenance:** what gets recorded about the environment
   (`now show -e`) depends on the machine; the e2e tests assert only the
   names of a few attributes and the synthetic user, never the values.

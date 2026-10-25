@@ -74,6 +74,6 @@ class CodeComponentLW(BaseLW):  # pylint: disable=too-many-instance-attributes
             "first_char_line": self.first_char_line,
             "first_char_column": self.first_char_column,
             "last_char_line": self.last_char_line,
-            "last_char_column": self.last_char_line,
+            "last_char_column": self.last_char_column,
             "container_id": self.container_id,
         }
