@@ -239,6 +239,29 @@ class Clusterizer(object):
                     arriving_arrows[target][source] |= attrs
             del departing_arrows[nid]
 
+    def _set_inner_targets(self, cluster):
+        """Set ``inner_targets`` of ``cluster`` and of the clusters inside
+        it: the ids of the nodes that an edge drawn from inside the cluster,
+        at any depth, reaches. Return them"""
+        created = self.created
+        filter_ = self.filter
+        empty = (None, None)
+        reached = set()
+        for node in cluster.elements:
+            if isinstance(node, ClusterNode):
+                # Its own edges below depend on what it holds
+                reached |= self._set_inner_targets(node)
+            for target_nid, styles in viewitems(
+                self.departing_arrows.get(node.node_id, {})
+            ):
+                _, target = created.get(target_nid, empty)
+                if target is None or target not in filter_.after_synonym:
+                    continue
+                if ((node, target), styles) in filter_.dependencies:
+                    reached.add(target_nid)
+        cluster.inner_targets = reached
+        return reached
+
     def process_dependencies(self):
         """Load dependencies from db"""
         departing_arrows = self.departing_arrows
@@ -247,6 +270,12 @@ class Clusterizer(object):
         empty = (None, None)
         self._create_evaluation_dependencies()
         self._fix_dependencies()
+        if self.config.show_only_was_derived_from:
+            # -w leaves out the nodes of a function that did not derive the
+            # evaluation, and with them the edges that drew the flow of its
+            # arguments: the edges of the call draw it instead (#473).
+            # Without -w, every node of the body is drawn.
+            self._set_inner_targets(self.main_cluster)
 
         for source_nid, targets in viewitems(departing_arrows):
             _, source = created.get(source_nid, empty)

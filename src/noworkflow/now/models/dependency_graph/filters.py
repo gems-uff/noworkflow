@@ -25,7 +25,11 @@ class Filter(object):
                 return False
             isargument = any(attr.get("_type").startswith("argument") for attr in attrs)
             if isinstance(source, ClusterNode) and isargument:
-                return False
+                # The flow of an argument is drawn from the nodes inside
+                # the cluster that used it. Keep the edge only when the
+                # clusterizer found that none of them reaches its target
+                inner = source.inner_targets
+                return inner is not None and target.node_id not in inner
         return True
 
     def __getattr__(self, attr):

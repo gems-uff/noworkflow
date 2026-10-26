@@ -1004,6 +1004,21 @@ CLUSTERED_SCRIPTS = {
         "    step(i)\n"
     ),
     "two_sites": ("def f(x):\n    return x\n\na = f(1)\nb = f(2)\n"),
+    # `consume` returns nothing: no argument derived the value of its call.
+    "returns_nothing": (
+        "def make():\n"
+        "    return [1, 2]\n"
+        "\n"
+        "def consume(values):\n"
+        "    print(len(values))\n"
+        "\n"
+        "def total(values):\n"
+        "    return sum(values)\n"
+        "\n"
+        "data = make()\n"
+        "consume(data)\n"
+        "print(total(data))\n"
+    ),
 }
 
 
@@ -1161,6 +1176,61 @@ def test_export_dataflow_draws_the_parameter_of_each_call_site(
     for eid in parameters:
         assert "e_{}".format(eid) in graph.nodes, str(result)
     assert drawn_cluster_labels(graph) == ["f", "f"], str(result)
+
+
+# --- -w on a call that no argument derived (#473) --------------------------
+
+# The modes that draw the call of a function of the script as a cluster.
+CLUSTERING_MODES = ("activation", "coarseGrain", "looplessCoarseGrain", "fineGrain")
+
+
+def reachable(graph, node):
+    """The nodes the edges of ``graph`` lead to from ``node``"""
+    heads = collections.defaultdict(set)
+    for tail, head, _ in graph.edges:
+        heads[tail].add(head)
+    seen, pending = set(), [node]
+    while pending:
+        for head in heads[pending.pop()] - seen:
+            seen.add(head)
+            pending.append(head)
+    return seen
+
+
+@pytest.mark.parametrize("mode", CLUSTERING_MODES)
+def test_export_dataflow_wdf_connects_a_call_to_what_derived_its_arguments(
+    clustered_projects, mode
+):
+    """``-w`` on ``consume(data)``, whose function returns nothing, leads
+    from the call to ``make()``, which produced ``data``: ``make()`` is in
+    the graph because the call took ``data`` as an argument, and the node
+    of ``consume`` that used it did not derive the value of the call
+    """
+    project = clustered_projects["returns_nothing"]
+    call = evaluation_of(project, "call", "consume(data)")
+    graph, result = clustered_graph(project, "-m", mode, "-w", call)
+    make = "e_{}".format(evaluation_of(project, "call", "make()"))
+    assert make in graph.nodes, str(result)
+    assert make in reachable(graph, "e_{}".format(call)), str(result)
+
+
+@pytest.mark.parametrize("wdf", (False, True), ids=("whole", "wdf"))
+def test_export_dataflow_draws_an_argument_through_the_node_that_used_it(
+    clustered_projects, wdf
+):
+    """The activation dataflow draws what ``total(data)`` took from
+    ``make()`` through ``sum(values)``, inside ``total``, and draws no edge
+    from the call itself to ``make()``, with or without ``-w``
+    """
+    project = clustered_projects["returns_nothing"]
+    call = "e_{}".format(evaluation_of(project, "call", "total(data)"))
+    make = "e_{}".format(evaluation_of(project, "call", "make()"))
+    used = "e_{}".format(evaluation_of(project, "call", "sum(values)"))
+    args = ("-w", call[len("e_") :]) if wdf else ()
+    graph, result = clustered_graph(project, "-m", "activation", *args)
+    edges = {(tail, head) for tail, head, _ in graph.edges}
+    assert (used, make) in edges, str(result)
+    assert (call, make) not in edges, str(result)
 
 
 @pytest.mark.parametrize("mode", DATAFLOW_MODES)

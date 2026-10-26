@@ -116,6 +116,9 @@ class ClusterNode(ActivationNode):
         self.depth = depth
         # Cluster ranks
         self.ranks = []
+        # Node ids that an edge drawn from inside the cluster reaches, or
+        # None when the clusterizer did not compute them
+        self.inner_targets = None
 
     def add(self, node):
         """Add node to cluster"""

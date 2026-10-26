@@ -342,8 +342,10 @@ PROSPECTIVE_EDGES = {
 }
 
 # fig:queryQ1Result: the activation dataflow of what derived save_metrics in
-# 1.2.1. Its clusters, nodes and edges, by label.
-Q1_CLUSTERS = {"get_df", "get_pca", "get_rus", "get_ypred"}
+# 1.2.1. Its clusters, nodes and edges, by label. save_metrics returns
+# nothing: its call ("44 return") reaches what derived its arguments through
+# the edges of the call (#473).
+Q1_CLUSTERS = {"get_df", "get_pca", "get_rus", "get_ypred", "save_metrics"}
 Q1_NODES = {
     "creditcard.csv",
     "10 pd.read_csv('creditcard.csv', encoding='utf-8')",
@@ -361,6 +363,7 @@ Q1_NODES = {
     "22 RandomForestClassifier()",
     "24 rf.predict(X_test)",
     "43 return",
+    "44 return",
 }
 Q1_EDGES = {
     ("10 pd.read_csv('creditcard.csv', encoding='utf-8')", "creditcard.csv", True),
@@ -398,6 +401,8 @@ Q1_EDGES = {
         True,
     ),
     ("43 return", "24 rf.predict(X_test)", False),
+    ("44 return", "42 train_test_split(X_resamp ... random_state=random_seed)", True),
+    ("44 return", "43 return", True),
 }
 
 # fig:queryQ4Result: the query of Q4, with the date of the replay instead
@@ -1541,7 +1546,8 @@ def test_q1_dataflow_of_save_metrics_in_1_2_1_is_fig_query_q1_result(paper):
     """Q1, fig:queryQ1Result: the activation dataflow of what derived
     save_metrics in 1.2.1 (`now export dataflow 1.2.1 -m activation -w
     <id>`, what `now vis` runs) has the clusters, nodes and edges of the
-    figure: the functions get_df, get_pca, get_rus and get_ypred, back to
+    figure: save_metrics, connected to train_test_split and get_ypred, and
+    the functions get_df, get_pca, get_rus and get_ypred, back to
     creditcard.csv. Through `now evaluation`, the same id needs `-t 1.2.1`:
     without it the command reads the last trial, the backup 7.0.0."""
     evaluation = paper.evaluation_id("1.2.1", "save_metrics(y_test, y_pred)")
