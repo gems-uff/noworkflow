@@ -396,8 +396,8 @@ launches an R script and a C program, three trials), from
 `Rscript` and `cc` on the PATH and skip without them, and
 `NOW_RSCRIPT=require` fails instead of skipping, as the job sets. Its
 strace variant needs Linux with `strace` (`NOW_STRACE=require` fails
-it instead of skipping, as the job sets). The
-claims that wait for #207 are `_desired` twins marked
+it instead of skipping, as the job sets). A
+claim the tool cannot satisfy yet is a `_desired` twin marked
 `xfail(strict=True)`: see "The paper's running example" in `AGENTS.md`.
 
 ### The vis in a browser

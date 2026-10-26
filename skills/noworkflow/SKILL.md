@@ -380,9 +380,10 @@ swipl -q -g "consult('trial2.pl'), forall(access(_, _, N, M, _, H, _, _), (write
 - Only Python is traced inside: of a process the script starts, noWorkflow
   records the call boundary (the command line, the exit status in the
   call's value) and the files named on the command line or created in
-  the project, never what happens inside the program. A file the process
-  modifies without naming it is not seen, a file it rewrites with the same
-  content is recorded as a read, and the children of `os.fork` and
+  the project, never what happens inside the program. Without
+  `--external-tracer strace` (Linux) or rdtLite's PROV-JSON, a file the
+  process modifies without naming it is not seen; a file it rewrites with
+  the same content is recorded as a read, and the children of `os.fork` and
   `multiprocessing` are not recorded at all. The program a process runs
   is a module of the trial, with the hash of the executable (and its
   bytes up to `--executable-cap`, 16 MB by default); it has a

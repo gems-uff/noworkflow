@@ -618,11 +618,11 @@ the corpus copy (`test_repository_examples.py` fails when they differ),
 so a change to the corpus is copied there in the same commit. The tests
 of the case study need `Rscript` and `cc` and skip without them (the job sets
 `NOW_RSCRIPT=require`, and `NOW_STRACE=require` for its strace
-variant). The claims that only #207 can
-satisfy are `_desired` twins, `xfail(strict=True)` through
-`known_defects` with the signature of today's failure; the issue that
-makes one pass removes the mark in its own commit, and the issue that
-changes how one fails rewrites its signature. The map is the module's
+variant). A claim the tool cannot satisfy yet
+is a `_desired` twin, `xfail(strict=True)` through `known_defects` with
+the signature of today's failure; the issue that makes it pass removes
+the mark in its own commit, and the issue that changes how it fails
+rewrites its signature. The map is the module's
 docstring.
 
 ## Sensitive data
