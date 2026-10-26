@@ -30,6 +30,8 @@ authors:
     given-names: Felipe
     affiliation: Universidade Federal Fluminense
 repository-code: "https://github.com/gems-uff/noworkflow"
+version: 2.2.0
+date-released: "2026-10-26"
 license: MIT
 keywords:
   - provenance
