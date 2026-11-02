@@ -9,8 +9,9 @@
 # with model.R run under rdtLite.
 #
 # Requirements (in the EXECUTION environment):
-#   - noWorkflow 2.2.0 (provides the `now` command)
-#   - Python package: pandas
+#   - noWorkflow 2.2.0 (provides the `now` command) and pandas 3.1.0, on
+#     Python 3.12: the environment of the paper (the README of the package
+#     says how to install it)
 #   - R 4 or later (`Rscript`), a C compiler (`cc`) and Graphviz (`dot`)
 #   - optional, for the fourth trial: the rdtLite package in R
 #     (`Rscript -e 'install.packages("rdtLite")'`)

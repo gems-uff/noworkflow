@@ -4,8 +4,9 @@
 # (credit card fraud detection pipeline) used throughout the paper.
 #
 # Requirements (in the EXECUTION environment, e.g. the `noworkflow-analysis` repo):
-#   - noWorkflow 2 (provides the `now` command)
-#   - Python packages: scikit-learn, imbalanced-learn, pandas
+#   - noWorkflow 2.2.0 (provides the `now` command) and the Python packages
+#     scikit-learn, imbalanced-learn and pandas, on Python 3.12: the
+#     environment of the paper (README.md says how to install it)
 #   - The Kaggle "Credit Card Fraud Detection" dataset as creditcard.csv
 #     https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 #
