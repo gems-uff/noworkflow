@@ -37,7 +37,9 @@ the PROV-JSON of rdtLite found by the snapshot) passed with it and lost
 their marks and their ``_desired`` suffix. Three things #202 showed that
 the section's draft did not foresee, now stated by the tests: the
 launch of ``Rscript`` also reads ``prepared.csv``, which its command line
-names, so a trial has nine accesses, not eight; ``now restore 1.1.1``
+names, so the pipeline makes nine accesses, not eight (with pandas 3.1,
+the environment of the paper's R1 revision, ``read_csv`` adds its own:
+``pandas_reads``, #460); ``now restore 1.1.1``
 records a backup trial (2.0.0), as the running example's 7.0.0, because
 the outputs 1.1.3 created have no content before their first access and
 the restore sees them as changed; and ``now restore 1.1.3 -f metrics``
@@ -107,6 +109,8 @@ import re
 import shlex
 import shutil
 import stat
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -174,6 +178,60 @@ EXCHANGED = [
     ("pred.csv", "r", "./metrics"),
     ("out.txt", "w", "./metrics"),
 ]
+# What pandas opens while it reads the dataset, beyond the one read the
+# pipeline asks for: since pandas 3.1 (the environment of the paper's R1
+# revision, #460) `read_csv` opens a large file once per step of its
+# parallel read and probes the cgroup files to count the processors (files
+# that may not exist: hash None on both sides). The section lists them with
+# the pipeline's own accesses, as `now show -f` prints them, and says why.
+# Their number depends on the size of the dataset (the synthetic one is read
+# in one piece, the Kaggle one in chunks) and on the platform (one cgroup
+# file in a container, three probes on a host), so the tests measure them
+# with pandas itself, in a fresh interpreter outside noWorkflow, instead of
+# fixing a count.
+PANDAS_READS = """
+import builtins, io, sys
+import pandas as pd
+opened = []
+def recording(original):
+    def open_(file, mode="r", *args, **kwargs):
+        if isinstance(file, str) and "r" in mode and "+" not in mode:
+            opened.append(file)
+        return original(file, mode, *args, **kwargs)
+    return open_
+builtins.open = recording(builtins.open)
+io.open = recording(io.open)
+pd.read_csv(sys.argv[1], encoding="utf-8")
+print("\\n".join(opened))
+"""
+_pandas_reads = {}
+
+
+def pandas_reads(project):
+    """The files pandas's ``read_csv`` opens for the project's dataset, as
+    the wrapper calls it, in order and by the name given to ``open``: the
+    dataset itself, once or several times, and the cgroup probes"""
+    key = str(project.path)
+    if key not in _pandas_reads:
+        completed = subprocess.run(
+            [sys.executable, "-c", PANDAS_READS, DATASET],
+            cwd=str(project.path),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        _pandas_reads[key] = completed.stdout.split()
+    return list(_pandas_reads[key])
+
+
+def expected_accesses(project):
+    """The accesses of a trial as the section lists them: what pandas
+    opens to read the dataset (``pandas_reads``) in place of the one read
+    of ``EXCHANGED``, then the rest of ``EXCHANGED``"""
+    reads = [(name, "r") for name in pandas_reads(project)]
+    return reads + [(name, mode) for name, mode, _ in EXCHANGED if name != DATASET]
+
+
 # The node of each launch in the activation dataflow: the call inside the
 # wrapper's `run`, which the three clusters repeat.
 LAUNCH_NODE = "15 subprocess.run(command)"
@@ -567,16 +625,23 @@ def test_the_three_trials_are_tagged_1_1_x_with_one_script_hash(case):
 
 def test_the_wrapper_reads_the_dataset_and_writes_prepared_csv_through_pandas(case):
     """The wrapper's own accesses, through pandas's open: creditcard.csv
-    read (binary or text, see ``EXCHANGED``) with the dataset's hash
+    read (binary or text, see ``EXCHANGED``; as many times as pandas opens
+    it, see ``pandas_reads``) with the dataset's hash
     before and after, prepared.csv written, new in 1.1.1 and rewritten
     with the same content in 1.1.2 and 1.1.3 (the launch of Rscript reads
     it afterwards: the next test)"""
     dataset = sha1((case.project.path / DATASET).read_bytes())
+    opens = pandas_reads(case.project).count(DATASET)
     previous = None
     for tag in RUN_TAGS:
-        (read,) = named(case, tag, "creditcard.csv")
-        assert read_kind(read["mode"]) == "r", diverges("creditcard.csv", tag)
-        assert read["content_hash_before"] == read["content_hash_after"] == dataset
+        reads = named(case, tag, "creditcard.csv")
+        assert len(reads) == opens, diverges(
+            "creditcard.csv",
+            "{}: {} reads, pandas opens it {} times".format(tag, len(reads), opens),
+        )
+        for read in reads:
+            assert read_kind(read["mode"]) == "r", diverges("creditcard.csv", tag)
+            assert read["content_hash_before"] == read["content_hash_after"] == dataset
         (written,) = [
             access
             for access in named(case, tag, "prepared.csv")
@@ -728,14 +793,15 @@ def test_argv0_never_becomes_a_file_access(case):
 
 
 def test_show_f_lists_the_exchanged_files_with_their_modes(case):
-    """`now show 1.1.1 -f` lists the nine accesses of the pipeline with
-    their modes: the wrapper's two and the seven of the three launches"""
+    """`now show 1.1.1 -f` lists the accesses of the pipeline with their
+    modes: what pandas opens to read the dataset, prepared.csv written by
+    the wrapper, and the seven of the three launches"""
     stdout = case.run("show", "1.1.1", "-f").stdout
     found = [
         (block["Name"], read_kind(block["Mode"]))
         for block in blocks(stdout, SHOW_ACCESSES)
     ]
-    expected = [(name, mode) for name, mode, _ in EXCHANGED]
+    expected = expected_accesses(case.project)
     assert sorted(found) == sorted(expected), (
         "now show 1.1.1 -f lists {} accesses: {}".format(len(found), sorted(found))
     )
@@ -871,8 +937,8 @@ def test_dataflow_in_activation_mode_draws_the_three_launches_and_their_files(
 
 def test_external_tracer_none_records_no_child_file(tmp_path, tools):
     """`now run --external-tracer none fraud_pipeline.py` records the
-    trial as before #202: the wrapper's two accesses and nothing of the
-    launches"""
+    trial as before #202: the wrapper's own accesses, through pandas, and
+    nothing of the launches"""
     project = case_project(tmp_path, tools)
     place_sources(project)
     project.run("run", "--external-tracer", "none", SCRIPT, allow_stderr=True)
@@ -882,10 +948,9 @@ def test_external_tracer_none_records_no_child_file(tmp_path, tools):
         "SELECT name, mode FROM file_access WHERE trial_id = ? ORDER BY checkpoint",
         trial["id"],
     )
-    assert [(row["name"], read_kind(row["mode"])) for row in rows] == [
-        ("creditcard.csv", "r"),
-        ("prepared.csv", "w"),
-    ]
+    assert sorted((row["name"], read_kind(row["mode"])) for row in rows) == sorted(
+        [(name, "r") for name in pandas_reads(project)] + [("prepared.csv", "w")]
+    )
 
 
 # --- Section 6.4: the executables as dependencies (#203) -------------------
@@ -1241,14 +1306,14 @@ def prov_file_entities(stdout):
 
 def test_export_prov_has_entities_for_the_exchanged_files(case):
     """`now export prov 1.1.1` declares an entity for each file the trial
-    read or wrote: the wrapper's two and the ones the launches exchange,
-    each used or generated by an activity (#461)"""
+    read or wrote: the wrapper's own, through pandas, and the ones the
+    launches exchange, each used or generated by an activity (#461)"""
     stdout = case.run("export", "prov", "1.1.1").stdout
     found = prov_file_entities(stdout)
     assert found, "no file entity in the PROV export of 1.1.1"
     missing = [name for name in EXCHANGED_FILES if name not in found]
     assert missing == [], "no file entity for {}".format(missing)
-    # One entity per access, nine in all, with the mode of each.
+    # One entity per access, with the mode of each.
     accesses = []
     for match in PROV_ENTITY.finditer(stdout):
         if 'type="script:file"' not in match.group(2):
@@ -1263,7 +1328,7 @@ def test_export_prov_has_entities_for_the_exchanged_files(case):
             re.MULTILINE,
         )
         assert linked, "no used or wasGeneratedBy of {}".format(entity)
-    assert sorted(accesses) == sorted((name, mode) for name, mode, _ in EXCHANGED)
+    assert sorted(accesses) == sorted(expected_accesses(case.project))
 
 
 # --- the README of Examples/glue_pipeline -----------------------------------
