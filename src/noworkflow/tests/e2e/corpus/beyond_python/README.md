@@ -7,7 +7,7 @@ script and a C program.
 
 - repository: [`dew-uff/noworkflow-analysis`](https://github.com/dew-uff/noworkflow-analysis),
   directory `beyond-python/`
-- tag: `is-2026-r1`, commit `d8bc4aa7aef4a8dd6f51b4da66243af54e3e9fef`
+- tag: `is-2026-r1`, commit `eccc3c4946339ebed89762c33730f109efe9cab4`
 - license: MIT, as the package
 
 | File | Role |

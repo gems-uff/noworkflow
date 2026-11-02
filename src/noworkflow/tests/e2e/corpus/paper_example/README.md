@@ -5,7 +5,7 @@ as its running example, copied byte for byte from its reproducibility
 package:
 
 - repository: [`dew-uff/noworkflow-analysis`](https://github.com/dew-uff/noworkflow-analysis)
-- tag: `is-2026-r1`, commit `d8bc4aa7aef4a8dd6f51b4da66243af54e3e9fef`
+- tag: `is-2026-r1`, commit `eccc3c4946339ebed89762c33730f109efe9cab4`
 - license: MIT, `LICENSE` in this directory
 
 | File | Role |
