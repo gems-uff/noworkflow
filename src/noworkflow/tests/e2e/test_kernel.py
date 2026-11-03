@@ -31,6 +31,7 @@ of trial with cells.
 """
 
 import contextlib
+import importlib.util
 import json
 import os
 import shutil
@@ -282,6 +283,60 @@ def test_a_bash_cell_is_recorded_as_a_launch_of_bash(project, prefix):
         trial["id"],
     )
     assert len(versions) == 1 and versions[0]["version"], versions
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("rpy2") is None or shutil.which("R") is None,
+    reason="needs rpy2 and R",
+)
+def test_an_R_cell_of_rpy2_runs_inside_the_kernel_and_launches_nothing(project, prefix):
+    """A ``%%R`` cell of the rpy2 extension runs R embedded in the kernel's
+    process, so it is recorded as the text of its block and as the
+    temporary files rpy2 opens from Python to relay R's console, and
+    nothing else: no program is launched, neither for the cell nor when the
+    extension loads, so the trial has no module row for ``R``, and the file
+    R writes in the cell is not a file access of the trial. This is the
+    limit the paper's Table 1 states for a ``%%R`` cell, against the
+    ``%%bash`` cell above, whose interpreter is launched.
+    """
+    # rpy2 finds R by running ``R RHOME``, so R's directory joins the
+    # synthetic PATH of the harness, as the case study does for Rscript.
+    project.env["PATH"] = os.pathsep.join(
+        [project.env["PATH"], os.path.dirname(shutil.which("R"))]
+    )
+    with running_kernel(project, prefix) as kernel:
+        status, output = kernel.run("%load_ext rpy2.ipython\n")
+        assert status == "ok", "{}\n{}".format(output, kernel.describe())
+        status, output = kernel.run("%%R\nwriteLines('hi', 'r_out.txt')\n")
+        assert (status, output) == ("ok", ""), "{}\n{}".format(
+            output, kernel.describe()
+        )
+    assert (project.path / "r_out.txt").read_text(encoding="utf-8") == "hi\n"
+    trial = the_trial(project)
+    assert cells(project, trial["id"]) == [
+        "get_ipython().run_line_magic('load_ext', 'rpy2.ipython')\n",
+        "get_ipython().run_cell_magic('R', '', \"writeLines('hi', 'r_out.txt')\\n\")\n",
+    ]
+    # rpy2 relays R's console through temporary files it opens from Python;
+    # those are the only accesses of the cell, none of them written by R.
+    cell_accesses = accesses(project, trial["id"], "run_cell_magic")
+    assert cell_accesses and all(
+        name.startswith(str(project.tmp)) for name, _ in cell_accesses
+    ), cell_accesses
+    names = [
+        row["name"]
+        for row in project.query(
+            "SELECT name FROM file_access WHERE trial_id = ? ORDER BY id",
+            trial["id"],
+        )
+    ]
+    assert "r_out.txt" not in names, names
+    programs = project.query(
+        "SELECT name, version FROM module WHERE trial_id = ? "
+        "AND name IN ('R', 'Rscript') ORDER BY name",
+        trial["id"],
+    )
+    assert programs == [], programs
 
 
 def test_now_clean_slices_a_trial_of_the_kernel(project, prefix):
