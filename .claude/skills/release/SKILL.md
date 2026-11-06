@@ -156,7 +156,9 @@ git grep -n -F '<previous version>' -- ':!uv.lock' ':!src/noworkflow/now/vis/sta
 Each hit that names noWorkflow's version (the placeholder in
 `.github/ISSUE_TEMPLATE/bug.yml`, a citation file) changes in the same
 commit; a hit that only shares the digits (a pinned version of another
-package, a recorded snapshot) stays. The tested Python versions in
+package, a recorded snapshot) stays. `date-released` in `CITATION.cff` is
+the day of the tag (step 5), not of the bump: write the planned day here
+and check it when the tag is created. The tested Python versions in
 `README.md` and the classifiers follow the CI matrix, not the release
 (`python-matrix`): at a release, only check that they agree with the
 blocking legs of `ci.yml`.
@@ -322,6 +324,10 @@ created and pushed by the maintainer:
 git tag -a <version> -m "<version>" <bump commit>
 git push origin <version>
 ```
+
+`date-released` in `CITATION.cff` is this day. When the tag is created on a
+day other than the one the bump wrote, the file is corrected on `main` in a
+commit of its own after the tag; the tag keeps the date it has.
 
 **A published tag is never moved.** Before the upload, a tag created by
 mistake is deleted by the maintainer, locally and on the remote; a clone that
